@@ -12,12 +12,6 @@ source $amber
 source $gromacs
 source $scripts_dir/extract_execution_model_bash.sh
 
-# cd /home/anna/BioSimSpace
-# git checkout feature-amber-fep
-# export BSS="/home/anna/anaconda3/bin/activate working"
-# source $BSS
-# cd $MAINDIRECTORY
-
 date
 start=`date +%s`
 

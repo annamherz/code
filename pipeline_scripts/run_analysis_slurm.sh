@@ -12,14 +12,14 @@ source $amber
 source $gromacs
 source $scripts_dir/extract_execution_model_bash.sh
 
-# cd /home/anna/BioSimSpace
-# git checkout feature-amber-pre-2023
-# export BSS="/home/anna/anaconda3/bin/activate biosimspace-dev"
-# source $BSS
-# cd $MAINDIRECTORY
-
 date
+start=`date +%s`
+
 echo "Folder for these runs is : $MAINDIRECTORY"
 echo "Analysis for the transformation $1, $2."
 
 python $scripts_dir/analysis.py $1 $2
+
+end=`date +%s`
+runtime=$((end-start))
+echo "runtime was $runtime seconds, which is $((runtime/60)) minutes"
