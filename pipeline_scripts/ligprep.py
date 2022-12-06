@@ -17,7 +17,7 @@ except:
         sys.path.insert(1, code)
     import pipeline
 
-from pipeline.ligprep import *
+from pipeline.prep import *
 
 # decide engine used for equilibration runs ("AMBER" or "GROMACS")
 engine = "AMBER"
@@ -31,7 +31,6 @@ protein_file = os.environ["protein_file"]
 ligands_folder = os.environ["ligands_folder"]
 # ref the protocol.dat which was set in overall bash script
 prot_file = os.environ["prot_file"]
-if search in line:
 lig_name = sys.argv[1]
 print(f'prep for {lig_name}...')
 

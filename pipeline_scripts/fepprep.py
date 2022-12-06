@@ -16,7 +16,7 @@ except:
         sys.path.insert(1, code)
     import pipeline
 
-from pipeline.fepprep import *
+from pipeline.prep import *
 
 # Values from the corresponding bash arrays.
 # The ligands for which the transformation is to be carried out.
