@@ -7,6 +7,17 @@ import os
 import sys
 from distutils.dir_util import copy_tree
 
+try:
+    import pipeline
+except:
+    print("adding code to the pythonpath...")
+    code = '/home/anna/Documents/code/python'
+    if code not in sys.path:
+        sys.path.insert(1, code)
+    import pipeline
+
+from pipeline.fepprep import *
+
 # Values from the corresponding bash arrays.
 # The ligands for which the transformation is to be carried out.
 trans = sys.argv[1]
@@ -48,11 +59,22 @@ if engine_query not in ["SOMD", "GROMACS", "AMBER"]:
     raise NameError("Input MD engine not found/recognised. Please use any of ['SOMD', 'GROMACS', 'AMBER']"
                     + "on the end of the line of the transformation in network.dat ")
 # read the protocol file to get all the requested parameters
-stream = open(prot_file, "r")
-lines = stream.readlines()
+# Read the protocol.dat to get all parameter infos.
+search_dict = {"ligand forcefield":None, "protein forcefield":None,
+                "solvent":None, "box edges":None, "box type": None,
+                "protocol":None, "sampling":None, "HMR":None,
+                "repeats":None, "keep trajectories":None}
+
+# get value regardless of the order of the protocol.dat
+for search in search_dict.keys():
+    with open(f"{prot_file}", "r") as file:
+        for line in file:
+            if search.casefold() in line.casefold():
+                search_dict[search] = line.strip()
+                break
 
 # get the requested runtime.
-runtime_query = lines[6].rstrip().replace(" ", "").split("=")[-1].split("*")[0]
+runtime_query = search_dict["sampling"].rstrip().replace(" ", "").split("=")[-1].split("*")[0]
 try:
     runtime_query = int(runtime_query)
 except ValueError:
@@ -60,8 +82,7 @@ except ValueError:
                     + " on the seventh line of protocol.dat in the shape of (e.g.):\nsampling = 2*ns")
 
 # make sure user has set ns or ps.
-runtime_unit_query = lines[6].rstrip().replace(
-    " ", "").split("=")[-1].split("*")[1]
+runtime_unit_query = search_dict["sampling"].rstrip().replace(" ", "").split("=")[-1].split("*")[1]
 if runtime_unit_query not in ["ns", "ps"]:
     raise NameError("Input runtime unit not supported. Please use 'ns' or 'ps'"
                     + " on the seventh line of protocol.dat in the shape of (e.g.):\nsampling = 2*ns")
@@ -71,7 +92,7 @@ elif runtime_unit_query == "ps":
     runtime_unit = BSS.Units.Time.picosecond
 
 # Check if HMR
-hmr = lines[7].rstrip().replace(" ", "").split("=")[-1]
+hmr = search_dict["HMR"].rstrip().replace(" ", "").split("=")[-1]
 if hmr == "True":
     hmr = True
 elif hmr == "False":
@@ -81,7 +102,7 @@ if not isinstance(hmr, bool):
                     + "on the eighth line of protocol.dat in the shape of (e.g.):\nHMR = True")
 
 # get the number of repeats
-repeats = int(lines[8].rstrip().replace(" ", "").split("=")[-1])
+repeats = int(search_dict["repeats"].rstrip().replace(" ", "").split("=")[-1])
 if not isinstance(repeats, int):
     raise NameError("Repeats must be of type int."
                     + "on the ninth line of protocol.dat in the shape of (e.g.):\nrepeats = 3")
@@ -91,36 +112,11 @@ start_temp = BSS.Types.Temperature(0, "kelvin")
 end_temp = BSS.Types.Temperature(300, "kelvin")
 pressure_query = BSS.Types.Pressure(1, "bar")
 
-# Load equilibrated free inputs for both ligands. Complain if input not found. These systems already contain equil. waters.
-# these will have been prepped previously using the ligprep or by other means
-
 # define minimisation steps
 min_steps = 10000 
 
-def mergeLigands(ligand_1, ligand_2, engine_query):
-    """Merges two ligands in preperation for FEP run.
-
-    Args:
-        ligand_1 (_type_): BSS molecule
-        ligand_2 (_type_): BSS molecule
-        engine_query (_type_): must be either amber somd or groamcs
-
-    Returns:
-        _type_: merged ligands as BSS object
-    """
-    # Align ligand2 on ligand1
-    mapping = BSS.Align.matchAtoms(
-        ligand_1, ligand_2, engine=engine_query, complete_rings_only=True)
-    inv_mapping = {v: k for k, v in mapping.items()}
-    ligand_2_a = BSS.Align.rmsdAlign(ligand_2, ligand_1, inv_mapping)
-
-    # Generate merged molecule.
-    merged_trans = BSS.Align.merge(
-        ligand_1, ligand_2_a, mapping, allow_ring_breaking=True)
-
-    return merged_trans
-
-
+# Load equilibrated free inputs for both ligands. Complain if input not found. These systems already contain equil. waters.
+# these will have been prepped previously using the ligprep or by other means
 # create the system for each the free and the bound leg.
 system_free = None
 system_bound = None
