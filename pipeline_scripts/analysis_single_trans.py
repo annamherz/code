@@ -24,7 +24,7 @@ lig_2 = trans.split('~')[1]
 engine = sys.argv[2].rstrip()
 
 # options
-extra_options = {'save_graphs': True, 'save_pickle':True, 'try_pickle':True}
+extra_options = {'save_graphs': True, 'save_pickle':True}
 chosen_estimator = "MBAR" # MBAR or TI
 chosen_method = "alchemlyb" # native or alchemlyb
 est_meth = f"{chosen_estimator}_{chosen_method}"
@@ -43,7 +43,6 @@ else:
 
 if not _os.path.exists(path_to_dir):
     raise OSError(f"{path_to_dir} does not exist.")
-
 
 print(f'analysing results for {path_to_dir}')
 print(f"using {chosen_method} and {chosen_estimator} for analysis")
@@ -92,7 +91,13 @@ def analyse_all_repeats(work_dir, estimator='MBAR', method="alchemlyb", extra_op
         check_overlap = False
     save_graphs = True
     save_pickle = True
-    try_pickle = False
+
+    pickle_dir = path_to_dir + '/pickle'
+    if not _os.path.exists(pickle_dir):
+        _os.mkdir(f"{pickle_dir}")
+        extra_options['try_pickle'] =  False
+    else:
+        extra_options['try_pickle'] =  True
 
     # if there are extra options, override the default calculation methods
     if extra_options:
@@ -189,9 +194,9 @@ def analyse_all_repeats(work_dir, estimator='MBAR', method="alchemlyb", extra_op
         try:
             print("trying to locate pickles in folder...")
             # TODO fix so pickle name is in function as otherwise cant run independently of this script
-            with open(f"{work_dir}/bound_pmf_{trans}_{engine}_{estimator}_{method}.pickle", "rb") as file:
+            with open(f"{pickle_dir}/bound_pmf_{trans}_{engine}_{estimator}_{method}.pickle", "rb") as file:
                 bound_pmf_dict = pickle.load(file)
-            with open(f"{work_dir}/free_pmf_{trans}_{engine}_{estimator}_{method}.pickle", "rb") as file:
+            with open(f"{pickle_dir}/free_pmf_{trans}_{engine}_{estimator}_{method}.pickle", "rb") as file:
                 free_pmf_dict = pickle.load(file)
             print("pickles found!")
         except:
@@ -397,9 +402,9 @@ def analyse_all_repeats(work_dir, estimator='MBAR', method="alchemlyb", extra_op
     if save_pickle:
         print("saving the pmf dictionaries for bound and free as pickles.")
         # write the pmf as a pickle
-        with open (f"{work_dir}/bound_pmf_{trans}_{engine}_{estimator}_{method}.pickle", 'wb') as handle:
+        with open (f"{pickle_dir}/bound_pmf_{trans}_{engine}_{estimator}_{method}.pickle", 'wb') as handle:
             pickle.dump(bound_pmf_dict, handle)
-        with open (f"{work_dir}/free_pmf_{trans}_{engine}_{estimator}_{method}.pickle", 'wb') as handle:
+        with open (f"{pickle_dir}/free_pmf_{trans}_{engine}_{estimator}_{method}.pickle", 'wb') as handle:
             pickle.dump(free_pmf_dict, handle)
     else:
         pass
