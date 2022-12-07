@@ -7,23 +7,8 @@ from ..utils._validate import *
 def lig_paramaterise(molecule, ligff_query):
     # dicitonary of functions available
     validate.lig_ff(ligff_query)
-
-    ligff_dict = {"gaff": BSS.Parameters.gaff,
-                  "gaff2": BSS.Parameters.gaff2,
-                  "sage": BSS.Parameters.parameterise,
-                  "parsely": BSS.Parameters.parameterise}
-    func = ligff_dict[ligff_query]
-    if ligff_query == "gaff" or ligff_query == "gaff2":
-        return func(molecule)
-    if ligff_query == "sage":
-        return func(molecule, 'openff_unconstrained-2.0.0')
-    if ligff_query == "parsely":
-        return func(molecule, 'openff_unconstrained-1.3.0')
-
-# Throw error if ligand forcefield not available.
-    if ligff_query not in ligff_dict:
-        raise NameError(
-            f"Force field not supported: {ligff_query}. Please use either of [GAFF1, GAFF2, Parsely, Sage]")
+    
+    return BSS.Parameters.parameterise(molecule, ligff_query)
         
 # define functions for the lig_paramateriserep
 def runProcess(system, protocol, engine="AMBER", work_dir=None):

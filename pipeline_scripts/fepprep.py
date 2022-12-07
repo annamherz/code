@@ -17,7 +17,7 @@ except:
     import pipeline
 
 from pipeline.prep import *
-from pipeline.utils.input import read_protocol
+from pipeline.utils import *
 
 # Values from the corresponding bash arrays.
 # The ligands for which the transformation is to be carried out.
@@ -52,23 +52,18 @@ workdir = f"{main_dir}/outputs/{engine_query}/{lig_1}~{lig_2}"
 #     raise NameError(
 #         f"The perturbation {trans} (or the reverse) with {num_lambda} windows using {engine_query} was not found in network.dat.")
 
-if not isinstance(num_lambda, int):
-    raise NameError(
-        f"Number of lambda windows must be an integer.")
-
-if engine_query not in BSS.FreeEnergy.engines():
-    raise NameError(f"Input MD engine not found/recognised. Please use any of {BSS.FreeEnergy.engines()}"
-                    + "on the end of the line of the transformation in network.dat ")
+# validate input
+num_lambda = validate.num_lambda(num_lambda)
+engine_query = validate.engine(engine_query)
 
 # parse protocol file
-query_dict = read_protocol(prot_file)
-# TODO change so all below are from this dict
+protocol = check_protocol(prot_file) # instantiate the protocol as an object
+protocol.validate() # validate all the input
 
 # Set temperature and pressure values
 start_temp = BSS.Types.Temperature(0, "kelvin")
 end_temp = BSS.Types.Temperature(300, "kelvin")
 pressure_query = BSS.Types.Pressure(1, "bar")
-
 # define minimisation steps
 min_steps = 10000 
 
@@ -144,9 +139,8 @@ for name, leg in zip(["lig", "sys"], ["free", "bound"]):
     if leg == "bound":
         system_bound = system_final
 
-# TODO
 # repartition the hydrogen masses
-if hmr == True:
+if protocol.hmr == True:
     print("repartitioning hydrogen masses for 4fs timestep...")
     timestep_query = int(4)
     if engine_query == "AMBER":
@@ -157,20 +151,13 @@ if hmr == True:
         system_bound.repartitionHydrogenMass(factor=4)
     elif engine_query == "SOMD":
         pass
-elif hmr == False:
+elif protocol.hmr == False:
     timestep_query = int(2)
-else:
-    raise TypeError(
-        "HMR (Hydrogen Mass Repartitioning) must be either True or False.")
 
 timestep_unit = BSS.Units.Time.femtosecond
 
-# incl eq time in setup? or just have at this default
 eq_runtime_query = int(100)  # 100 ps NVT and NPT eq
 eq_runtime_unit = BSS.Units.Time.picosecond
-# someway to set eq so it also is like this in somd?
-
-# TODO runtime query?
 
 # define the free energy protocol with all this information.
 if engine_query == 'AMBER' or engine_query == 'GROMACS':
@@ -185,7 +172,7 @@ if engine_query == 'AMBER' or engine_query == 'GROMACS':
                                                        pressure=pressure_query, restart=True
                                                        )
     freenrg_protocol = BSS.Protocol.FreeEnergy(timestep=timestep_query*timestep_unit, num_lam=num_lambda, temperature=end_temp,
-                                               runtime=runtime_query*runtime_unit, pressure=pressure_query,
+                                               runtime=protocol.sampling*protocol.sampling_unit, pressure=pressure_query,
                                                restart=True
                                                )
 
@@ -194,7 +181,7 @@ elif engine_query == 'SOMD':
                                           runtime=(eq_runtime_query*2)*eq_runtime_unit, pressure=pressure_query,
                                           )
     freenrg_protocol = BSS.Protocol.FreeEnergy(timestep=timestep_query*timestep_unit, num_lam=num_lambda, temperature=end_temp,
-                                               runtime=runtime_query*runtime_unit, pressure=pressure_query,
+                                               runtime=protocol.sampling*protocol.sampling_unit, pressure=pressure_query,
                                                )
 
 # now set up the MD directories.
@@ -257,9 +244,9 @@ if engine_query == "SOMD":
 
 # default folder is with no integer.
 # for the sake of analysis , doesnt matter as finds folders w names of leg
-more_repeats = list(range(1, repeats))
+more_repeats = list(range(1, protocol.repeats))
 
-print(f"there are {repeats} folder(s) being made for each leg...")
+print(f"there are {protocol.repeats} folder(s) being made for each leg...")
 for r in more_repeats:
     for leg in ["bound", "free"]:
         copy_tree(f"{workdir}/{leg}_0", f"{workdir}/{leg}_{r}")

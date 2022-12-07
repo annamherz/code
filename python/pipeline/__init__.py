@@ -4,7 +4,7 @@ import warnings as _warnings
 
 __all__ = ['analysis',
            'prep',
-           'fepprep'
+           'utils'
             ]
 
 # check for BioSimSpace

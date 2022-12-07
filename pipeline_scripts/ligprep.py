@@ -6,7 +6,7 @@ from BioSimSpace.Units.Length import angstrom as _angstrom
 import sys
 import os
 
-from pipeline.utils.input import read_protocol
+from pipeline.utils import *
 
 BSS.setVerbose(True)
 
@@ -56,8 +56,8 @@ else:
     pass
 
 # parse protocol file
-query_dict = read_protocol(prot_file)
-# TODO change so all below are from this dict
+protocol = check_protocol(prot_file) # instantiate the protocol as an object
+protocol.validate() # validate all the input
 
 # load, solvate and run the systems.
 # load the protein, this was paramaterised during the setup stage.
@@ -74,7 +74,7 @@ except:
 
 # paramaterise the ligand
 print(f"Parameterising {lig_name}...")
-lig_p = lig_paramaterise(ligand, ligff_query).getMolecule()
+lig_p = lig_paramaterise(ligand, protocol.ligand_forcefield).getMolecule()
 
 # Combine protein, ligand and crystallographic waters.
 system = lig_p + prot_wat
@@ -88,7 +88,10 @@ for leg, leg_mol in zip(legs, legs_mols):
 
     # solvate
     print(f"Solvating {leg} for {lig_name}...")
-    leg_mol_solvated = min_solv(leg_mol, solvent_query, boxtype_query, box_axis_length, box_axis_unit_query)
+    leg_mol_solvated = min_solv(leg_mol, protocol.solvent,
+                                protocol.box_type,
+                                protocol.box_edges,
+                                protocol.box_edges_unit)
 
     # saving pre runs
     print(f"Saving solvated for {leg} and {lig_name}")

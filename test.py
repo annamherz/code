@@ -1,3 +1,4 @@
+import BioSimSpace as BSS
 import sys
 
 try:
@@ -9,10 +10,11 @@ except:
         sys.path.insert(1, code)
     import pipeline
 
-from pipeline.utils._validate import *
+from pipeline import *
 
-prot_dict = {"sampling":2}
-try:
-    validate_query.validate_protocol_dict(prot_dict)
-except Exception as e:
-    print(f"There is a problem with the input provided in file\n Exception is:\n {e}")
+file = "/home/anna/Documents/benchmark/tyk2_benchmark/execution_model_rbfenn_test/protocol.dat"
+
+protocol = utils.check_protocol(file) # instantiate the protocol as an object
+protocol.validate() # validate all the input
+
+protocol.ligand_forcefield

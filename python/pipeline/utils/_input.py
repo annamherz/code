@@ -2,7 +2,6 @@ import sys
 import os
 import BioSimSpace as BSS
 
-# TODO import validate
 from ._validate import *
 
 def engine_network(engine, file_path):
@@ -12,8 +11,8 @@ def engine_network(engine, file_path):
         engine (str): engine to generate the network for
         file_path (str): network.dat file containing multiple engines
     """
-    validate_query.engine(engine)
-    validate_query.path(file_path)
+    engine = validate.engine(engine)
+    file_path = validate.file_path(file_path)
 
     try:
         print("using the folder of the file as the location to write the output file...")
@@ -33,52 +32,77 @@ def engine_network(engine, file_path):
                                 f.write(f"{line}")
 
 
-def read_protocol(prot_file):
 
-    # Read the protocol.dat to get all parameter infos.
-    search_dict = {"ligand forcefield":None, "protein forcefield":None,
-                    "solvent":None, "box edges":None, "box type": None,
-                    "protocol":None, "sampling":None, "HMR":None,
-                    "repeats":None, "keep trajectories":None}
-    
-    # get value regardless of the order of the protocol.dat
-    for search in search_dict.keys():
-        with open(f"{prot_file}", "r") as file:
+class check_protocol():
+
+    def __init__(self, file):
+        self._prot_file = validate.file_path(file)
+        print(self._prot_file)
+        self._query_dict = check_protocol._read_protocol(self)
+        # update query dict if anything is missing
+        self._query_dict = check_protocol._check_query(self)
+
+    def _read_protocol(self):
+
+        query_dict = {}
+
+        # get value regardless of the order of the protocol.dat
+        with open(f"{self._prot_file}", "r") as file:
             for line in file:
-                if search.casefold() in line.casefold():
-                    search_dict[search] = line.strip()
-                    break
-    
-    # get all the queries
-    ligff_query = (search_dict["ligand forcefield"].rstrip().replace(" ", "").split("=")[-1]).lower() # ligand ff
-    protff_query = search_dict["protein forcefield"].rstrip().replace(" ", "").split("=")[-1] # protein ff
-    solvent_query = search_dict["solvent"].rstrip().replace(" ", "").split("=")[-1] # solvent ff
-    boxsize_query = search_dict["box edges"].rstrip().replace(" ", "").split("=")[-1] # box size and type
-    box_axis_length = boxsize_query.split("*")[0]
-    box_axis_unit_query = boxsize_query.split("*")[1]
-    boxtype_query = (search_dict["box type"].rstrip().replace(" ", "").split("=")[-1]).lower()
-    sampling_query = search_dict["sampling"].rstrip().replace(" ", "").split("=")[-1].split("*")[0]
-    sampling_unit_query = search_dict["sampling"].rstrip().replace(" ", "").split("=")[-1].split("*")[1]
-    hmr_query = search_dict["HMR"].rstrip().replace(" ", "").split("=")[-1]
-    repeats_query = search_dict["repeats"].rstrip().replace(" ", "").split("=")[-1]
+                
+                if "=" not in line:
+                    raise ValueError("protocol file may only contain lines with '=', eg 'ligand forcefield = GAFF2'")
+                elif "*" in line: # if unit, get as seperate dict entry
+                    query_dict[f"{line.split('=')[0].strip().lower()}"] = line.split('=')[-1].strip().split("*")[0]
+                    query_dict[f"{line.split('=')[0].strip().lower()} unit"] = line.split('=')[-1].strip().split("*")[-1]
+                else:
+                    query_dict[f"{line.split('=')[0].strip().lower()}"] = line.split('=')[-1].strip()
 
-    # validate if the queries are permitted
-    query_dict = { "ligand forcefield":ligff_query, "protein forcefield":protff_query,
-                    "solvent":solvent_query, "box length":box_axis_length, "box unit":box_axis_unit_query,
-                    "boxtype":boxtype_query, "sampling":sampling_query, 
-                    "sampling unit":sampling_unit_query, "HMR":hmr_query, "repeats":repeats_query}
+        return query_dict
 
-    query = validate_query(query_dict)
-    try:
-        query.validate_all() # validate all inputs provided in the protocol file
-    except Exception as e:
-        print(f"There is a problem with the input provided in {prot_file}.\n Exception is:\n {e}")
+    def _check_query(self):
+        
+        query_dict = self._query_dict
 
-    # convert the queries into the correct format for using for the rest of the pipeline
+        default_dict = {'ligand forcefield': 'gaff2',
+                    'solvent': 'TIP3P',
+                    'box edges': '30',
+                    'box edges unit': 'angstrom',
+                    'box type': 'cubic',
+                    'protocol': 'default',
+                    'sampling': '2',
+                    'sampling unit': 'ns',
+                    'hmr': 'False',
+                    'repeats': '1',
+                    'trajectories': "None",
+                    'protein forcefield': 'ff14SB'
+                    }
+        
+        for query in default_dict.keys():
+            if query not in query_dict.keys():
+                query_dict[query] = default_dict[query]
+                print(f"{query} not found in protocol. {default_dict[query]} will be used.")
+            
+        return query_dict
 
-    parameters_dict = { "ligand forcefield":ligff, "protein forcefield":protff,
-                    "solvent":solvent, "box length":box_length, "box unit":box_unit,
-                    "boxtype":boxtype, "sampling":sampling, 
-                    "sampling unit":sampling_unit, "HMR":hmr, "repeats":repeats}
+    def validate(self):
+        """validates all the input instantiated using the protocol file.
+        """
+        
+        query_dict = self._query_dict
 
-    return query_dict
+        try:
+            self.ligand_forcefield = validate.lig_ff(query_dict['ligand forcefield'])
+            self.protein_forcefield = validate.prot_ff(query_dict['protein forcefield'])
+            self.solvent = validate.solvent_ff(query_dict['solvent'])
+            self.box_edges = validate.box_edges(query_dict['box edges'])
+            self.box_edges_unit = validate.box_edges_unit(query_dict['box edges unit'])
+            self.box_type = validate.box_type(query_dict['box type'])
+            self.sampling = validate.sampling(query_dict['sampling'])
+            self.sampling_unit = validate.sampling_unit(query_dict['sampling unit'])
+            self.hmr = validate.hmr(query_dict['hmr'])
+            self.repeats = validate.repeats(query_dict['repeats'])
+            self.trajectories = validate.trajectories(query_dict['trajectories'])
+
+        except Exception as e:
+            print(f"There is a problem with the input provided in {self._prot_file}.\n Exception is:\n {e}")
