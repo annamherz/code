@@ -2,7 +2,6 @@ import sys
 import os
 import shutil
 
-
 def add_header_simfile(trans_dir):
     """Adds header to simfiles if failed to generate.
 

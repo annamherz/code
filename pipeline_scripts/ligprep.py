@@ -6,6 +6,8 @@ from BioSimSpace.Units.Length import angstrom as _angstrom
 import sys
 import os
 
+from pipeline.utils.input import read_protocol
+
 BSS.setVerbose(True)
 
 try:
@@ -53,33 +55,9 @@ if not os.path.exists(f"{main_dir}/prep/pre_run"):
 else:
     pass
 
-################
-# Defining all the parameters needed
-
-# Read the protocol.dat to get all parameter infos.
-search_dict = {"ligand forcefield":None, "protein forcefield":None,
-                "solvent":None, "box edges":None, "box type": None,
-                "protocol":None, "sampling":None, "HMR":None,
-                "repeats":None, "keep trajectories":None}
-
-# get value regardless of the order of the protocol.dat
-for search in search_dict.keys():
-    with open(f"{prot_file}", "r") as file:
-        for line in file:
-            if search.casefold() in line.casefold():
-                search_dict[search] = line.strip()
-                break
-
-# forcefields
-ligff_query = (search_dict["ligand forcefield"].rstrip().replace(" ", "").split("=")[-1]).lower() # ligand ff
-protff_query = search_dict["protein forcefield"].rstrip().replace(" ", "").split("=")[-1] # protein ff
-solvent_query = search_dict["solvent"].rstrip().replace(" ", "").split("=")[-1] # solvent ff
-
-# box size and type
-boxsize_query = search_dict["box edges"].rstrip().replace(" ", "").split("=")[-1]
-box_axis_length = boxsize_query.split("*")[0]
-box_axis_unit_query = boxsize_query.split("*")[1]
-boxtype_query = (search_dict["box type"].rstrip().replace(" ", "").split("=")[-1]).lower()
+# parse protocol file
+query_dict = read_protocol(prot_file)
+# TODO change so all below are from this dict
 
 # load, solvate and run the systems.
 # load the protein, this was paramaterised during the setup stage.

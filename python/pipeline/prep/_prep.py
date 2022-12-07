@@ -2,8 +2,12 @@ import BioSimSpace as BSS
 from BioSimSpace import _Exceptions
 from BioSimSpace.Units.Length import angstrom as _angstrom
 
+from ..utils._validate import *
+
 def lig_paramaterise(molecule, ligff_query):
     # dicitonary of functions available
+    validate.lig_ff(ligff_query)
+
     ligff_dict = {"gaff": BSS.Parameters.gaff,
                   "gaff2": BSS.Parameters.gaff2,
                   "sage": BSS.Parameters.parameterise,

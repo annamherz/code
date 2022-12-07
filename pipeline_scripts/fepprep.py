@@ -17,6 +17,7 @@ except:
     import pipeline
 
 from pipeline.prep import *
+from pipeline.utils.input import read_protocol
 
 # Values from the corresponding bash arrays.
 # The ligands for which the transformation is to be carried out.
@@ -55,57 +56,13 @@ if not isinstance(num_lambda, int):
     raise NameError(
         f"Number of lambda windows must be an integer.")
 
-if engine_query not in ["SOMD", "GROMACS", "AMBER"]:
-    raise NameError("Input MD engine not found/recognised. Please use any of ['SOMD', 'GROMACS', 'AMBER']"
+if engine_query not in BSS.FreeEnergy.engines():
+    raise NameError(f"Input MD engine not found/recognised. Please use any of {BSS.FreeEnergy.engines()}"
                     + "on the end of the line of the transformation in network.dat ")
-# read the protocol file to get all the requested parameters
-# Read the protocol.dat to get all parameter infos.
-search_dict = {"ligand forcefield":None, "protein forcefield":None,
-                "solvent":None, "box edges":None, "box type": None,
-                "protocol":None, "sampling":None, "HMR":None,
-                "repeats":None, "keep trajectories":None}
 
-# get value regardless of the order of the protocol.dat
-for search in search_dict.keys():
-    with open(f"{prot_file}", "r") as file:
-        for line in file:
-            if search.casefold() in line.casefold():
-                search_dict[search] = line.strip()
-                break
-
-# get the requested runtime.
-runtime_query = search_dict["sampling"].rstrip().replace(" ", "").split("=")[-1].split("*")[0]
-try:
-    runtime_query = int(runtime_query)
-except ValueError:
-    raise NameError("Input runtime value not supported. Please use an integer"
-                    + " on the seventh line of protocol.dat in the shape of (e.g.):\nsampling = 2*ns")
-
-# make sure user has set ns or ps.
-runtime_unit_query = search_dict["sampling"].rstrip().replace(" ", "").split("=")[-1].split("*")[1]
-if runtime_unit_query not in ["ns", "ps"]:
-    raise NameError("Input runtime unit not supported. Please use 'ns' or 'ps'"
-                    + " on the seventh line of protocol.dat in the shape of (e.g.):\nsampling = 2*ns")
-if runtime_unit_query == "ns":
-    runtime_unit = BSS.Units.Time.nanosecond
-elif runtime_unit_query == "ps":
-    runtime_unit = BSS.Units.Time.picosecond
-
-# Check if HMR
-hmr = search_dict["HMR"].rstrip().replace(" ", "").split("=")[-1]
-if hmr == "True":
-    hmr = True
-elif hmr == "False":
-    hmr = False
-if not isinstance(hmr, bool):
-    raise NameError("Hydrogen Mass Repartitioning must be of type bool."
-                    + "on the eighth line of protocol.dat in the shape of (e.g.):\nHMR = True")
-
-# get the number of repeats
-repeats = int(search_dict["repeats"].rstrip().replace(" ", "").split("=")[-1])
-if not isinstance(repeats, int):
-    raise NameError("Repeats must be of type int."
-                    + "on the ninth line of protocol.dat in the shape of (e.g.):\nrepeats = 3")
+# parse protocol file
+query_dict = read_protocol(prot_file)
+# TODO change so all below are from this dict
 
 # Set temperature and pressure values
 start_temp = BSS.Types.Temperature(0, "kelvin")
@@ -212,6 +169,8 @@ timestep_unit = BSS.Units.Time.femtosecond
 eq_runtime_query = int(100)  # 100 ps NVT and NPT eq
 eq_runtime_unit = BSS.Units.Time.picosecond
 # someway to set eq so it also is like this in somd?
+
+# TODO runtime query?
 
 # define the free energy protocol with all this information.
 if engine_query == 'AMBER' or engine_query == 'GROMACS':

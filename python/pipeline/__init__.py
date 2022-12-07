@@ -3,7 +3,7 @@
 import warnings as _warnings
 
 __all__ = ['analysis',
-           'ligprep',
+           'prep',
            'fepprep'
             ]
 
@@ -17,6 +17,5 @@ with _warnings.catch_warnings():
         raise EnvironmentError('BioSimSpace required: www.biosimspace.org')
 
 from . import analysis
-from . import ligprep
-from . import fepprep
+from . import prep
 from . import utils
