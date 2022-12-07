@@ -92,16 +92,18 @@ class validate():
     def sampling_unit(sampling_unit):
 
         if not isinstance(sampling_unit, str):
-            raise TypeError("'sampling_unit' must be of type 'str'.")
+            if not isinstance(sampling_unit, BSS.Types.Time):
+                raise TypeError("'sampling_unit' must be of type 'str' or 'BSS.Types.Time'.")
 
-        sampling_unit_list = ["ns", "ps"]
-        if sampling_unit not in sampling_unit_list:
-            raise ValueError(f"'sampling_unit' must be one of {sampling_unit_list}.")
-        
-        if sampling_unit == "ns":
-            sampling_unit = BSS.Units.Time.nanosecond
-        elif sampling_unit == "ps":
-            sampling_unit = BSS.Units.Time.picosecond        
+        else:
+            sampling_unit_list = ["ns", "ps"]
+            if sampling_unit not in sampling_unit_list:
+                raise ValueError(f"'sampling_unit' must be one of {sampling_unit_list}.")
+            
+            if sampling_unit == "ns":
+                sampling_unit = BSS.Units.Time.nanosecond
+            elif sampling_unit == "ps":
+                sampling_unit = BSS.Units.Time.picosecond        
 
         return sampling_unit
 
@@ -120,16 +122,18 @@ class validate():
     def box_edges_unit(box_edges_unit):
 
         if not isinstance(box_edges_unit, str):
-            raise TypeError("'box_edges_unit' must be of type 'str'.")
+            if not isinstance(box_edges_unit, BSS.Types.Length):
+                raise TypeError("'box_edges_unit' must be of type 'str' or 'BSS.Types.Length'.")
 
-        box_edges_unit_list = ["angstrom", "nm"]
-        if box_edges_unit not in box_edges_unit_list:
-            raise ValueError(f"'box_edges_unit' must be one of {box_edges_unit_list}.")
+        else:
+            box_edges_unit_list = ["angstrom", "nm"]
+            if box_edges_unit not in box_edges_unit_list:
+                raise ValueError(f"'box_edges_unit' must be one of {box_edges_unit_list}.")
 
-        if box_edges_unit == "angstrom":
-            box_edges_unit = BSS.Units.Length.angstrom
-        elif box_edges_unit == "nm":
-            box_edges_unit = BSS.Units.Length.nanometer   
+            if box_edges_unit == "angstrom":
+                box_edges_unit = BSS.Units.Length.angstrom
+            elif box_edges_unit == "nm":
+                box_edges_unit = BSS.Units.Length.nanometer   
 
         return box_edges_unit
 
@@ -140,7 +144,7 @@ class validate():
         if not isinstance(box_type, str):
             raise TypeError("'box_type' must be of type 'str'.")
 
-        box_type_list = ["cubic", "truncatedOctahedron"]
+        box_type_list = ["cubic", "truncatedOctahedron", "octahedral"]
         if box_type not in box_type_list:
             raise ValueError(f"'box_type' must be one of {box_type_list}.")
 

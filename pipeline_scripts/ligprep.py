@@ -7,6 +7,7 @@ import sys
 import os
 
 from pipeline.utils import *
+from pipeline.prep import *
 
 BSS.setVerbose(True)
 
@@ -23,16 +24,12 @@ from pipeline.prep import *
 
 # decide engine used for equilibration runs ("AMBER" or "GROMACS")
 engine = "AMBER"
-
 # set environs
-# pmemd_path = os.environ["AMBERHOME"] + "/bin/pmemd.cuda"
 pmemd_path = os.environ["amber"] + "/bin/pmemd.cuda"
 main_dir = os.environ["MAINDIRECTORY"]
-# main_dir = "/home/anna/Documents/benchmark/test_tyk2_benchmark_sage"
 protein_file = os.environ["protein_file"]
 ligands_folder = os.environ["ligands_folder"]
-# ref the protocol.dat which was set in overall bash script
-prot_file = os.environ["prot_file"]
+prot_file = os.environ["prot_file"] # protocol.dat which was set in overall bash script
 lig_name = sys.argv[1]
 print(f'prep for {lig_name}...')
 
@@ -42,34 +39,26 @@ if os.path.exists(f"{main_dir}/prep/{lig_name}_sys_equil_solv.prm7"):
         print(f"Prep files already generated for {lig_name}. Done.")
         sys.exit(0)
 
-# make other folders that need to be made
-# for the prepped files
-if not os.path.exists(f"{main_dir}/prep"):
-    os.mkdir(f"{main_dir}/prep")
-else:
-    pass
-
-# for the system pre prep
-if not os.path.exists(f"{main_dir}/prep/pre_run"):
-    os.mkdir(f"{main_dir}/prep/pre_run")
-else:
-    pass
+# make other folders that need to be made for the prepped files
+folders = [f"{main_dir}/prep", f"{main_dir}/prep/pre_run"]
+for folder in folders:
+    if not os.path.exists(folder):
+        os.mkdir(folder)
+    else:
+        pass
 
 # parse protocol file
 protocol = check_protocol(prot_file) # instantiate the protocol as an object
-protocol.validate() # validate all the input
+protocol.validate() # validate all the input into needed format.
 
 # load, solvate and run the systems.
 # load the protein, this was paramaterised during the setup stage.
-prot_wat = BSS.IO.readMolecules(
-    [f"{protein_file}.rst7", f"{protein_file}.prm7"])
+prot_wat = BSS.IO.readMolecules([f"{protein_file}.rst7", f"{protein_file}.prm7"])
 
-# load ligand
-# These should already be in the correct position
-# try sdf first, if not available try mol2
-try:
+# load ligand, these should already be in the correct position
+try: # sdf first
     ligand = BSS.IO.readMolecules(f"{ligands_folder}/{lig_name}.sdf")[0]
-except:
+except: # mol2 if sdf is not available
     ligand = BSS.IO.readMolecules(f"{ligands_folder}/{lig_name}.mol2")[0]
 
 # paramaterise the ligand
@@ -80,15 +69,15 @@ lig_p = lig_paramaterise(ligand, protocol.ligand_forcefield).getMolecule()
 system = lig_p + prot_wat
 
 # Solvate and run each the bound and the free system.
-legs_mols = [lig_p, system]
-legs = ["lig", "sys"]
+legs_mols, legs = [lig_p, system], ["lig", "sys"]
 
 # zip together the molecules in that leg with the name for that leg
 for leg, leg_mol in zip(legs, legs_mols):
 
     # solvate
     print(f"Solvating {leg} for {lig_name}...")
-    leg_mol_solvated = min_solv(leg_mol, protocol.solvent,
+    leg_mol_solvated = minimum_solvation(leg_mol,
+                                protocol.solvent,
                                 protocol.box_type,
                                 protocol.box_edges,
                                 protocol.box_edges_unit)
@@ -100,7 +89,7 @@ for leg, leg_mol in zip(legs, legs_mols):
 
     # minimise and eqiulibrate these
     print(f"minimising and equilibrating for {leg} and {lig_name}")
-    leg_equil_final = lig_paramateriserep(leg_mol_solvated, leg)
+    leg_equil_final = minimise_equilibrate_leg(leg_mol_solvated, leg, engine, pmemd_path)
 
     # finally, save last snapshot
     print(f"Saving solvated/equilibrated for {leg} and {lig_name}")

@@ -127,7 +127,7 @@ for name, leg in zip(["lig", "sys"], ["free", "bound"]):
 
     # merge the ligands based on the engine.
     print("mapping, aligning and merging the ligands...")
-    merged_trans = mergeLigands(ligand_1, ligand_2, engine_query)
+    merged_trans = merge_ligands(ligand_1, ligand_2, engine_query)
 
     # Get equilibrated waters and waterbox information for both bound and free. Get all information from lambda==0
     # Following is work around because setBox() doesn't validate correctly boxes with lengths and angles

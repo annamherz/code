@@ -36,6 +36,7 @@ def engine_network(engine, file_path):
 class check_protocol():
 
     def __init__(self, file):
+        # instantiate the class with the protocol file
         self._prot_file = validate.file_path(file)
         print(self._prot_file)
         self._query_dict = check_protocol._read_protocol(self)
@@ -43,6 +44,15 @@ class check_protocol():
         self._query_dict = check_protocol._check_query(self)
 
     def _read_protocol(self):
+        """reads the protocol file into a dictionary
+
+        Raises:
+            ValueError: if the protocol file does not contain "="
+
+        Returns:
+            dict: dictionary of the entries in the protocol file,
+            seperated into key:value pairs by the "=" and units by "*".
+        """
 
         query_dict = {}
 
@@ -61,6 +71,8 @@ class check_protocol():
         return query_dict
 
     def _check_query(self):
+        """fills in any gaps of the dict from the protocol file
+        """
         
         query_dict = self._query_dict
 
@@ -69,7 +81,6 @@ class check_protocol():
                     'box edges': '30',
                     'box edges unit': 'angstrom',
                     'box type': 'cubic',
-                    'protocol': 'default',
                     'sampling': '2',
                     'sampling unit': 'ns',
                     'hmr': 'False',
@@ -86,7 +97,7 @@ class check_protocol():
         return query_dict
 
     def validate(self):
-        """validates all the input instantiated using the protocol file.
+        """validates all the input from the dict from the protocol file.
         """
         
         query_dict = self._query_dict

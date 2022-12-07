@@ -11,26 +11,27 @@ def lig_paramaterise(molecule, ligff_query):
     return BSS.Parameters.parameterise(molecule, ligff_query)
         
 # define functions for the lig_paramateriserep
-def runProcess(system, protocol, engine="AMBER", work_dir=None):
+def runProcess(system, protocol, engine="AMBER", pmemd_path=None, work_dir=None):
     """
     Given a solvated system (BSS object) and BSS protocol, run a process workflow with either 
-    Sander (CPU) or pmemd.cuda (GPU). NPT is typically done with GPU to save computing time.
-    Returns the processed system.
+    AMBER or GROMACS. Returns the processed system.
     """
 
     # Create the process passing a working directory.
     if engine == "AMBER":
-        process = BSS.Process.Amber(
-            system, protocol, work_dir=work_dir, exe=pmemd_path)  # need to define pmemd?
+        if pmemd_path:
+            process = BSS.Process.Amber(
+                system, protocol, work_dir=work_dir, exe=pmemd_path)
+        else:
+            process = BSS.Process.Amber(
+                system, protocol, work_dir=work_dir)
 
     elif engine == "GROMACS":
         process = BSS.Process.Gromacs(
             system, protocol, work_dir=work_dir)
 
-    # Start the process.
+    # Start the process, wait for it to exit
     process.start()
-
-    # Wait for the process to exit.
     process.wait()
 
     # Check for errors.
@@ -45,12 +46,10 @@ def runProcess(system, protocol, engine="AMBER", work_dir=None):
     return system
 
 
-def lig_paramateriserep(system_solvated, leg):  # times at the top
+def minimise_equilibrate_leg(system_solvated, leg, engine="AMBER", pmemd=None):  # times at the top
     """
     Default protocols and running of the lig_paramateriserep.
-
     system_solvated is a BSS system
-
     leg is if lig or sys .
     """
     # define all the protocols
@@ -117,46 +116,42 @@ def lig_paramateriserep(system_solvated, leg):  # times at the top
     )
 
     # run all the protocols
-    minimised1 = runProcess(system_solvated, protocol_min_rest, engine=engine)
-    minimised2 = runProcess(minimised1, protocol_min, engine=engine)
-    equil1 = runProcess(minimised2, protocol_nvt_sol, engine=engine)
-    equil2 = runProcess(equil1, protocol_nvt_backbone, engine=engine)
-    equil3 = runProcess(equil2, protocol_nvt, engine=engine)
-    equil4 = runProcess(equil3, protocol_npt_heavy, engine=engine)
-    equil5 = runProcess(equil4, protocol_npt_heavy_lighter, engine=engine)
-    sys_equil_fin = runProcess(equil5, protocol_npt, engine=engine)
+    minimised1 = runProcess(system_solvated, protocol_min_rest, engine, pmemd)
+    minimised2 = runProcess(minimised1, protocol_min, engine, pmemd)
+    equil1 = runProcess(minimised2, protocol_nvt_sol, engine, pmemd)
+    equil2 = runProcess(equil1, protocol_nvt_backbone, engine, pmemd)
+    equil3 = runProcess(equil2, protocol_nvt, engine, pmemd)
+    equil4 = runProcess(equil3, protocol_npt_heavy, engine, pmemd)
+    equil5 = runProcess(equil4, protocol_npt_heavy_lighter, engine, pmemd)
+    sys_equil_fin = runProcess(equil5, protocol_npt, engine, pmemd)
 
     return sys_equil_fin
 
-def min_solv(system, solvent, boxtype, box_axis_length, box_axis_unit_query=None):  # times at the top
+def minimum_solvation(system, solvent, box_type, box_edges, box_edges_unit=None, verbose=True):
     """
     Default solvation for minimum size box.
     """
 
-    if not box_axis_unit_query:
-        box_axis_unit = BSS.Units.Length.angstrom
-    elif box_axis_unit_query.lower() == "nm" or box_axis_unit_query.lower() == "nanometer":
-        box_axis_unit = BSS.Units.Length.nanometer
-    elif box_axis_unit_query.lower() == "a" or box_axis_unit_query.lower() == "angstrom":
-        box_axis_unit = BSS.Units.Length.angstrom
-    else:
-        raise NameError("Input unit not recognised. Please use any of ['nanometer', 'angstrom', 'nm', 'a']")
+    # validate inputs
+    try:
+        solvent = validate.solvent_ff(solvent)
+        box_edges = validate.box_edges(box_edges)
+        box_edges_unit = validate.box_edges_unit(box_edges_unit)
+        box_type = validate.box_type(box_type)
+    except Exception as e:
+        print(f"The provided arguments could not be validated.\n Exception is:\n {e}")    
                          
     # type of solvation models available in BSS
     boxtype_dict = {"cubic": BSS.Box.cubic,
-                "truncatedoctahedron": BSS.Box.truncatedOctahedron,
+                "truncatedOctahedron": BSS.Box.truncatedOctahedron,
                 "octahedral": BSS.Box.truncatedOctahedron}
-    
-    # Throw error if box type not available.
-    if boxtype not in boxtype_dict:
-        raise NameError("Input box type not recognised. Please use any of ['cubic', 'truncatedoctahedron', 'octahedral']") 
-    
+
     # define the box sizes based on the sizes of what is being solvated
     box_min, box_max = system.getAxisAlignedBoundingBox()
     # calcualte the minimum box size needed
     box_size = [y - x for x, y in zip(box_min, box_max)]
     # add the user defined box size around the min system size
-    box_sizes = [x + int(box_axis_length) * box_axis_unit for x in box_size]
+    box_sizes = [x + int(box_edges) * box_edges_unit for x in box_size]
 
     # for amber22 currently, eq fails if the overall box is less than 41 A
     # check the box size and adjust if needed
@@ -170,37 +165,41 @@ def min_solv(system, solvent, boxtype, box_axis_length, box_axis_unit_query=None
             if size == max(box_sizes):
                 box_sizes[index] = new_max_size
 
-    # Solvate based on the boxtype query
+    # Solvate based on the box_type query
     # this also adds ions to balance the charge
-    boxtype_func = boxtype_dict[boxtype]
+    boxtype_func = boxtype_dict[box_type]
     box, angles = boxtype_func(max(box_sizes))
     mol_solvated = BSS.Solvent.solvate(solvent, molecule=system,
                                            box=box, angles=angles, ion_conc=0.15)
 
     nmols = mol_solvated.nMolecules()
 
-    print(f"box dimensions for {box_axis_length} {box_axis_unit_query} {boxtype} are:")
-    print(f"box_min : {box_min}")
-    print(f"box_max : {box_max}")
-    print(f"box_size : {box_size}")
-    print(f"box_sizes : {box_sizes}")
-    print(f"with the final box : {box} with angles as : {angles}")
-    print(f"The total no of molecules is : {nmols}")
+    if verbose == True:
+        print(f"box dimensions for {box_edges} {box_edges_unit} {box_type} are:")
+        print(f"box_min : {box_min}")
+        print(f"box_max : {box_max}")
+        print(f"box_size : {box_size}")
+        print(f"box_sizes : {box_sizes}")
+        print(f"with the final box : {box} with angles as : {angles}")
+        print(f"The total no of molecules is : {nmols}")
 
     return mol_solvated
 
 
-def mergeLigands(ligand_1, ligand_2, engine_query):
+def merge_ligands(ligand_1, ligand_2, engine_query):
     """Merges two ligands in preperation for FEP run.
 
     Args:
         ligand_1 (_type_): BSS molecule
         ligand_2 (_type_): BSS molecule
-        engine_query (_type_): must be either amber somd or groamcs
+        engine_query (str): must be either AMBER, SOMD, GROMACS
 
     Returns:
         _type_: merged ligands as BSS object
     """
+
+    engine_query = validate.engine(engine_query)
+
     # Align ligand2 on ligand1
     mapping = BSS.Align.matchAtoms(
         ligand_1, ligand_2, engine=engine_query, complete_rings_only=True)
