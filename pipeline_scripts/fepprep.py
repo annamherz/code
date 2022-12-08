@@ -5,6 +5,7 @@ import BioSimSpace as BSS
 from BioSimSpace import _Exceptions
 import os
 import sys
+import csv
 from distutils.dir_util import copy_tree
 
 try:
@@ -24,55 +25,41 @@ from pipeline.utils import *
 trans = sys.argv[1]
 lig_1 = trans.split('~')[0]
 lig_2 = trans.split('~')[1]
-# engine
 engine_query = str(sys.argv[2]).upper()
-# number of lambda windows
 num_lambda = int(sys.argv[3])
 
 main_dir = os.environ["MAINDIRECTORY"]
-# ref the network.dat which was set in overall bash script
-net_file = os.environ["net_file"]
-# ref the protocol.dat which was set in overall bash script
-prot_file = os.environ["prot_file"]
+net_file = os.environ["net_file"] # network file
+prot_file = os.environ["prot_file"] # protocol file
 prep_dir = f"{main_dir}/prep"  # define lig prep location
 # define trans dir
 workdir = f"{main_dir}/outputs/{engine_query}/{lig_1}~{lig_2}"
 
 # check if the trans, eng and window are in the network file
-# found = False
-# with open(net_file, "r") as lambdas_file:
-#     reader = csv.reader(lambdas_file, delimiter=" ")
-#     for row in reader:
-#         if (row[0] == lig_1 and row[1] == lig_2) or (row[1] == lig_1 and row[0] == lig_2):
-#             if int(row[2]) == num_lambda:
-#                 if str(row[-1]).upper() == engine_query:
-#                     found = True
+found = False
+with open(net_file, "r") as lambdas_file:
+    reader = csv.reader(lambdas_file, delimiter=" ")
+    for row in reader:
+        if (row[0] == lig_1 and row[1] == lig_2) or (row[1] == lig_1 and row[0] == lig_2):
+            if int(row[2]) == num_lambda:
+                if str(row[-1]).upper() == engine_query:
+                    found = True
 
-# if not found:
-#     raise NameError(
-#         f"The perturbation {trans} (or the reverse) with {num_lambda} windows using {engine_query} was not found in network.dat.")
-
-# validate input
-num_lambda = validate.num_lambda(num_lambda)
-engine_query = validate.engine(engine_query)
+if not found:
+    raise NameError(
+        f"The perturbation {trans} (or the reverse) with {num_lambda} windows using {engine_query} was not found in {net_file}.")
 
 # parse protocol file
-protocol = check_protocol(prot_file) # instantiate the protocol as an object
+protocol = pipeline_protocol(prot_file) # instantiate the protocol as an object
 protocol.validate() # validate all the input
+protocol.num_lambda = validate.num_lambda(num_lambda)
+protocol.engine = validate.engine(engine_query)
 
-# Set temperature and pressure values
-start_temp = BSS.Types.Temperature(0, "kelvin")
-end_temp = BSS.Types.Temperature(300, "kelvin")
-pressure_query = BSS.Types.Pressure(1, "bar")
-# define minimisation steps
-min_steps = 10000 
-
-# Load equilibrated free inputs for both ligands. Complain if input not found. These systems already contain equil. waters.
-# these will have been prepped previously using the ligprep or by other means
+# Load equilibrated free inputs for both ligands.
 # create the system for each the free and the bound leg.
 system_free = None
 system_bound = None
-# zip together the molecules in that leg with the name for that leg
+
 for name, leg in zip(["lig", "sys"], ["free", "bound"]):
     # Load equilibrated free inputs
     system_1 = BSS.IO.readMolecules(
@@ -142,7 +129,6 @@ for name, leg in zip(["lig", "sys"], ["free", "bound"]):
 # repartition the hydrogen masses
 if protocol.hmr == True:
     print("repartitioning hydrogen masses for 4fs timestep...")
-    timestep_query = int(4)
     if engine_query == "AMBER":
         system_free.repartitionHydrogenMass(factor=3)
         system_bound.repartitionHydrogenMass(factor=3)
@@ -152,36 +138,46 @@ if protocol.hmr == True:
     elif engine_query == "SOMD":
         pass
 elif protocol.hmr == False:
-    timestep_query = int(2)
-
-timestep_unit = BSS.Units.Time.femtosecond
-
-eq_runtime_query = int(100)  # 100 ps NVT and NPT eq
-eq_runtime_unit = BSS.Units.Time.picosecond
+    pass
 
 # define the free energy protocol with all this information.
 if engine_query == 'AMBER' or engine_query == 'GROMACS':
     min_protocol = BSS.Protocol.FreeEnergyMinimisation(
         num_lam=num_lambda, steps=min_steps)
-    heat_protocol = BSS.Protocol.FreeEnergyEquilibration(timestep=timestep_query*timestep_unit, num_lam=num_lambda,
-                                                         runtime=eq_runtime_query*eq_runtime_unit, pressure=None,
-                                                         temperature_start=start_temp, temperature_end=end_temp
+    heat_protocol = BSS.Protocol.FreeEnergyEquilibration(timestep=protocol.timestep*protocol.timestep_unit,
+                                                         num_lam=protocol.num_lambda,
+                                                         runtime=protocol.eq_runtime*protocol.eq_runtime_unit,
+                                                         pressure=None,
+                                                         temperature_start=protocol.start_temperature*protocol.temperature_unit,
+                                                         temperature_end=protocol.end_temperature*protocol.temperature_unit
                                                          )
-    eq_protocol = BSS.Protocol.FreeEnergyEquilibration(timestep=timestep_query*timestep_unit, num_lam=num_lambda,
-                                                       runtime=eq_runtime_query*eq_runtime_unit, temperature=end_temp,
-                                                       pressure=pressure_query, restart=True
+    eq_protocol = BSS.Protocol.FreeEnergyEquilibration(timestep=protocol.timestep*protocol.timestep_unit,
+                                                       num_lam=protocol.num_lambda,
+                                                       runtime=protocol.eq_runtime*protocol.eq_runtime_unit,
+                                                       temperature=protocol.temperature*protocol.temperature_unit,
+                                                       pressure=protocol.pressure*protocol.pressure_unit,
+                                                       restart=True
                                                        )
-    freenrg_protocol = BSS.Protocol.FreeEnergy(timestep=timestep_query*timestep_unit, num_lam=num_lambda, temperature=end_temp,
-                                               runtime=protocol.sampling*protocol.sampling_unit, pressure=pressure_query,
-                                               restart=True
+    freenrg_protocol = BSS.Protocol.FreeEnergy(timestep=protocol.timestep*protocol.timestep_unit,
+                                                num_lam=protocol.num_lambda,
+                                                runtime=protocol.sampling*protocol.sampling_unit,
+                                                temperature=protocol.temperature*protocol.temperature_unit,
+                                                pressure=protocol.pressure*protocol.pressure_unit,
+                                                restart=True
                                                )
 
 elif engine_query == 'SOMD':
-    eq_protocol = BSS.Protocol.FreeEnergy(timestep=timestep_query*timestep_unit, num_lam=num_lambda, temperature=end_temp,
-                                          runtime=(eq_runtime_query*2)*eq_runtime_unit, pressure=pressure_query,
+    eq_protocol = BSS.Protocol.FreeEnergy(timestep=protocol.timestep*protocol.timestep_unit,
+                                          num_lam=num_lambda,
+                                          temperature=protocol.temperature*protocol.temperature_unit,
+                                          runtime=(protocol.eq_runtime*2)*protocol.eq_runtime_unit,
+                                          pressure=protocol.pressure*protocol.pressure_unit,
                                           )
-    freenrg_protocol = BSS.Protocol.FreeEnergy(timestep=timestep_query*timestep_unit, num_lam=num_lambda, temperature=end_temp,
-                                               runtime=protocol.sampling*protocol.sampling_unit, pressure=pressure_query,
+    freenrg_protocol = BSS.Protocol.FreeEnergy(timestep=protocol.timestep*protocol.timestep_unit,
+                                                num_lam=protocol.num_lambda,
+                                                runtime=protocol.sampling*protocol.sampling_unit,
+                                                temperature=protocol.temperature*protocol.temperature_unit,
+                                                pressure=protocol.pressure*protocol.pressure_unit,
                                                )
 
 # now set up the MD directories.
@@ -231,7 +227,7 @@ if engine_query == "SOMD":
             eq_protocol,
             engine=f"{engine_query}",
             work_dir=f"{workdir}/{leg}_0/eq",
-            extra_options={'minimise': True, 'minimise maximum iterations': min_steps, 'equilibrate': False}
+            extra_options={'minimise': True, 'minimise maximum iterations': protocol.min_steps, 'equilibrate': False}
         )
 
         BSS.FreeEnergy.Relative(

@@ -29,7 +29,7 @@ pmemd_path = os.environ["amber"] + "/bin/pmemd.cuda"
 main_dir = os.environ["MAINDIRECTORY"]
 protein_file = os.environ["protein_file"]
 ligands_folder = os.environ["ligands_folder"]
-prot_file = os.environ["prot_file"] # protocol.dat which was set in overall bash script
+protocol_file = os.environ["prot_file"]
 lig_name = sys.argv[1]
 print(f'prep for {lig_name}...')
 
@@ -48,7 +48,7 @@ for folder in folders:
         pass
 
 # parse protocol file
-protocol = check_protocol(prot_file) # instantiate the protocol as an object
+protocol = pipeline_protocol(protocol_file) # instantiate the protocol as an object
 protocol.validate() # validate all the input into needed format.
 
 # load, solvate and run the systems.

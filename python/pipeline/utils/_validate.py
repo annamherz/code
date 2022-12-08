@@ -170,11 +170,11 @@ class validate():
 
 
     @staticmethod
-    def sampling_unit(sampling_unit):
+    def time_unit(time_unit):
         """validates the sampling unit
 
         Args:
-            sampling_unit (str or BSS.Types.Time): unit of sampling
+            time_unit (str or BSS.Types.Time): unit of sampling
 
         Raises:
             TypeError: must be of type 'str' or 'BSS.Types.Time'
@@ -184,21 +184,23 @@ class validate():
             BSS.Types.Time: in BSS Time
         """
 
-        if not isinstance(sampling_unit, str):
-            if not isinstance(sampling_unit, BSS.Types.Time):
-                raise TypeError("'sampling_unit' must be of type 'str' or 'BSS.Types.Time'.")
+        if not isinstance(time_unit, str):
+            if not isinstance(time_unit, BSS.Types.Time):
+                raise TypeError("'time_unit' must be of type 'str' or 'BSS.Types.Time'.")
 
         else:
-            sampling_unit_list = ["ns", "ps"]
-            if sampling_unit not in sampling_unit_list:
-                raise ValueError(f"'sampling_unit' must be one of {sampling_unit_list}.")
+            time_unit_list = ["ns", "ps", "fs"]
+            if time_unit not in time_unit_list:
+                raise ValueError(f"'time_unit' must be one of {time_unit_list}.")
             
-            if sampling_unit == "ns":
-                sampling_unit = BSS.Units.Time.nanosecond
-            elif sampling_unit == "ps":
-                sampling_unit = BSS.Units.Time.picosecond        
+            if time_unit == "ns":
+                time_unit = BSS.Units.Time.nanosecond
+            elif time_unit == "ps":
+                time_unit = BSS.Units.Time.picosecond      
+            elif time_unit == "fs":
+                time_unit = BSS.Units.Time.femtosecond      
 
-        return sampling_unit
+        return time_unit
        
 
     @staticmethod
@@ -221,17 +223,82 @@ class validate():
                 raise TypeError("'box_edges_unit' must be of type 'str' or 'BSS.Types.Length'.")
 
         else:
-            box_edges_unit_list = ["angstrom", "nm"]
+            box_edges_unit = box_edges_unit.lower()
+            box_edges_unit_list = ["angstrom", "a", "nanometer", "nm"]
             if box_edges_unit not in box_edges_unit_list:
                 raise ValueError(f"'box_edges_unit' must be one of {box_edges_unit_list}.")
 
-            if box_edges_unit == "angstrom":
+            if box_edges_unit == "angstrom" or box_edges_unit == "a":
                 box_edges_unit = BSS.Units.Length.angstrom
-            elif box_edges_unit == "nm":
+            elif box_edges_unit == "nm" or box_edges_unit == "nanometer":
                 box_edges_unit = BSS.Units.Length.nanometer   
 
         return box_edges_unit
 
+
+    @staticmethod
+    def temperature_unit(temperature_unit):
+        """validates the temperature unit
+
+        Args:
+            temperature_unit (str or BSS.Types.Temperature): unit of temperature
+
+        Raises:
+            TypeError: must be of type 'str' or 'BSS.Types.Temperature'
+            ValueError: if not of BSS.Types.Temperature
+        Returns:
+            BSS.Types.Temperature: in BSS Temperature
+        """
+
+        if not isinstance(temperature_unit, str):
+            if not isinstance(temperature_unit, BSS.Types.Temperature):
+                raise TypeError("'temperature_unit' must be of type 'str' or 'BSS.Types.Temperature'.")
+
+        else:
+            temperature_unit = temperature_unit.lower()
+            temperature_unit_list = ["kelvin", "k", "celsius", "c"]
+            if temperature_unit not in temperature_unit_list:
+                raise ValueError(f"'temperature_unit' must be one of {temperature_unit_list}.")
+
+            if temperature_unit == "k" or temperature_unit == "kelvin":
+                temperature_unit = BSS.Units.Temperature.kelvin
+            elif temperature_unit == "c" or temperature_unit == "celsius":
+                temperature_unit = BSS.Units.Temperature.celsius   
+
+        return temperature_unit
+
+
+    @staticmethod
+    def pressure_unit(pressure_unit):
+        """validates the pressure unit
+
+        Args:
+            pressure_unit (str or BSS.Types.Pressure): unit of pressure
+
+        Raises:
+            TypeError: must be of type 'str' or 'BSS.Types.Pressure'
+            ValueError: if not of BSS.Types.Pressure
+        Returns:
+            BSS.Types.Pressure: in BSS Pressure
+        """
+
+        if not isinstance(pressure_unit, str):
+            if not isinstance(pressure_unit, BSS.Types.Pressure):
+                raise TypeError("'pressure_unit' must be of type 'str' or 'BSS.Types.Pressure'.")
+
+        else:
+            pressure_unit = pressure_unit.lower()
+            pressure_unit_list = ["atm", "atmosphere", "bar"]
+            if pressure_unit not in pressure_unit_list:
+                raise ValueError(f"'pressure_unit' must be one of {pressure_unit_list}.")
+
+            if pressure_unit == "atm" or pressure_unit == "atmosphere":
+                pressure_unit = BSS.Units.Pressure.atm
+            elif pressure_unit == "bar":
+                pressure_unit = BSS.Units.Pressure.bar  
+
+        return pressure_unit
+        
 
     @staticmethod
     def box_type(box_type):
