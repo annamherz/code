@@ -106,13 +106,13 @@ class check_protocol():
             self.ligand_forcefield = validate.lig_ff(query_dict['ligand forcefield'])
             self.protein_forcefield = validate.prot_ff(query_dict['protein forcefield'])
             self.solvent = validate.solvent_ff(query_dict['solvent'])
-            self.box_edges = validate.box_edges(query_dict['box edges'])
+            self.box_edges = validate.integer(query_dict['box edges'])
             self.box_edges_unit = validate.box_edges_unit(query_dict['box edges unit'])
             self.box_type = validate.box_type(query_dict['box type'])
-            self.sampling = validate.sampling(query_dict['sampling'])
+            self.sampling = validate.integer(query_dict['sampling'])
             self.sampling_unit = validate.sampling_unit(query_dict['sampling unit'])
-            self.hmr = validate.hmr(query_dict['hmr'])
-            self.repeats = validate.repeats(query_dict['repeats'])
+            self.hmr = validate.boolean(query_dict['hmr'])
+            self.repeats = validate.integer(query_dict['repeats'])
             self.trajectories = validate.trajectories(query_dict['trajectories'])
 
         except Exception as e:

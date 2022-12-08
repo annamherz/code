@@ -21,6 +21,8 @@ import csv
 import numpy as np
 import pandas as pd 
 
+from ..utils import *
+
 # functions
 # TODO clean up and make sure have description at start
 
@@ -28,6 +30,9 @@ def convert_yml_into_freenrgworkflows(exp_file, exp_file_dat):
     # get the experimental data into a useable format (from yml to csv)
     # for freenergworkflows, want to save as lig, Ki
     # experimental values (e.g. ic50/ki) for all ligands in our set.
+
+    exp_file = validate.file_path(exp_file)
+
     with open(exp_file, "r") as file:
         data = yaml.safe_load(file) # loads as dictionary
 

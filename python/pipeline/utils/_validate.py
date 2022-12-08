@@ -1,17 +1,28 @@
-# validate various inputs
-
 import BioSimSpace as BSS
-from BioSimSpace.Units.Length import angstrom as _angstrom
 import os
 
 
 class validate():
+    """class of staticmethods to return validated input
+    """
 
     def __init__(self):
         pass
   
     @staticmethod
     def file_path(file_path):
+        """validates the provided file path
+
+        Args:
+            file_path (str): path to file
+
+        Raises:
+            TypeError: must be of type 'str'
+            ValueError: path must exist!
+
+        Returns:
+            str: file path
+        """
         if not isinstance(file_path, str):
             raise TypeError("'file_path' must be of type 'str'.")
 
@@ -23,6 +34,18 @@ class validate():
 
     @staticmethod
     def engine(engine):
+        """validates the provided engine
+
+        Args:
+            engine (str): engine to be used for the MD / FEP run
+
+        Raises:
+            TypeError: must be of type 'str'
+            ValueError: must be one of BSS.FreeEnergy.engines().
+
+        Returns:
+            str: engine.upper()
+        """
         if not isinstance(engine, str):
             raise TypeError("'engine' must be of type 'str'.")
 
@@ -34,6 +57,18 @@ class validate():
 
     @staticmethod
     def lig_ff(lig_ff):
+        """validates the provided ligand forcefield
+
+        Args:
+            lig_ff (str): name of the ligand forcefield
+
+        Raises:
+            TypeError: must be of type 'str'
+            ValueError: must be either sage, parsely, gaff or gaff2.
+
+        Returns:
+            str: forcefield that can be used with BSS.Parameters.parameterise()
+        """
 
         if not isinstance(lig_ff, str):
             raise TypeError("'lig_ff' must be of type 'str'.")
@@ -56,6 +91,18 @@ class validate():
 
     @staticmethod
     def prot_ff(prot_ff):
+        """validates the provided protein forcefield
+
+        Args:
+            prot_ff (str): name of the protein forcefield
+
+        Raises:
+            TypeError: must be of type 'str'
+            ValueError: must be one of the BSS.Parameters.forcefields() protein forcefields.
+
+        Returns:
+            str: forcefield that can be used with BSS.Parameters.parameterise()
+        """
 
         if not isinstance(prot_ff, str):
             raise TypeError("'prot_ff' must be of type 'str'.")
@@ -69,6 +116,18 @@ class validate():
 
     @staticmethod
     def solvent_ff(solvent_ff):
+        """validates the provided solvent forcefield / water model
+
+        Args:
+            solvent_ff (str): name of the water model
+
+        Raises:
+            TypeError: must be of type 'str'
+            ValueError: must be in BSS.Solvent.waterModels()
+
+        Returns:
+            str: water model that can be used with BSS.Solvent.solvate()
+        """
 
         if not isinstance(solvent_ff, str):
             raise TypeError("'solvent_ff' must be of type 'str'.")
@@ -79,17 +138,51 @@ class validate():
         return solvent_ff.lower()
 
     @staticmethod
-    def sampling(sampling):
+    def integer(integer):
+        """validates the provided integer so that it is an integer
 
-        if not isinstance(sampling, int):
-            if not isinstance(sampling, str):
-                raise ValueError("sampling must be of type 'int' or 'str'")
+        Args:
+            integer (str or int or float): an integer / number to be converted into an integer
 
-        return int(sampling)
+        Raises:
+            TypeError: must be of type 'str' or 'int' or 'float'
+            ValueError: 'str' could not be converted into an integer
+
+        Returns:
+            int: integer in integer format
+        """
+
+        if not isinstance(integer, int):
+            if not isinstance(integer, float):
+                if not isinstance(integer, str):
+                    raise TypeError(f"{integer} must be of type 'int', 'float' or 'str'")
+                else:
+                    try:
+                        integer = float(integer)
+                    except:
+                        raise ValueError(f"{integer} could not be converted into an integer")
+        
+        if isinstance(integer, float):
+            print(f"{integer} will be turned into {int(integer)}")
+            integer = round(integer)
+
+        return integer
 
 
     @staticmethod
     def sampling_unit(sampling_unit):
+        """validates the sampling unit
+
+        Args:
+            sampling_unit (str or BSS.Types.Time): unit of sampling
+
+        Raises:
+            TypeError: must be of type 'str' or 'BSS.Types.Time'
+            ValueError: if not of BSS.Types.Time, must be 'ns' or 'ps'.
+
+        Returns:
+            BSS.Types.Time: in BSS Time
+        """
 
         if not isinstance(sampling_unit, str):
             if not isinstance(sampling_unit, BSS.Types.Time):
@@ -106,20 +199,22 @@ class validate():
                 sampling_unit = BSS.Units.Time.picosecond        
 
         return sampling_unit
-
-        
-    @staticmethod
-    def box_edges(box_edges):
-
-        if not isinstance(box_edges, int):
-            if not isinstance(box_edges, str):
-                raise TypeError("'box_edges' must be of type 'str' or 'int.")
-
-        return int(box_edges)
-        
+       
 
     @staticmethod
     def box_edges_unit(box_edges_unit):
+        """validates the box edges unit
+
+        Args:
+            box_edges_unit (str or BSS.Types.Length): unit of length
+
+        Raises:
+            TypeError: must be of type 'str' or 'BSS.Types.Length'
+            ValueError: if not of BSS.Types.Length, must be 'nm' or 'angstrom'.
+
+        Returns:
+            BSS.Types.Length: in BSS Length
+        """
 
         if not isinstance(box_edges_unit, str):
             if not isinstance(box_edges_unit, BSS.Types.Length):
@@ -140,6 +235,18 @@ class validate():
 
     @staticmethod
     def box_type(box_type):
+        """validates the box type
+
+        Args:
+            box_type (str): type of box to be used for solvation.
+
+        Raises:
+            TypeError: must be of type 'str'
+            ValueError: must be one of the box types accepted by minimum_solvation()
+
+        Returns:
+            str: box type
+        """
 
         if not isinstance(box_type, str):
             raise TypeError("'box_type' must be of type 'str'.")
@@ -152,36 +259,54 @@ class validate():
 
 
     @staticmethod
-    def hmr(hmr):
+    def boolean(boolean):
+        """validates boolean input
 
-        if not isinstance(hmr, bool):
-            if not isinstance(hmr, str):
-                raise TypeError("'hmr' must be of type 'str' (True or False) or 'bool'.")
-            else:
-                hmr_list = ["True", "False"]
-                if hmr not in hmr_list:
-                    raise ValueError(f"'hmr' must be one of {hmr_list}.")
-                
-                if hmr == "True":
-                    hmr = True
-                elif hmr == "False":
-                    hmr = False
+        Args:
+            boolean (str or bool): boolean
+
+        Raises:
+            TypeError: must be of type 'str' or 'bool'
+            ValueError: if 'str' , must be 'True'/'1' or 'False'/'0'
+
+        Returns:
+            bool: boolean
+        """
+
+        if boolean != 1 and boolean != 0:
+            if not isinstance(boolean, bool):
+                if not isinstance(boolean, str):
+                    raise TypeError(f"{boolean} must be of type 'str' (True or False) or 'bool'.")
+                else:
+                    boolean_list = ["True", "False","1","0"]
+                    if boolean not in boolean_list:
+                        raise ValueError(f"{boolean} must be one of {boolean_list}.")
+        else:
+            boolean = str(boolean)
+
+
+        if boolean == "True" or boolean == "1":
+            boolean = True
+        elif boolean == "False" or boolean == "0":
+            boolean = False
         
-        return hmr
-
-
-    @staticmethod
-    def repeats(repeats):
-
-        if not isinstance(repeats, str):
-            if not isinstance(repeats, int):
-                raise TypeError("'repeats' must be of type 'str' or 'int'.")
-
-        return int(repeats)
+        return boolean
 
 
     @staticmethod
     def trajectories(trajectories):
+        """validate input for trajectories being saved or not
+
+        Args:
+            trajectories (str): whether to save the trajectory or not
+
+        Raises:
+            TypeError: must be of type 'str'
+            ValueError: must be in trajectories_list so can be recognised by future scripts
+
+        Returns:
+           str: how many of the trajectories will be saved
+        """
 
         if not isinstance(trajectories, str):
             raise TypeError("'trajectories' must be of type 'str'.")
@@ -192,15 +317,26 @@ class validate():
 
         return trajectories
 
+
     @staticmethod
     def num_lambda(num_lambda):
+        """validate number of lambdas to be run
 
-        if not isinstance(num_lambda, str):
-            if not isinstance(num_lambda, int):
-                raise TypeError("'num_lambda' must be of type 'str' or 'int'.")
+        Args:
+            num_lambda (str or int): number of lambdas
+
+        Raises:
+            TypeError: must be of type 'str' or 'int'
+            ValueError: must be accepted number of lambda windows.
+
+        Returns:
+            int: number of lambdas
+        """
+
+        validate.integer(num_lambda)
 
         num_lambda_list = [11]
-        if int(num_lambda) not in num_lambda_list:
+        if num_lambda not in num_lambda_list:
             raise ValueError(f"'num_lambda' must be one of {num_lambda}.")
 
-        return int(num_lambda)
+        return num_lambda
