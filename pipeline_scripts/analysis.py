@@ -35,16 +35,14 @@ lig_2 = trans.split('~')[1]
 engine = sys.argv[2].rstrip()
 
 # options
-extra_options = {'save_graphs': True, 'save_pickle':True}
-chosen_estimator = "MBAR" # MBAR or TI
-chosen_method = "alchemlyb" # native or alchemlyb
-est_meth = f"{chosen_estimator}_{chosen_method}"
-method = f"benchmark" # this is for writing in the output folder
-file_ext = f"{engine}_{est_meth}_{method}" # for all files written
+analysis_options = {'estimator': "MBAR", "method":"alchemlyb",
+                    "check_overlap":True,
+                    "try_pickle":True, 'save_pickle':True,
+                    "auto_equilibration": False,
+                    "truncate_percentage": 0,
+                    "truncate_keep":"start"}
 
 main_dir = _os.environ["MAINDIRECTORY"]
-# main_dir = "/home/anna/Documents/benchmark/test_tyk2_benchmark_sage"
-final_results_file_path = f"{main_dir}/outputs/final_summary_{file_ext}.csv"
 
 # find correct path, use extracted if it exists
 if _os.path.exists(f"{main_dir}/outputs/{engine}_extracted/{trans}"):
@@ -56,16 +54,20 @@ if not _os.path.exists(path_to_dir):
     raise OSError(f"{path_to_dir} does not exist.")
 
 print(f'analysing results for {path_to_dir}')
-print(f"using {chosen_method} and {chosen_estimator} for analysis")
+print(f"using {analysis_options} for analysis")
 
+# using the pipeline module for analysis
 analysis = analyse(path_to_dir)
-analysis.set_options(extra_options)
-
+analysis.set_options(analysis_options)
 avg, error, repeats_tuple_list = analysis.analyse_all_repeats()
+analysis.plot_graphs()
+
+method = analysis.pickle_ext
+final_results_file_path = f"{main_dir}/outputs/final_summary_{method}.csv"
 
 # ####### WRITING DATA for the final result
 # data point for average
-data_point_avg = [lig_1, lig_2, str(avg), str(error), engine, est_meth, method]
+data_point_avg = [lig_1, lig_2, str(avg), str(error), engine, method]
 print(data_point_avg)
 
 # use csv to open the results file.
@@ -103,8 +105,8 @@ else:
 no_repeats = list(range(len(repeats_tuple_list)))
 # use csv to open the results file.
 for r in no_repeats:
-    data_point = [lig_1, lig_2, repeats_tuple_list[r][1], repeats_tuple_list[r][2], engine, est_meth, method]
-    results_file_path = f"{main_dir}/outputs/repeat_{no_repeats.index(r)}_{file_ext}.csv"
+    data_point = [lig_1, lig_2, repeats_tuple_list[r][1], repeats_tuple_list[r][2], engine, method]
+    results_file_path = f"{main_dir}/outputs/repeat_{no_repeats.index(r)}_{method}.csv"
     with open(results_file_path, "a") as freenrg_writefile:
         writer = csv.writer(freenrg_writefile)
 
