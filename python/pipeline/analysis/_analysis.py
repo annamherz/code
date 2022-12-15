@@ -43,11 +43,12 @@ class analyse():
         self._free_val_dict = {}
         self._bound_err_dict = {}  # for the final error defined
         self._free_err_dict = {}
+        self.repeats_tuple_list = []
 
         # intialise other things
         analyse._get_repeat_folders(self)
         analyse._set_default_options(self)
-        self._analysed_all = False
+        self.is_analysed = False
 
 
     def _set_default_options(self):
@@ -72,6 +73,8 @@ class analyse():
         f"eq{str(self._auto_equilibration).lower()}_"+
         f"stats{str(self._statistical_inefficiency).lower()}_"+
         f"truncate{str(self._truncate_percentage)}{self._truncate_keep}")
+
+        self.pickle_ext = pickle_ext
 
         return pickle_ext
 
@@ -114,7 +117,7 @@ class analyse():
         if "truncate_keep" in options_dict:
             self._truncate_keep = validate.string(
                 options_dict["truncate_keep"])
-            if self.estimator not in ['start', 'end']:
+            if self._truncate_keep not in ['start', 'end']:
                 raise ValueError(
                     "'truncate_keep' must be either 'start' or 'end'.")
 
@@ -204,13 +207,29 @@ class analyse():
         """
 
         if self._try_pickle:
-            try_pickle = analyse._check_pickle(self)
-        if try_pickle:
+            do_pickle = analyse._check_pickle(self)
+        if do_pickle:
             freenrg_rel, repeats_tuple_list = analyse._analyse_all_repeats_pickle(
                 self)
         else:
             freenrg_rel, repeats_tuple_list = analyse._analyse_all_repeats_normal(
                 self)
+
+        # set the average and error
+        self.freenrg = freenrg_rel[0]
+        self.error = freenrg_rel[1]
+        self.repeats_tuple_list = repeats_tuple_list
+        self.is_analysed = True
+
+        if self._check_overlap:
+            analyse.check_overlap(self)
+    
+        if self._save_pickle:
+            if do_pickle:
+                print("already using pickles, will not be saving again.")
+            else:
+                print("saving the pmf dictionaries for bound and free as pickles.")
+                analyse.save_pickle(self)
 
         return (freenrg_rel[0], freenrg_rel[1], repeats_tuple_list)
 
@@ -284,15 +303,6 @@ class analyse():
         freenrg_rel, repeats_tuple_list = analyse._calculate_freenrg(
             self, free_calculated, bound_calculated)
 
-        if self._check_overlap:
-            analyse.check_overlap(self)
-
-        if self._save_pickle:
-            print("saving the pmf dictionaries for bound and free as pickles.")
-            analyse.save_pickle(self)
-
-        self._analysed_all = True
-
         return (freenrg_rel, repeats_tuple_list)
 
 
@@ -327,14 +337,6 @@ class analyse():
 
         freenrg_rel, repeats_tuple_list = analyse._calculate_freenrg(
             self, free_calculated, bound_calculated)
-
-        if self._check_overlap:
-            analyse.check_overlap(self)
-
-        if self._save_pickle:
-            print("already using pickles, will not be saving again.")
-
-        self._analysed_all = True
 
         return (freenrg_rel, repeats_tuple_list)
 
@@ -418,7 +420,7 @@ class analyse():
         self._pickle_dir = validate.folder_path(self._pickle_dir, create=True)
         pickle_ext = analyse._pickle_ext(self)
 
-        if not self._analysed_all:
+        if not self.is_analysed:
             warnings.warn(
                 "can't save pickle, not all repeats have been analysed. please self.analyse_all_repeats() first!")
         else:
@@ -447,7 +449,7 @@ class analyse():
 
     def check_overlap(self):
 
-        if not self._analysed_all:
+        if not self.is_analysed:
             warnings.warn(
                 "can't check overlap, not all repeats have been analysed. please self.analyse_all_repeats() first!")
 
@@ -476,7 +478,7 @@ class analyse():
 
     def plot_graphs(self):
 
-        if not self._analysed_all:
+        if not self.is_analysed:
             warnings.warn(
                 "can't plot, not all repeats have been analysed. please self.analyse_all_repeats() first!")
 

@@ -506,7 +506,7 @@ class validate():
         """checks if it is a BSS system
 
         Args:
-            system (BioSimSpace._SireWrappers._system.System): _description_
+            system (BioSimSpace._SireWrappers._system.System): the system
 
         Raises:
             TypeError: if not BioSimSpace._SireWrappers._system.System
@@ -520,3 +520,28 @@ class validate():
             raise TypeError("'system' must be a BSS system!.")
 
         return system
+
+
+    @staticmethod
+    def analysis(analysis, analysed=True):
+        """checks if it is an analysed pipeline.analysis.analyse 
+
+        Args:
+            system (pipeline.analysis.analyse): an analysed pipeline analysis
+
+        Raises:
+            TypeError: if not pipeline.analysis.analyse
+
+        Returns:
+            pipeline.analysis.analyse: the passed system
+        """
+
+
+        if not isinstance(analysis, pipeline.analysis.analyse):
+            raise TypeError("'analysis' must be a pipeline.analysis.analyse!.")
+        
+        if analysed == True:
+            if not analysis.is_analysed:
+                raise ValueError("'analysis' must have already been analysed!.")
+
+        return analysis

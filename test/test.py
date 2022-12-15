@@ -14,6 +14,7 @@ from pipeline import *
 
 
 from pipeline.analysis import *
+from pipeline.utils import *
 
 work_dir = "/home/anna/Documents/code/test/AMBER_extracted/lig_ejm31~lig_ejm42"
 analysis = pipeline.analysis.analyse(work_dir)
@@ -22,13 +23,14 @@ analysis_options = {'estimator': "MBAR", "method":"alchemlyb",
                     "check_overlap":True,
                     "try_pickle":True, 'save_pickle':True,
                     "auto_equilibration": False,
-                    "truncate_percentage": 0}#
+                    "truncate_percentage": 0,
+                    "truncate_keep":"start"}
 
 analysis.set_options(analysis_options)
-print(analysis._analysed_all)
 analysis.analyse_all_repeats()
 analysis.plot_graphs()
-
+final_results_folder = f"{work_dir}/results"
+write_analysis_file(analysis, final_results_folder)
 
 # file = "/home/anna/Documents/benchmark/tyk2_benchmark/execution_model_rbfenn_test/protocol.dat"
 # system = BSS.IO.readMolecules(
