@@ -12,55 +12,73 @@ except:
 
 from pipeline import *
 
+
+from pipeline.analysis import *
+
+work_dir = "/home/anna/Documents/code/test/AMBER_extracted/lig_ejm31~lig_ejm42"
+analysis = pipeline.analysis.analyse(work_dir)
+
+analysis_options = {'estimator': "MBAR", "method":"alchemlyb",
+                    "check_overlap":True,
+                    "try_pickle":True, 'save_pickle':True,
+                    "auto_equilibration": False,
+                    "truncate_percentage": 0}#
+
+analysis.set_options(analysis_options)
+print(analysis._analysed_all)
+analysis.analyse_all_repeats()
+analysis.plot_graphs()
+
+
 # file = "/home/anna/Documents/benchmark/tyk2_benchmark/execution_model_rbfenn_test/protocol.dat"
 # system = BSS.IO.readMolecules(
 #         [f"/home/anna/Documents/benchmark/mcl1_benchmark/prep/lig_23_lig_equil_solv.rst7",
 #         f"/home/anna/Documents/benchmark/mcl1_benchmark/prep/lig_23_lig_equil_solv.prm7"])
 
-from pipeline.prep import *
-from pipeline.utils import *
+# from pipeline.prep import *
+# from pipeline.utils import *
 
-lig_1 = "lig_ejm31"
-lig_2 = "lig_ejm42"
-engine_query = "AMBER"
-num_lambda = 11
+# lig_1 = "lig_ejm31"
+# lig_2 = "lig_ejm42"
+# engine_query = "AMBER"
+# num_lambda = 11
 
-# files that were set in the run_all script
-main_dir = "/home/anna/Documents/benchmark/tyk2_benchmark"
-prot_file = file = "/home/anna/Documents/benchmark/tyk2_benchmark/execution_model_rbfenn_test/protocol.dat"
-prep_dir = f"{main_dir}/prep"  # define lig prep location
-workdir = f"/home/anna/Documents/code/test/outputs/{engine_query}/{lig_1}~{lig_2}" # pert dir
+# # files that were set in the run_all script
+# main_dir = "/home/anna/Documents/benchmark/tyk2_benchmark"
+# prot_file = file = "/home/anna/Documents/benchmark/tyk2_benchmark/execution_model_rbfenn_test/protocol.dat"
+# prep_dir = f"{main_dir}/prep"  # define lig prep location
+# workdir = f"/home/anna/Documents/code/test/outputs/{engine_query}/{lig_1}~{lig_2}" # pert dir
 
-# parse protocol file
-protocol = pipeline_protocol(prot_file) # instantiate the protocol as an object
-protocol.validate() # validate all the input
-protocol.rewrite_protocol() # rewrite protocol file
-# add the number of lambdas and engine to the protocol
-protocol.num_lambda = validate.num_lambda(num_lambda)
-protocol.engine = validate.engine(engine_query)
-
-
-# create the system for each the free and the bound leg.
-system_free = None
-system_bound = None
+# # parse protocol file
+# protocol = pipeline_protocol(prot_file) # instantiate the protocol as an object
+# protocol.validate() # validate all the input
+# protocol.rewrite_protocol() # rewrite protocol file
+# # add the number of lambdas and engine to the protocol
+# protocol.num_lambda = validate.num_lambda(num_lambda)
+# protocol.engine = validate.engine(engine_query)
 
 
-for name, leg in zip(["lig", "sys"], ["free", "bound"]):
-    # Load equilibrated inputs for both ligands
-    system_1 = BSS.IO.readMolecules(
-        [f"{prep_dir}/{lig_1}_{name}_equil_solv.rst7", f"{prep_dir}/{lig_1}_{name}_equil_solv.prm7"])
-    system_2 = BSS.IO.readMolecules(
-        [f"{prep_dir}/{lig_2}_{name}_equil_solv.rst7", f"{prep_dir}/{lig_2}_{name}_equil_solv.prm7"])
+# # create the system for each the free and the bound leg.
+# system_free = None
+# system_bound = None
 
-    print(f"Preparing the {leg} leg...")
-    if leg == "free":
-        system_free = merge.merge_system(system_1, system_2, protocol.engine)
-    if leg == "bound":
-        system_bound = merge.merge_system(system_1, system_2, protocol.engine)
 
-# instantiate each system as a fepprep class with the protocol
-fepprep = fepprep(system_free, system_bound, protocol)
-fepprep.generate_folders(workdir)
+# for name, leg in zip(["lig", "sys"], ["free", "bound"]):
+#     # Load equilibrated inputs for both ligands
+#     system_1 = BSS.IO.readMolecules(
+#         [f"{prep_dir}/{lig_1}_{name}_equil_solv.rst7", f"{prep_dir}/{lig_1}_{name}_equil_solv.prm7"])
+#     system_2 = BSS.IO.readMolecules(
+#         [f"{prep_dir}/{lig_2}_{name}_equil_solv.rst7", f"{prep_dir}/{lig_2}_{name}_equil_solv.prm7"])
+
+#     print(f"Preparing the {leg} leg...")
+#     if leg == "free":
+#         system_free = merge.merge_system(system_1, system_2, protocol.engine)
+#     if leg == "bound":
+#         system_bound = merge.merge_system(system_1, system_2, protocol.engine)
+
+# # instantiate each system as a fepprep class with the protocol
+# fepprep = fepprep(system_free, system_bound, protocol)
+# fepprep.generate_folders(workdir)
 
 
 
