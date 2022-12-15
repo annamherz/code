@@ -16,6 +16,7 @@ class pipeline_protocol():
         # update query dict if anything is missing
         self._query_dict = pipeline_protocol._check_query(self)
 
+
     def _read_protocol(self):
         """reads the protocol file into a dictionary
 
@@ -42,17 +43,7 @@ class pipeline_protocol():
                     query_dict[f"{line.split('=')[0].strip().lower()}"] = line.split('=')[-1].strip()
 
         return query_dict
-    
-    def rewrite_protocol(self):
-        """ rewrite the protocol to the same file after validation
-        """
-        new_file = self._prot_file
-        query_dict = self._query_dict
 
-        with open(new_file, "w") as protocol_file:
-            writer = csv.writer(protocol_file)
-            for query in query_dict.keys():
-                writer.writerow([f"{query} = {query_dict[query]}"])
 
     def _check_query(self):
         """fills in any gaps of the dict from the protocol file
@@ -83,7 +74,7 @@ class pipeline_protocol():
                     }
 
         # remove any unrecognised dictionary entries
-        for query in query_dict.keys():
+        for query in list(query_dict):
             if query not in default_dict.keys():
                 del query_dict[query]
                 print(f"{query} removed from the protocol as not recognised.\n please use only:\n {default_dict.keys()}")
@@ -96,6 +87,19 @@ class pipeline_protocol():
         
             
         return query_dict
+
+    
+    def rewrite_protocol(self):
+        """ rewrite the protocol to the same file after validation
+        """
+        new_file = self._prot_file
+        query_dict = self._query_dict
+
+        with open(new_file, "w") as protocol_file:
+            writer = csv.writer(protocol_file)
+            for query in query_dict.keys():
+                writer.writerow([f"{query} = {query_dict[query]}"])
+
 
     def validate(self):
         """validates all the input from the dict from the protocol file.

@@ -395,3 +395,18 @@ def gen_graph(ligands=None, perturbations=None, file_dir=None):
 
     return graph
 
+
+# from alvaro
+def get_average_weighted_simple_paths(G):
+    '''Calculate the average number of connection between each pair of nodes. 
+    '''
+    paths_per_nodepair_combination = []
+    for node_i in G.nodes:
+        for node_j in G.nodes:
+            if node_i == node_j: break
+            possible_paths = nx.all_simple_edge_paths(G, node_i, node_j)
+            sum_of_weighted_averaged_paths = sum([np.average([G.get_edge_data(*edge)['weight']
+                                                                                      for edge in path])
+                                                                                      for path in possible_paths])
+            paths_per_nodepair_combination.append(sum_of_weighted_averaged_paths)
+    return np.average(paths_per_nodepair_combination)

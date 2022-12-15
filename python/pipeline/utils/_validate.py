@@ -1,5 +1,8 @@
 import BioSimSpace as BSS
+from BioSimSpace._SireWrappers import System as _System
 import os
+import warnings
+import pipeline
 
 
 class validate():
@@ -10,7 +13,7 @@ class validate():
         pass
   
     @staticmethod
-    def file_path(file_path):
+    def file_path(file_path, create=False):
         """validates the provided file path
 
         Args:
@@ -31,6 +34,33 @@ class validate():
         
         return file_path
 
+
+    @staticmethod
+    def folder_path(folder_path, create=False):
+        """validates the provided file path
+
+        Args:
+            folder_path (str): path to file
+
+        Raises:
+            TypeError: must be of type 'str'
+            ValueError: path must exist!
+
+        Returns:
+            str: file path
+        """
+        if not isinstance(folder_path, str):
+            raise TypeError("'folder_path' must be of type 'str'.")
+
+        if not os.path.exists(folder_path):
+            raise ValueError(f"{folder_path} does not exist!")
+        
+        if create:
+            if not os.path.exists(folder_path):
+                os.mkdir(folder_path)
+            else:
+                pass   
+            
 
     @staticmethod
     def engine(engine):
@@ -158,7 +188,10 @@ class validate():
                     raise TypeError(f"{integer} must be of type 'int', 'float' or 'str'")
                 else:
                     try:
-                        integer = float(integer)
+                        if "." in integer:
+                            integer = float(integer)
+                        else:
+                            integer = int(integer)
                     except:
                         raise ValueError(f"{integer} could not be converted into an integer")
         
@@ -407,3 +440,60 @@ class validate():
             raise ValueError(f"'num_lambda' must be one of {num_lambda}.")
 
         return num_lambda
+
+
+    @staticmethod
+    def pipeline_protocol(protocol, fepprep=False):
+        """check if the passed protocol is a correct pipeline_protocol
+
+        Args:
+            protocol (pipeline.prep.pipeline_protocol): a previously
+            read and validated pipeline protocol
+
+            fepprep (bool) : 
+
+        Returns:
+            pipeline.prep.pipeline_protocol: the protocol if it is okay
+        """
+
+        if not isinstance(protocol, pipeline.prep.pipeline_protocol):
+            raise TypeError("'protocol' must be of type 'pipeline.prep.pipeline_protocol'.")
+
+        if not isinstance(fepprep, bool):
+            raise TypeError("'fepprep' must be of type 'bool'.")
+
+        # validate incase it wasnt
+        protocol.validate()
+
+        # if fepprep, check that an engine and no of lam was specified
+        if fepprep:
+            if not hasattr(protocol, "num_lambda"):
+                warnings.warn("the provided protocol does not have attribute 'num_lambda'.\n 11 lambda windows will be used...")
+                protocol.num_lambda = 11
+            if not hasattr(protocol, "engine"):
+                raise TypeError("protocol must have an engine to be used for fep.\n please set an engine using protocol.engine = 'ENGINE' ")
+            else:
+                protocol.engine = validate.engine(protocol.engine)
+
+        return protocol
+
+
+    @staticmethod
+    def system(system):
+        """checks if it is a BSS system
+
+        Args:
+            system (BioSimSpace._SireWrappers._system.System): _description_
+
+        Raises:
+            TypeError: if not BioSimSpace._SireWrappers._system.System
+
+        Returns:
+            BioSimSpace._SireWrappers._system.System: the passed system
+        """
+
+
+        if not isinstance(system, _System):
+            raise TypeError("'system' must be a BSS system!.")
+
+        return system
