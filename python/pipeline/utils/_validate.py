@@ -52,15 +52,18 @@ class validate():
         if not isinstance(folder_path, str):
             raise TypeError("'folder_path' must be of type 'str'.")
 
-        if not os.path.exists(folder_path):
-            raise ValueError(f"{folder_path} does not exist!")
-        
         if create:
             if not os.path.exists(folder_path):
-                os.mkdir(folder_path)
+                warnings.warn(f"{folder_path} does not exist!")
+                os.makedirs(folder_path)
             else:
                 pass   
-            
+        else:
+            if not os.path.exists(folder_path):
+                raise ValueError(f"{folder_path} does not exist!")
+        
+        return folder_path
+
 
     @staticmethod
     def engine(engine):

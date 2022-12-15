@@ -29,7 +29,7 @@ num_lambda = 11
 main_dir = "/home/anna/Documents/benchmark/tyk2_benchmark"
 prot_file = file = "/home/anna/Documents/benchmark/tyk2_benchmark/execution_model_rbfenn_test/protocol.dat"
 prep_dir = f"{main_dir}/prep"  # define lig prep location
-workdir = f"outputs/{engine_query}/{lig_1}~{lig_2}" # pert dir
+workdir = f"/home/anna/Documents/code/test/outputs/{engine_query}/{lig_1}~{lig_2}" # pert dir
 
 # parse protocol file
 protocol = pipeline_protocol(prot_file) # instantiate the protocol as an object
@@ -44,6 +44,7 @@ protocol.engine = validate.engine(engine_query)
 system_free = None
 system_bound = None
 
+
 for name, leg in zip(["lig", "sys"], ["free", "bound"]):
     # Load equilibrated inputs for both ligands
     system_1 = BSS.IO.readMolecules(
@@ -53,15 +54,13 @@ for name, leg in zip(["lig", "sys"], ["free", "bound"]):
 
     print(f"Preparing the {leg} leg...")
     if leg == "free":
-        system_free = fepprep.merge_system(system_1, system_2,protocol.engine)
-        print(type(system_free))
+        system_free = merge.merge_system(system_1, system_2, protocol.engine)
     if leg == "bound":
-        system_bound = fepprep.merge_system(system_1, system_2, protocol.engine)
-        print(type(system_bound))
+        system_bound = merge.merge_system(system_1, system_2, protocol.engine)
 
 # instantiate each system as a fepprep class with the protocol
-# fepprep = prep.fepprep(system_free, system_bound, protocol)
-# fepprep.generate_folders(workdir)
+fepprep = fepprep(system_free, system_bound, protocol)
+fepprep.generate_folders(workdir)
 
 
 

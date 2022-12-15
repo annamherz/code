@@ -74,10 +74,10 @@ for name, leg in zip(["lig", "sys"], ["free", "bound"]):
 
     print(f"Preparing the {leg} leg...")
     if leg == "free":
-        system_free = fepprep.merge_system(system_1, system_2, protocol.engine)
+        system_free = merge.merge_system(system_1, system_2, protocol.engine)
     if leg == "bound":
-        system_bound = fepprep.merge_system(system_1, system_2, protocol.engine)
+        system_bound = merge.merge_system(system_1, system_2, protocol.engine)
 
 # instantiate each system as a fepprep class with the protocol
-fepprep = prep.fepprep(system_free, system_bound, protocol)
+fepprep = fepprep(system_free, system_bound, protocol)
 fepprep.generate_folders(workdir)
