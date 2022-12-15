@@ -351,12 +351,12 @@ class fepprep():
 
 
     @staticmethod
-    def merge_ligands( ligand_1, ligand_2, engine_query):
+    def merge_ligands( ligand_0, ligand_1, engine_query):
         """Merges two ligands in preperation for FEP run.
 
         Args:
+            ligand_0 (_type_): BSS molecule
             ligand_1 (_type_): BSS molecule
-            ligand_2 (_type_): BSS molecule
             engine_query (str): must be either AMBER, SOMD, GROMACS
 
         Returns:
@@ -367,64 +367,69 @@ class fepprep():
 
         # Align ligand2 on ligand1
         mapping = BSS.Align.matchAtoms(
-            ligand_1, ligand_2, engine=engine, complete_rings_only=True)
+            ligand_0, ligand_1, engine=engine, complete_rings_only=True)
         inv_mapping = {v: k for k, v in mapping.items()}
-        ligand_2_a = BSS.Align.rmsdAlign(ligand_2, ligand_1, inv_mapping)
+        ligand_2_a = BSS.Align.rmsdAlign(ligand_1, ligand_0, inv_mapping)
 
         # Generate merged molecule.
         merged_ligands = BSS.Align.merge(
-            ligand_1, ligand_2_a, mapping, allow_ring_breaking=True)
+            ligand_0, ligand_2_a, mapping, allow_ring_breaking=True)
 
         return merged_ligands
     
 
     @staticmethod
-    def merge_system(system1, system2, leg, engine_query):
+    def extract_ligand(system):
+        """extracts the ligand from a BSS system
+
+        Args:
+            system (BioSimSpace._SireWrappers._system.System): system containing a ligand
+
+        Returns:
+            BioSimSpace._SireWrappers._molecule.Molecule: ligand as a molecule object
+        """
+
+        system = validate.system(system)
+
+        # Extract ligands. Do this based on nAtoms and nResidues, as sometimes
+        # the order of molecules is switched, so we can't use index alone.
+        ligand = None
+        n_residues = [mol.nResidues() for mol in system]
+        n_atoms = [mol.nAtoms() for mol in system]
+        for i, (n_resi, n_at) in enumerate(zip(n_residues, n_atoms)):
+            if n_resi == 1 and n_at > 5:
+                ligand = system.getMolecule(i)
+            else:
+                pass
+            if ligand:
+                break
+        
+        return ligand
+
+    @staticmethod
+    def merge_system(system0, system1, engine_query):
+        """merges to BSS systems for FEP.
+
+        Args:
+            system0 (BioSimSpace._SireWrappers._system.System): system for the ligand at lambda 0. Is the base system.
+            system1 (BioSimSpace._SireWrappers._system.System): system from which the ligand at lmabda 1 will be obtained
+            engine_query (BioSimSpace.FreeEnergy.engines()): an engine allowed for FEP
+
+        Raises:
+            _Exceptions.AlignmentError: If the ligands could not be aligned
+
+        Returns:
+            BioSimSpace._SireWrappers._system.System: system0 with the ligand replaced by the merged ligand
+        """
 
         engine = validate.engine(engine_query)
+        system_0 = validate.system(system0)
         system_1 = validate.system(system1)
-        system_2 = validate.system(system2)
-        if leg not in ("bound", "free"):
-            raise ValueError(f"{leg} (leg) must be either 'bound' or 'free'. This is so the ligands can be correctly found and merged.")
 
-        if leg == "free":
-            # Extract ligands.
-            ligand_1 = system_1.getMolecule(0)
-            ligand_2 = system_2.getMolecule(0)
+        ligand_0 = fepprep.extract_ligand(system_0)
+        ligand_1 = fepprep.extract_ligand(system_1)
 
-        elif leg == "bound":
-            # Extract ligands and protein. Do this based on nAtoms and nResidues, as sometimes
-            # the order of molecules is switched, so we can't use index alone.
-            ligand_1 = None
-            protein = None
-            n_residues = [mol.nResidues() for mol in system_1]
-            n_atoms = [mol.nAtoms() for mol in system_1]
-            for i, (n_resi, n_at) in enumerate(zip(n_residues[:20], n_atoms[:20])):
-                if n_resi == 1 and n_at > 5:
-                    ligand_1 = system_1.getMolecule(i)
-                elif n_resi > 1:
-                    protein = system_1.getMolecule(i)
-                else:
-                    pass
-
-            # loop over molecules in system to extract the ligand
-            ligand_2 = None
-            n_residues = [mol.nResidues() for mol in system_2]
-            n_atoms = [mol.nAtoms() for mol in system_2]
-            for i, (n_resi, n_at) in enumerate(zip(n_residues, n_atoms)):
-                # grab the system's ligand and the protein. ignore the waters.
-                if n_resi == 1 and n_at > 5:
-                    ligand_2 = system_2.getMolecule(i)
-                else:
-                    pass
-
-            if protein:
-                pass
-            else:
-                raise _Exceptions.AlignmentError(
-                    "Could not extract protein from input systems. Check that your ligands/proteins are properly prepared!")
-
-        if ligand_1 and ligand_2:
+        if ligand_0 and ligand_1:
             pass
         else:
             raise _Exceptions.AlignmentError(
@@ -432,11 +437,10 @@ class fepprep():
 
         # merge the ligands based on the engine.
         print("mapping, aligning and merging the ligands...")
-        merged_trans = fepprep.merge_ligands(ligand_1, ligand_2, engine)
+        merged_trans = fepprep.merge_ligands(ligand_0, ligand_1, engine)
 
-        # Get equilibrated waters and waterbox information for both bound and free. Get all information from lambda==0
-        # Following is work around because setBox() doesn't validate correctly boxes with lengths and angles
-        system_1.removeMolecules(ligand_1)
-        system_final = merged_trans + system_1
+        # put the merged ligand into the system_0 in place of ligand_0
+        system_0.removeMolecules(ligand_0)
+        system_final = merged_trans + system_0
 
         return system_final
