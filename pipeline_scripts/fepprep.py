@@ -28,12 +28,12 @@ lig_2 = trans.split('~')[1]
 engine_query = str(sys.argv[2]).upper()
 num_lambda = int(sys.argv[3])
 
+# files that were set in the run_all script
 main_dir = os.environ["MAINDIRECTORY"]
 net_file = os.environ["net_file"] # network file
 prot_file = os.environ["prot_file"] # protocol file
 prep_dir = f"{main_dir}/prep"  # define lig prep location
-# define trans dir
-workdir = f"{main_dir}/outputs/{engine_query}/{lig_1}~{lig_2}"
+workdir = f"{main_dir}/outputs/{engine_query}/{lig_1}~{lig_2}" # pert dir
 
 # check if the trans, eng and window are in the network file
 found = False
@@ -49,19 +49,12 @@ if not found:
     raise NameError(
         f"The perturbation {trans} (or the reverse) with {num_lambda} windows using {engine_query} was not found in {net_file}.")
 
-# parse protocol file
-protocol = pipeline_protocol(prot_file) # instantiate the protocol as an object
-protocol.validate() # validate all the input
-protocol.num_lambda = validate.num_lambda(num_lambda)
-protocol.engine = validate.engine(engine_query)
-
-# Load equilibrated free inputs for both ligands.
 # create the system for each the free and the bound leg.
 system_free = None
 system_bound = None
 
 for name, leg in zip(["lig", "sys"], ["free", "bound"]):
-    # Load equilibrated free inputs
+    # Load equilibrated inputs for both ligands
     system_1 = BSS.IO.readMolecules(
         [f"{prep_dir}/{lig_1}_{name}_equil_solv.rst7", f"{prep_dir}/{lig_1}_{name}_equil_solv.prm7"])
     system_2 = BSS.IO.readMolecules(
@@ -126,6 +119,14 @@ for name, leg in zip(["lig", "sys"], ["free", "bound"]):
     if leg == "bound":
         system_bound = system_final
 
+
+# parse protocol file
+protocol = pipeline_protocol(prot_file) # instantiate the protocol as an object
+protocol.validate() # validate all the input
+protocol.rewrite_protocol() # rewrite protocol file
+protocol.num_lambda = validate.num_lambda(num_lambda)
+protocol.engine = validate.engine(engine_query)
+
 # repartition the hydrogen masses
 if protocol.hmr == True:
     print("repartitioning hydrogen masses for 4fs timestep...")
@@ -142,8 +143,9 @@ elif protocol.hmr == False:
 
 # define the free energy protocol with all this information.
 if engine_query == 'AMBER' or engine_query == 'GROMACS':
-    min_protocol = BSS.Protocol.FreeEnergyMinimisation(
-        num_lam=num_lambda, steps=min_steps)
+    min_protocol = BSS.Protocol.FreeEnergyMinimisation(num_lam=protocol.num_lambda,
+                                                       steps=protocol.min_steps
+                                                       )
     heat_protocol = BSS.Protocol.FreeEnergyEquilibration(timestep=protocol.timestep*protocol.timestep_unit,
                                                          num_lam=protocol.num_lambda,
                                                          runtime=protocol.eq_runtime*protocol.eq_runtime_unit,
@@ -168,7 +170,7 @@ if engine_query == 'AMBER' or engine_query == 'GROMACS':
 
 elif engine_query == 'SOMD':
     eq_protocol = BSS.Protocol.FreeEnergy(timestep=protocol.timestep*protocol.timestep_unit,
-                                          num_lam=num_lambda,
+                                          num_lam=protocol.num_lambda,
                                           temperature=protocol.temperature*protocol.temperature_unit,
                                           runtime=(protocol.eq_runtime*2)*protocol.eq_runtime_unit,
                                           pressure=protocol.pressure*protocol.pressure_unit,
