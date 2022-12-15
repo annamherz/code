@@ -1,3 +1,18 @@
+from inspect import BoundArguments
+import warnings
+import BioSimSpace as BSS
+from BioSimSpace import _Exceptions
+from BioSimSpace import Units as _Units
+import sys
+import csv
+import pickle
+import os as _os
+import numpy as _np
+import pandas as _pd
+import math as _math
+import itertools as it
+from scipy.stats import sem
+
 
 # import libraries
 import BioSimSpace as BSS
@@ -23,248 +38,373 @@ import pandas as pd
 
 from ..utils import *
 
-# functions
-# TODO clean up and make sure have description at start
-
-def convert_yml_into_freenrgworkflows(exp_file, exp_file_dat):
-    # get the experimental data into a useable format (from yml to csv)
-    # for freenergworkflows, want to save as lig, Ki
-    # experimental values (e.g. ic50/ki) for all ligands in our set.
-
-    exp_file = validate.file_path(exp_file)
-
-    with open(exp_file, "r") as file:
-        data = yaml.safe_load(file) # loads as dictionary
-
-    with open(exp_file_dat, "w") as file:
-        writer = csv.writer(file, delimiter=",")
-        writer.writerow(["ligand","value","error"])
-
-        # the data needs to be IC50, uM
-        # am assuming that ki and IC50 are the same
-        
-        for key in data.keys(): # write for each ligand that was in yaml file
-            if data[key]['measurement']['unit'] == 'uM':
-                writer.writerow([key, data[key]['measurement']['value'], data[key]['measurement']['error']])
-            elif data[key]['measurement']['unit'] == 'nM':
-                writer.writerow([key, "{:.4f}".format(data[key]['measurement']['value']/1000), data[key]['measurement']['error']/1000])
 
 
+def analyse_all_repeats(work_dir, estimator='MBAR', method="alchemlyb", extra_options=None):
+    """Analyse all existing free-energy data from a simulation working directory.
 
-def get_info_network(engine=None, results_files=None, net_file=None, output_folder=None, extra_options=None):
-    # get info from a network file for engine
-    # For the network that we are considering,
-    # we want to get results files with these perturbations from the overall file that contains the large network results (if this is the case).
-    # This is just good to have a consistent format of results to analyse.
-    if not engine:
-        raise ValueError("must specify an engine") # TODO make so can be BSS engines or all engines allowed
-    # TODO if not out_folder is a file path, raise issue
-    # if not engine:
-    #     raise ValueError("must specify an engine")    
-    # TODO if not temp folder make
+        Parameters
+        ----------
 
-    # get all the indivisual results file for that engine
-    # TODO if results file is empty, raise issue
-    # TODO print how many results files
-    # TODO extra options if want to change file name etc, also put if only want a specific engine here?
-    # otherwise will find all engines in network file and use this
+        work_dir : str
+            The working directory for all the repeats of the simulation.
+            The repeats must have either bound and/or free in the name to be recognised.
 
-    # We also want to create a list of the perturbations in our network.
-    # create a list of the perturbations
-    perturbations = []
+        estimator : str
+            The estimator ('MBAR' or 'TI') used. MBAR is the default.
 
-    # create a list of ligands
-    ligands = []
+        extra_options : dict
+            Extra options can include the following as keys:
+            average_method : 'mean' (default is mean)
+            error_method : 'SEM' (default is SEM)
+            save_graphs : (bool) - these will be saved in work_dir/graphs
 
-    # use the network file to find the ligands and perturbations
-    for line in open(f"{net_file}", "r"):
-        if line.split()[-1] == engine:
-            lig_0 = line.split()[0]
-            lig_1 = line.split()[1]
-            pert = f"{lig_0}~{lig_1}"
-            perturbations.append(pert)
-            if lig_0 not in ligands:
-                ligands.append(lig_0)
-            elif lig_1 not in ligands:
-                ligands.append(lig_1)
+        Returns
+        -------
+
+        free_energy : (:class:`Energy <BioSimSpace.Types.Energy>`, :class:`Energy <BioSimSpace.Types.Energy>`)
+            The average BSS.relative free-energy difference and its associated error.
+    """
+
+    if not isinstance(work_dir, str):
+        raise TypeError("'work_dir' must be of type 'str'.")
+    if not _os.path.isdir(work_dir):
+        raise ValueError("'work_dir' doesn't exist!")
+
+    if estimator not in ['MBAR', 'TI']:
+        raise ValueError("'estimator' must be either 'MBAR' or 'TI'.")
+
+    # default calculation methods
+    error_method = 'SEM'
+    average_method = 'mean'
+    if estimator == "MBAR":
+        check_overlap = True
+    else:
+        check_overlap = False
+    save_graphs = True
+    save_pickle = True
+
+    pickle_dir = path_to_dir + '/pickle'
+    if not _os.path.exists(pickle_dir):
+        _os.mkdir(f"{pickle_dir}")
+        extra_options['try_pickle'] =  False
+    else:
+        extra_options['try_pickle'] =  True
+
+    # if there are extra options, override the default calculation methods
+    if extra_options:
+        if not isinstance(extra_options, dict):
+            # add so it has to be std or smth else
+            raise TypeError("'extra_options' must be of type 'dict'.")
+        if "error_method" in extra_options:
+            if not isinstance(extra_options["error_method"], str):
+                raise TypeError(
+                    "'error_method' value in the extra_options dictionary must be of type 'str'.")
             else:
-                pass
-
-    mod_results_files = []
-
-    for file in results_files:
-        new_file_name = f"{output_folder}/results_{results_files.index(file)}_{engine}.csv"
-        with open(new_file_name, "w") as result_file:
-
-            writer = csv.writer(result_file, delimiter=",")
-            writer.writerow(["lig_1","lig_2","freenrg","error","engine"])
-
-            for row, index in pd.read_csv(file).iterrows():
-                pert = f"{index['lig_1']}~{index['lig_2']}"
-                if pert in perturbations:
-                    writer.writerow([index['lig_1'], index['lig_2'], index['freenrg'], index['error'], index['engine']])    
-
-            mod_results_files.append(new_file_name)
-
-    return perturbations, ligands, mod_results_files
-
-
-def gen_graph(ligands=None, perturbations=None, file_dir=None):
-
-    # TODO error check if not lists, etc
-    # Generate the graph.
-    graph = nx.Graph()
-
-    # Loop over the nligands and add as nodes to the graph.
-    for lig in ligands:
-        graph.add_node(lig, label=lig, labelloc="t")
-
-    # Loop over the edges in the dictionary and add to the graph.
-    for edge in perturbations:
-        lig_0 = edge.split("~")[0]
-        lig_1 = edge.split("~")[1]
-        graph.add_edge(lig_0, lig_1)
-
-    # Plot the networkX graph.
-    pos = nx.kamada_kawai_layout(graph)
-    plt.figure(figsize=(8,8), dpi=150)
-    nx.draw(
-        graph, pos, edge_color='black', width=1, linewidths=1,
-        node_size=2100, node_color='darkblue', font_size = 9.5,
-        labels={node: node for node in graph.nodes()},
-        font_color = "white")
-
-    plt.savefig(f"{file_dir}/analysis_network.png", dpi=300)
-    plt.show()
-
-
-# make dictionary of values of results
-def make_dict_comp_results(results_files=None, perturbations=None, file_name=None, engine=None):
-
-    # TODO some way to get engine from results files?
-    # make a dictionary with the results of the files
-    comp_dict_list = {}
-    comp_err_dict_list = {}
-
-    # append for results file
-    for res_file in results_files:
-        res_df = pd.read_csv(res_file)
-        for index,row in res_df.iterrows():
-            lig_0 = row[0]
-            lig_1 = row[1]
-            pert = f"{lig_0}~{lig_1}"
-            if not isinstance(row[2], float):
-                ddG = BSS.Types.Energy(float(row[2].split()[0]),row[2].split()[-1])
+                error_method = extra_options["error_method"]
+        if "average_method" in extra_options:
+            if not isinstance(extra_options["average_method"], str):
+                raise TypeError(
+                    "'average_method' value in the extra_options dictionary must be of type 'str'.")
             else:
-                ddG = row[2]
-            if not isinstance(row[3], float):
-                ddG_err = BSS.Types.Energy(float(row[3].split()[0]),row[3].split()[-1])
+                average_method = extra_options["average_method"]
+        if "save_graphs" in extra_options:
+            if not isinstance(extra_options["save_graphs"], bool):
+                raise TypeError(
+                    "'save_graphs' value in the extra_options dictionary must be of type 'bool'.")
             else:
-                ddG_err = row[3]
-                
-            if pert in comp_dict_list:
-                # Key exist in dict, check if is a list
-                if not isinstance(comp_dict_list[pert], list):
-                    # If type is not list then make it list
-                    comp_dict_list[pert] = [comp_dict_list[pert]]
-                if not isinstance(comp_err_dict_list[pert], list):
-                    # If type is not list then make it list
-                    comp_err_dict_list[pert] = [comp_err_dict_list[pert]]
-                # Append the value in list
-                comp_dict_list[pert].append(ddG)
-                comp_err_dict_list[pert].append(ddG_err)
+                save_graphs = extra_options["save_graphs"]
+        if "save_pickle" in extra_options:
+            if not isinstance(extra_options["save_pickle"], bool):
+                raise TypeError(
+                    "'save_pickle' value in the extra_options dictionary must be of type 'bool'.")
             else:
-                # As key is not in dict,
-                # so, add key-value pair
-                comp_dict_list[pert] = ddG
-                comp_err_dict_list[pert] = ddG_err
+                save_pickle = extra_options["save_pickle"]
+        if "try_pickle" in extra_options:
+            if not isinstance(extra_options["try_pickle"], bool):
+                raise TypeError(
+                    "'try_pickle' value in the extra_options dictionary must be of type 'bool'.")
+            else:
+                try_pickle = extra_options["try_pickle"]
 
-    # now calculate all the avg and SEM for the network perturbations
-    # put these into a dictionary
-    comp_diff_dict = {}
+    # Dictionaries
+    bound_pmf_dict = {}  # for the intial results
+    free_pmf_dict = {}
+    bound_matrix_dict = {}  # for the energy matrix
+    free_matrix_dict = {}
+    bound_val_dict = {}  # for the actual value for all the windows
+    free_val_dict = {}
+    bound_err_dict = {}  # for the final error defined
+    free_err_dict = {}
 
-    # TODO if none, don't write to csv file
-    # write these to a csv file
-    with open(f"{file_name}.csv", "w") as comp_pert_file:
-        writer = csv.writer(comp_pert_file, delimiter=",")
-        writer.writerow(["lig_1","lig_2","freenrg","error","engine"])
-        for pert in perturbations:
-            lig_0 = pert.split("~")[0]
-            lig_1 = pert.split("~")[1]
-            
-            # check if the perturbations calculated are also those in the network file and if any are missing
-            try:
-                # find the values in the dictionary
-                ddGs = comp_dict_list[pert]
-                ddGs_error = comp_err_dict_list[pert]
-                # calculate the average and the error
-                comp_ddG = np.average(ddGs)
-                # comp_ddG = np.average([ddG.value() for ddG in ddGs])
-                if len(ddGs) == 1:
-                    comp_err = ddGs_error.value()
-                else:
-                    comp_err = sem(ddGs)
-                    # comp_err = sem([ddG.value() for ddG in ddGs])
-        
-            # if unable to calculate one of the perturbations, this is a None value.
-            except:
-                comp_ddG = None
-                comp_err = None
-            
-            # TODO some way to incl units
+    # list for all the repeats
+    repeats_tuple_list = []
+    # list for the successful calculations
+    bound_calculated = []
+    free_calculated = []
 
-            #update the dictionary for plotting later
-            comp_diff_dict.update({pert:(comp_ddG, comp_err)})
-
-            writer.writerow([lig_0, lig_1, comp_ddG, comp_err, engine])
-    
-    return comp_diff_dict
-
-def freenrgworkflows_into_dict(experimental_DDGs, ligands, perturbations):
-    # create a dictionary for the experimental values
-    exper_val_dict = {}
-
-    # convert the list of dicitonaries from freenrgworkflows into a single dictionary
-    for lig_dict in experimental_DDGs:
-        lig_name = list(lig_dict.keys())[0]
-        exper = lig_dict[lig_name]
-        exper_err = lig_dict["error"]
-        exper_val_dict.update({lig_name:(exper, exper_err)})
-
-    # add any ligands that are in the ligands file but dont have experimental values for
-    for lig_name in ligands:
-        if lig_name in exper_val_dict:
-            pass
+    # Read how many repeats are in the directory.
+    folders = (next(_os.walk(work_dir))[1])
+    b_folders = []
+    f_folders = []
+    for f in folders:
+        if 'bound' in f:
+            b_folders.append(f'{f}')
+        elif 'free' in f:
+            f_folders.append(f'{f}')
         else:
-            exper_val_dict.update({lig_name:(None, None)})
+            continue
+    
+    # sort the folders
+    b_folders.sort()
+    f_folders.sort()
 
-    # now that we have our dictionary, 
-    # we can also create a dictionary with all the experimental values for the perturbations
-    exper_diff_dict = {}
+    if not b_folders:
+        raise ValueError(
+            "Couldn't find any folders with bound in the specified directory?")
+    elif not f_folders:
+        raise ValueError(
+            "Couldn't find any folders with free in the specified directory?")
+    else:
+        print(f'For bound values, analysing folder(s) {b_folders}')
+        print(f'For free values, analysing folder(s) {f_folders}')
 
-    # calculate the experimental RBFEs
-    # write these to a csv file
-    with open("experimental_perturbations.csv", "w") as exp_pert_file:
-        writer = csv.writer(exp_pert_file, delimiter=",")
-        writer.writerow(["lig_1","lig_2","freenrg","error","engine"])
+    no_of_b_repeats = len(b_folders)
+    b_repeats = list(range(no_of_b_repeats))
+    no_of_f_repeats = len(f_folders)
+    f_repeats = list(range(no_of_f_repeats))
 
-        for pert in perturbations:
-            lig_0 = pert.split("~")[0]
-            lig_1 = pert.split("~")[1]
-            # exclude from calculating if one of the ligands is not available
-            if exper_val_dict[lig_0][0] is None or exper_val_dict[lig_1][0] is None:
-                exper_ddG =None
-                exper_err = None
-                exper_diff_dict.update({pert:(None, None)})
-            # if experimental data is available, calculate experimental perturbation and propagate
+    if no_of_b_repeats != no_of_f_repeats:
+        print(
+            f"There are a different number of repeats for bound ({no_of_b_repeats}) and free ({no_of_f_repeats}) for {work_dir}.")
+    else:
+        print(
+            f"There are {no_of_b_repeats} repeats for each the bound and the free for {work_dir}.")
+
+    # try loading in if previously calculated
+    if try_pickle:
+        try:
+            print("trying to locate pickles in folder...")
+            # TODO fix so pickle name is in function as otherwise cant run independently of this script
+            with open(f"{pickle_dir}/bound_pmf_{trans}_{engine}_{estimator}_{method}.pickle", "rb") as file:
+                bound_pmf_dict = pickle.load(file)
+            with open(f"{pickle_dir}/free_pmf_{trans}_{engine}_{estimator}_{method}.pickle", "rb") as file:
+                free_pmf_dict = pickle.load(file)
+            print("pickles found!")
+        except:
+            print("loading pickle failed. Calculating normally.")
+            try_pickle = False
+
+    # Analyse the results for each leg of the transformation.
+    for b in b_repeats:
+        try:
+            name = str(b) + '_bound'
+            if try_pickle:
+                if name in bound_pmf_dict.keys():
+                    bound_matrix_dict.update({name: None})
+                    bound_calculated.append(name)
+                else:
+                    print("could not find pickle for that name, rerunning...")
+                    pmf_bound, overlap_matrix_bound = BSS.FreeEnergy.Relative.analyse(
+                        f'{work_dir}/{b_folders[b]}', estimator=estimator, method=method)
+                    bound_pmf_dict.update({name: pmf_bound})
+                    bound_matrix_dict.update({name: overlap_matrix_bound})
+                    bound_calculated.append(name)                    
             else:
-                exper_ddG = exper_val_dict[lig_1][0] - exper_val_dict[lig_0][0]
-                exper_err = math.sqrt(math.pow(exper_val_dict[lig_0][1], 2) + math.pow(exper_val_dict[lig_1][1], 2))
-                exper_diff_dict.update({pert:(exper_ddG, exper_err)})
+                pmf_bound, overlap_matrix_bound = BSS.FreeEnergy.Relative.analyse(
+                    f'{work_dir}/{b_folders[b]}', estimator=estimator, method=method)
+                bound_pmf_dict.update({name: pmf_bound})
+                bound_matrix_dict.update({name: overlap_matrix_bound})
+                bound_calculated.append(name)
+        except Exception as e:
+            print(e)
+            print(
+                f'Unable to analyse values for {name}, which is repeat {b_folders[b]} in {work_dir}.')
 
-            writer.writerow([lig_0, lig_1, exper_ddG, exper_err, "experimental"])
+    for f in f_repeats:
+        try:
+            name = str(f) + '_free'
+            if try_pickle:
+                if name in free_pmf_dict.keys():
+                    free_matrix_dict.update({name: None})
+                    free_calculated.append(name)
+                else:
+                    pmf_free, overlap_matrix_free = BSS.FreeEnergy.Relative.analyse(
+                        f'{work_dir}/{f_folders[f]}', estimator=estimator, method=method)
+                    free_pmf_dict.update({name: pmf_free})
+                    free_matrix_dict.update({name: overlap_matrix_free})
+                    free_calculated.append(name)
+            else:
+                pmf_free, overlap_matrix_free = BSS.FreeEnergy.Relative.analyse(
+                    f'{work_dir}/{f_folders[f]}', estimator=estimator, method=method)
+                free_pmf_dict.update({name: pmf_free})
+                free_matrix_dict.update({name: overlap_matrix_free})
+                free_calculated.append(name)
+        except Exception as e:
+            print(e)
+            print(
+                f'Unable to analyse values for {name}, which is repeat {f_folders[f]} in {work_dir}.')
 
-    return exper_diff_dict, exper_val_dict
+    # create a dictionary of the calculated values, for each bound and free
+    for r in b_repeats:
+        try:
+            bound_name = str(r) + '_bound'
+            bound_val = (bound_pmf_dict[bound_name])[-1][1] - \
+                (bound_pmf_dict[bound_name])[0][1]
+            bound_err = (bound_pmf_dict[bound_name])[-1][2] # TODO change this so as in diff?
+            bound_val_dict.update({bound_name: bound_val})
+            bound_err_dict.update({bound_name: bound_err})
+        except:
+            print(f'''Unable to compute values for {bound_name} in {work_dir}.\
+                Check earlier error message if these values could be analysed.''')
+    for r in f_repeats:
+        try:
+            free_name = str(r) + '_free'
+            free_val = (free_pmf_dict[free_name])[-1][1] - \
+                (free_pmf_dict[free_name])[0][1]
+            free_err = (free_pmf_dict[free_name])[-1][2] # TODO change this so as in diff?
+            free_val_dict.update({free_name: free_val})
+            free_err_dict.update({free_name: free_err})
+        except:
+            print(f'''Unable to compute values for {free_name} in {work_dir}.\
+                Check earlier error message if these values could be analysed.''')
+
+    # get average of free energy values just calculated
+    # if there is only one repeat use the BSS difference function
+    if len(free_val_dict.values()) == 1 and len(bound_val_dict.values()) == 1:
+        freenrg_rel = BSS.FreeEnergy.Relative.difference(
+            list(bound_pmf_dict.items())[0][1], list(free_pmf_dict.items())[0][1])
+        freenrg_val = freenrg_rel[0].value()
+        freenrg_err = freenrg_rel[1].value()
+
+    # otherwise, calculate the average and the SEM
+    else:
+        free_vals = list(
+            val/_Units.Energy.kcal_per_mol for val in free_val_dict.values())
+        free_avg = _np.mean(free_vals)
+        free_sem = sem(free_vals)
+        bound_vals = list(
+            val/_Units.Energy.kcal_per_mol for val in bound_val_dict.values())
+        bound_avg = _np.mean(bound_vals)
+        bound_sem = sem(bound_vals)
+        freenrg_val = (bound_avg-free_avg)
+        freenrg_err = (_math.sqrt(
+            _math.pow(bound_sem, 2)+_math.pow(free_sem, 2)))
+        freenrg_rel = (freenrg_val * _Units.Energy.kcal_per_mol,
+                        freenrg_err * _Units.Energy.kcal_per_mol)
+    
+    # create tuple list of each repeat that was calculated
+    # first check the length of the calculated values and check if this is also the length of the folders found
+    if len(bound_calculated) != no_of_b_repeats:
+        print("the number of calculated values for bound does not match the number of found bound folders earlier.\
+            Check previous messages to see which folder(s) couldn't be analysed.")
+    if len(free_calculated) != no_of_f_repeats:
+        print("the number of calculated values for free does not match the number of found free folders earlier.\
+            Check previous messages to see which folder(s) couldn't be analysed.")   
+
+    # if the numebr of calculated values is the same, match these evenly
+    if len(bound_calculated) == len(free_calculated):
+        print(f"There are {len(bound_calculated)} calculated values for each the bound and the free leg for the folders in {work_dir}.")
+        no_of_repeats = len(bound_calculated)
+        repeats = list(range(no_of_repeats))
+        for r in repeats:
+            freenrg_rel = BSS.FreeEnergy.Relative.difference(
+                bound_pmf_dict[bound_calculated[r]], free_pmf_dict[free_calculated[r]])
+            freenrg_val = freenrg_rel[0].value()
+            freenrg_err = freenrg_rel[1].value()
+            repeats_tuple_list.append((f"{str(r)}_repeat", freenrg_val, freenrg_err))
+
+    elif len(bound_calculated) != len(free_calculated):
+        print(f"There are {len(bound_calculated)} calculated values for the bound and \
+        {len(free_calculated)} calculated values for the free leg for the folders in {work_dir}.")
+        # use the shorter calculated values as the number of complete repeats
+        if len(bound_calculated) < len(free_calculated):
+            no_of_repeats = len(bound_calculated)
+        else:
+            no_of_repeats = len(free_calculated)
+        print(f"The number of calculated values do not match. {no_of_repeats} repeats will be calculated.")
+        r = 0
+        for b,f in zip(bound_calculated, free_calculated):
+            print(f"calculating repeat {r} as {b} and {f}.")
+            freenrg_rel = BSS.FreeEnergy.Relative.difference(bound_pmf_dict[b], free_pmf_dict[f])
+            freenrg_val = freenrg_rel[0].value()
+            freenrg_err = freenrg_rel[1].value()
+            repeats_tuple_list.append((f"{str(r)}_repeat", freenrg_val, freenrg_err))
+            r += 1
+    
+    graph_dir = work_dir + '/graphs'
+    if not _os.path.exists(graph_dir):
+        _os.mkdir(f"{graph_dir}")
+    else:
+        pass
+
+    if check_overlap:
+        # check overlap matrix if okay
+        for b in b_repeats:
+            try:
+                name = str(b) + '_bound'
+                overlap = bound_matrix_dict[name]
+                overlap_okay = BSS.FreeEnergy.Relative.checkOverlap(
+                    overlap, estimator=estimator)
+            except Exception as e:
+                print(e)
+                print(f"could not check overlap matrix for {name}")
+            if save_graphs:
+                try:
+                    ax = BSS.FreeEnergy.Relative.plot(overlap, work_dir=graph_dir, plot_name=f"{name}_overlap_MBAR")
+                except:
+                    print("could not plt overlap matrix")
+
+        for f in f_repeats:
+            try:
+                name = str(f) + '_free'
+                overlap = free_matrix_dict[name]
+                overlap_okay = BSS.FreeEnergy.Relative.checkOverlap(
+                    overlap, estimator=estimator)
+            except Exception as e:
+                print(e)
+                print(f"could not check overlap matrix for {name}")
+            if save_graphs:
+                try:
+                    ax = BSS.FreeEnergy.Relative.plot(overlap, work_dir=graph_dir, plot_name=f"{name}_overlap_MBAR")
+                except:
+                    print("could not plt overlap matrix")
+
+
+    if estimator == "TI" and save_graphs:
+        
+        for b in b_repeats:
+            name = str(b) + '_bound'
+            overlap = bound_matrix_dict[name]
+            try:
+                ax = BSS.FreeEnergy.Relative.plot(overlap, work_dir=graph_dir, plot_name=f"{name}_dHdl_TI")
+            except Exception as e:
+                print(e)
+                print("could not plt dhdl")
+
+        for f in f_repeats:
+            name = str(f) + '_free'
+            overlap = free_matrix_dict[name]
+            try:
+                ax = BSS.FreeEnergy.Relative.plot(overlap, work_dir=graph_dir, plot_name=f"{name}_dHdl_TI")
+            except Exception as e:
+                print(e)
+                print("could not plt dhdl")
+
+    if save_pickle:
+        print("saving the pmf dictionaries for bound and free as pickles.")
+        # write the pmf as a pickle
+        with open (f"{pickle_dir}/bound_pmf_{trans}_{engine}_{estimator}_{method}.pickle", 'wb') as handle:
+            pickle.dump(bound_pmf_dict, handle)
+        with open (f"{pickle_dir}/free_pmf_{trans}_{engine}_{estimator}_{method}.pickle", 'wb') as handle:
+            pickle.dump(free_pmf_dict, handle)
+    else:
+        pass
+
+    return (freenrg_rel[0], freenrg_rel[1], repeats_tuple_list)
+
+
+
 
 
 def calc_mae(values_dict=None, perts_ligs = None):
@@ -328,85 +468,3 @@ def calc_mae(values_dict=None, perts_ligs = None):
 
     return mae_pert_df, mae_pert_df_err
 
-
-def convert_cinnabar_file(results_files, exper_val_dict, output_file):
-    # files is a list of files
-    # output file
-
-    # write to a csv file
-    with open(f"{output_file}.csv", "w") as cinnabar_data_file:
-        writer = csv.writer(cinnabar_data_file, delimiter=",")
-
-        # first, write the experimental data
-        writer.writerow(["# Experimental block"])
-        writer.writerow(["# Ligand","expt_DDG","expt_dDDG"])
-
-
-        # TODO write function to convert experimental values instead of freenergworkflows (take from other ana)
-        for lig in exper_val_dict.keys():
-            writer.writerow([lig,f"{exper_val_dict[lig][0]}",f"{exper_val_dict[lig][1]}"])
-
-
-        # second write the perturbation data
-        writer.writerow([" "])
-        writer.writerow(["# Calculated block"])
-        writer.writerow(["# Ligand1","Ligand2","calc_DDG","calc_dDDG(MBAR)", "calc_dDDG(additional)"])
-
-        for file in results_files:
-            with open(file, "r") as res_file:
-                for line in res_file:
-                    if "freenrg" in line: # avoid the header
-                        pass
-                    else:                           # write each perturbation and repeat to the file
-                        lig_0 = line.split(",")[0]
-                        lig_1 = line.split(",")[1]
-                        comp_ddG = line.split(",")[2]
-                        comp_err = line.split(",")[3]
-            
-                        writer.writerow([lig_0, lig_1, comp_ddG, comp_err, "0.0"])
-
-def gen_graph(ligands=None, perturbations=None, file_dir=None):
-
-    # TODO error check if not lists, etc
-    # Generate the graph.
-    graph = nx.Graph()
-
-    # Loop over the nligands and add as nodes to the graph.
-    for lig in ligands:
-        graph.add_node(lig, label=lig, labelloc="t")
-
-    # Loop over the edges in the dictionary and add to the graph.
-    for edge in perturbations:
-        lig_0 = edge.split("~")[0]
-        lig_1 = edge.split("~")[1]
-        graph.add_edge(lig_0, lig_1)
-
-    # Plot the networkX graph.
-    pos = nx.kamada_kawai_layout(graph)
-    plt.figure(figsize=(8,8), dpi=150)
-    nx.draw(
-        graph, pos, edge_color='black', width=1, linewidths=1,
-        node_size=2100, node_color='darkblue', font_size = 9.5,
-        labels={node: node for node in graph.nodes()},
-        font_color = "white")
-
-    plt.savefig(f"{file_dir}/analysis_network.png", dpi=300)
-    plt.show()
-
-    return graph
-
-
-# from alvaro
-def get_average_weighted_simple_paths(G):
-    '''Calculate the average number of connection between each pair of nodes. 
-    '''
-    paths_per_nodepair_combination = []
-    for node_i in G.nodes:
-        for node_j in G.nodes:
-            if node_i == node_j: break
-            possible_paths = nx.all_simple_edge_paths(G, node_i, node_j)
-            sum_of_weighted_averaged_paths = sum([np.average([G.get_edge_data(*edge)['weight']
-                                                                                      for edge in path])
-                                                                                      for path in possible_paths])
-            paths_per_nodepair_combination.append(sum_of_weighted_averaged_paths)
-    return np.average(paths_per_nodepair_combination)

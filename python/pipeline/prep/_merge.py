@@ -17,7 +17,7 @@ class merge():
             engine_query (str): must be either AMBER, SOMD, GROMACS
 
         Returns:
-            _type_: merged ligands as BSS object
+            BioSimSpace._SireWrappers._molecule.Molecule: merged ligands as BSS object
         """
 
         engine = validate.engine(engine_query)
