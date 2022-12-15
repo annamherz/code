@@ -11,7 +11,27 @@ class validate():
 
     def __init__(self):
         pass
-  
+
+
+    @staticmethod
+    def string(string):
+        """validates the string
+
+        Args:
+            string (str): text
+
+        Raises:
+            TypeError: must be of type 'str'
+
+        Returns:
+            str: text
+        """
+        if not isinstance(string, str):
+            raise TypeError(f"{string} / 'string' must be of type 'str'.")
+        
+        return string
+
+
     @staticmethod
     def file_path(file_path, create=False):
         """validates the provided file path

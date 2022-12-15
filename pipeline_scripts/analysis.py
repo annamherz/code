@@ -58,9 +58,10 @@ if not _os.path.exists(path_to_dir):
 print(f'analysing results for {path_to_dir}')
 print(f"using {chosen_method} and {chosen_estimator} for analysis")
 
+analysis = analyse(path_to_dir)
+analysis.set_options(extra_options)
 
-avg, error, repeats_tuple_list = analyse_all_repeats(
-    path_to_dir, estimator=chosen_estimator, method=chosen_method, extra_options=extra_options)
+avg, error, repeats_tuple_list = analysis.analyse_all_repeats()
 
 # ####### WRITING DATA for the final result
 # data point for average

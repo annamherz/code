@@ -155,3 +155,65 @@ def freenrgworkflows_into_dict(experimental_DDGs, ligands, perturbations):
 
     return exper_diff_dict, exper_val_dict
 
+
+
+def calc_mae(values_dict=None, perts_ligs = None):
+    # calc mae for a provided dictionary in the format wanted
+
+    values_dict_list = []
+    for key in values_dict.keys():
+        values_dict_list.append(key)
+
+    mae_pert_df = pd.DataFrame(columns=values_dict_list,index=values_dict_list)
+    mae_pert_df_err = pd.DataFrame(columns=values_dict_list,index=values_dict_list)
+
+    # iterate over all possible combinations
+    for combo in itertools.product(values_dict_list,values_dict_list):
+        eng1 = combo[0]
+        eng2 = combo[1]
+
+        eng1_vals = []
+        eng2_vals = []
+
+        # first create df of values
+        if perts_ligs == "perts":
+            for pert in values_dict[eng1]["pert_results"]:
+                if pert in values_dict[eng2]["pert_results"]:
+                    if values_dict[eng1]["pert_results"][pert][0] != None:
+                        if values_dict[eng2]["pert_results"][pert][0] != None:
+                            eng1_vals.append(values_dict[eng1]["pert_results"][pert][0])
+                            eng2_vals.append(values_dict[eng2]["pert_results"][pert][0])
+        elif perts_ligs == "ligs":
+            for pert in values_dict[eng1]["val_results"]:
+                if pert in values_dict[eng2]["val_results"]:
+                    if values_dict[eng1]["val_results"][pert][0] != None:
+                        if values_dict[eng2]["val_results"][pert][0] != None:
+                            eng1_vals.append(values_dict[eng1]["val_results"][pert][0])
+                            eng2_vals.append(values_dict[eng2]["val_results"][pert][0])
+        else:
+            raise ValueError("'perts_ligs' must be either 'perts' or 'ligs'!")
+
+
+        if len(eng1_vals) == len(eng2_vals):
+            mean_absolute_error = mae(eng1_vals,eng2_vals)  
+            data_for_df = {"eng1":eng1_vals,"eng2":eng2_vals}
+            data_df= pd.DataFrame(data_for_df)
+        else:
+            print("cant calc")
+
+        boots = []
+        n_boots = 10000
+
+        for n in range(n_boots):
+            sample_df = data_df.sample(n=len(eng1_vals), replace=True)
+            mae_sample = (abs(sample_df['eng1'] - sample_df['eng2']).sum())/len(eng1_vals)
+            boots.append(mae_sample)
+            mae_err = (np.std(boots))
+
+        mae_pert_df.loc[eng1,eng2]=mean_absolute_error
+        mae_pert_df_err.loc[eng1,eng2]=mae_err
+
+    mae_pert_df.to_csv(f"{res_folder}/mae_pert_{file_ext_out}.csv", sep=" ")
+    mae_pert_df_err.to_csv(f"{res_folder}/mae_pert_err_{file_ext_out}.csv", sep=" ")
+
+    return mae_pert_df, mae_pert_df_err
