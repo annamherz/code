@@ -18,15 +18,15 @@ from pipeline.utils import *
 
 
 results_files = ["/home/anna/Documents/code/test/final_summary_AMBER_MBAR_alchemlyb_benchmark.csv",
-                 "/home/anna/Documents/code/test/final_summary_SOMD_MBAR_alchemlyb_benchmark.csv",
-                 "/home/anna/Documents/code/test/final_summary_GROMACS_MBAR_alchemlyb_benchmark.csv"
-                 ]
+                 "/home/anna/Documents/code/test/final_summary_SOMD_MBAR_alchemlyb_benchmark.csv"]
 engine = "SOMD"
 output_folder = "/home/anna/Documents/code/test"
-net_file = "/home/anna/Documents/benchmark/tyk2_benchmark/execution_model/network_combined.dat"
+net_file = "/home/anna/Documents/benchmark/tyk2_benchmark/execution_model/network_lomap.dat"
+weight_file = "/home/anna/Documents/benchmark/tyk2_benchmark/execution_model/network_lomap_scores.dat"
 
-perturbations, ligands, mod_results_files = get_info_network(results_files, net_file, extra_options={"engines":["Amber","gROMacs"]})
-
+perturbations, ligands, mod_results_files = get_info_network(results_files, net_file, extra_options={"engine":engine})
+gra = graph(ligands, perturbations)
+gra.add_weight(weight_file)
 
 # work_dir = ["/home/anna/Documents/code/test/AMBER_extracted/lig_ejm31~lig_ejm42",
 #             "/home/anna/Documents/code/test/GROMACS_extracted/lig_ejm31~lig_ejm42",

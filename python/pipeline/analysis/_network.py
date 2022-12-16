@@ -57,20 +57,21 @@ def get_info_network(results_files=None, net_file=None, output_folder=None, extr
     ligands = []
 
     # use the network file to find the ligands and perturbations
-    for line in open(f"{net_file}", "r"):
-        for engine in engines:
-            if line.split()[-1] == engine:
-                lig_0 = line.split()[0]
-                lig_1 = line.split()[1]
-                pert = f"{lig_0}~{lig_1}"
-                if pert not in perturbations:
-                    perturbations.append(pert)
-                if lig_0 not in ligands:
-                    ligands.append(lig_0)
-                elif lig_1 not in ligands:
-                    ligands.append(lig_1)
-                else:
-                    pass
+    with open(f"{net_file}", "r") as file:
+        for line in file:
+            for engine in engines:
+                if line.split()[-1] == engine:
+                    lig_0 = line.split()[0]
+                    lig_1 = line.split()[1]
+                    pert = f"{lig_0}~{lig_1}"
+                    if pert not in perturbations:
+                        perturbations.append(pert)
+                    if lig_0 not in ligands:
+                        ligands.append(lig_0)
+                    elif lig_1 not in ligands:
+                        ligands.append(lig_1)
+                    else:
+                        pass
 
     mod_results_files = []
 
@@ -88,52 +89,137 @@ def get_info_network(results_files=None, net_file=None, output_folder=None, extr
 
             mod_results_files.append(new_file_name)
 
-    return perturbations, ligands, mod_results_files
+    return (perturbations, ligands, mod_results_files)
 
 
+class graph():
+    
+    def __init__(self, ligands, perturbations, file_dir=None):
+
+        self.ligands = validate.is_list(ligands)
+        self.perturbations = validate.is_list(perturbations)
+
+        if file_dir:
+            self.file_dir = validate.folder_path(file_dir, create=True)
+            self._save_image = True
+        else:
+            self._save_image = False
+
+        graph._gen_graph(self)
+
+    def _gen_graph(self):
+
+        # Generate the graph.
+        graph = nx.Graph()
+
+        # Loop over the nligands and add as nodes to the graph.
+        for lig in self.ligands:
+            graph.add_node(lig, label=lig, labelloc="t")
+
+        # Loop over the edges in the nxgraph and add to the graph.
+        for edge in self.perturbations:
+            lig_0 = edge.split("~")[0]
+            lig_1 = edge.split("~")[1]
+            graph.add_edge(lig_0, lig_1)
+        
+        self.graph = graph
 
 
-def gen_graph(ligands=None, perturbations=None, file_dir=None):
+    def draw_graph(self, file_dir=None):
+        
+        graph = validate.nxgraph(self.graph)
 
-    # TODO error check if not lists, etc
-    # Generate the graph.
-    graph = nx.Graph()
+        # Plot the networkX graph.
+        pos = nx.kamada_kawai_layout(graph)
+        plt.figure(figsize=(8,8), dpi=150)
+        nx.draw(
+            graph, pos, edge_color='black', width=1, linewidths=1,
+            node_size=2100, node_color='darkblue', font_size = 9.5,
+            labels={node: node for node in graph.nodes()},
+            font_color = "white")
 
-    # Loop over the nligands and add as nodes to the graph.
-    for lig in ligands:
-        graph.add_node(lig, label=lig, labelloc="t")
+        if self._save_image:
+            plt.savefig(f"{file_dir}/analysis_network.png", dpi=300)
 
-    # Loop over the edges in the dictionary and add to the graph.
-    for edge in perturbations:
-        lig_0 = edge.split("~")[0]
-        lig_1 = edge.split("~")[1]
-        graph.add_edge(lig_0, lig_1)
-
-    # Plot the networkX graph.
-    pos = nx.kamada_kawai_layout(graph)
-    plt.figure(figsize=(8,8), dpi=150)
-    nx.draw(
-        graph, pos, edge_color='black', width=1, linewidths=1,
-        node_size=2100, node_color='darkblue', font_size = 9.5,
-        labels={node: node for node in graph.nodes()},
-        font_color = "white")
-
-    plt.savefig(f"{file_dir}/analysis_network.png", dpi=300)
-    plt.show()
+        plt.show()
 
 
+    def cycle_closures(self):
 
-# from alvaro
-def get_average_weighted_simple_paths(G):
-    '''Calculate the average number of connection between each pair of nodes. 
-    '''
-    paths_per_nodepair_combination = []
-    for node_i in G.nodes:
-        for node_j in G.nodes:
-            if node_i == node_j: break
-            possible_paths = nx.all_simple_edge_paths(G, node_i, node_j)
-            sum_of_weighted_averaged_paths = sum([np.average([G.get_edge_data(*edge)['weight']
-                                                                                      for edge in path])
-                                                                                      for path in possible_paths])
-            paths_per_nodepair_combination.append(sum_of_weighted_averaged_paths)
-    return np.average(paths_per_nodepair_combination)
+        cycles = nx.cycle_basis(self.graph)
+
+        # get list of all cycle closures
+        cycle_closures = []
+
+        for cycle in cycles:
+            length = len(cycle)
+            ligas = []
+            ligbs = []
+            for i in range(0, length-1):
+                ligas.append(cycle[i])
+                ligbs.append(cycle[i+1])
+            # add final cycle closure
+            ligas.append(cycle[-1])
+            ligbs.append(cycle[0])
+            # make list for cycle closure
+            cycle_closure = []
+            for liga, ligb in zip(ligas,ligbs):
+                cycle_closure.append(f"{liga}~{ligb}")
+            
+            cycle_closures.append(cycle_closure)
+
+            self.cycles_list = cycle_closures    
+        
+        return cycle_closures
+
+
+    def add_weight(self, input_data=None):
+        
+        if not input_data:
+            raise ValueError("need some kind of input to add weights from! dict or file.")
+
+        else:
+            try:
+                weight_dict = validate.dictionary(input_data)
+                for key in weight_dict.keys():
+                    if not isinstance(key, tuple):
+                        raise TypeError("dict entry must be of the format {(lig_0, lig_1): weight}")
+                use_file = False
+                # print("using dict to add weights")
+            except:
+                use_file = True
+                weight_dict = {}
+
+        if use_file:
+            # print("using input file to get the weights")
+            scores_file = validate.file_path(input_data)
+            
+            with open(scores_file, "r") as file:
+                for line in file:
+                    lig_0 = line.split(",")[0]
+                    lig_1 = line.split(",")[1]
+                    weight = line.split(",")[-1].strip()
+                    weight_dict[(lig_0, lig_1)] = float(weight)            
+
+        nx.set_edge_attributes(self.graph, weight_dict, name="weight")
+
+
+    # from alvaro
+    def get_average_weighted_simple_paths(self):
+        '''Calculate the average number of connection between each pair of nodes. 
+        '''
+
+        G = self.graph
+
+        paths_per_nodepair_combination = []
+        for node_i in G.nodes:
+            for node_j in G.nodes:
+                if node_i == node_j: break
+                possible_paths = nx.all_simple_edge_paths(G, node_i, node_j)
+                sum_of_weighted_averaged_paths = sum([np.average([G.get_edge_data(*edge)['weight']
+                                                                                        for edge in path])
+                                                                                        for path in possible_paths])
+                paths_per_nodepair_combination.append(sum_of_weighted_averaged_paths)
+        
+        # no of possible paths between each two nodes on average
+        return np.average(paths_per_nodepair_combination)

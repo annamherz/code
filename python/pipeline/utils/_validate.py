@@ -2,6 +2,7 @@ import BioSimSpace as BSS
 from BioSimSpace._SireWrappers import System as _System
 import os
 import warnings
+import networkx as nx
 
 import pipeline
 
@@ -49,6 +50,25 @@ class validate():
             raise TypeError(f"{dictionary} / 'dictionary' must be of type 'dict'.")
         
         return dictionary
+
+
+    @staticmethod
+    def nxgraph(nxgraph):
+        """validates the nxgraph
+
+        Args:
+            nxgraph (networkx.Graph): the nxgraph
+
+        Raises:
+            TypeError: must be of type 'networkx.Graph'
+
+        Returns:
+            networkx.Graph: the nxgraph
+        """
+        if not isinstance(nxgraph, nx.Graph):
+            raise TypeError(f"{nxgraph} / 'nxgraph' must be of type 'networkx.Graph'.")
+        
+        return nxgraph
 
 
     @staticmethod
