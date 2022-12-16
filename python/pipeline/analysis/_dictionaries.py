@@ -217,3 +217,46 @@ def calc_mae(values_dict=None, perts_ligs = None):
     mae_pert_df_err.to_csv(f"{res_folder}/mae_pert_err_{file_ext_out}.csv", sep=" ")
 
     return mae_pert_df, mae_pert_df_err
+
+
+def make_dict_cycle_closures(pert_dict, cycle_closures):
+
+    pert_dict = validate.dictionary(pert_dict)
+    cycle_closures = validate.is_list(cycle_closures)
+
+    cycles_dict = {}
+    cycle_vals = []
+
+    for cycle in cycle_closures:
+
+        cycle_dict = {}
+        # print(cycle)
+        cycle_val = []
+        cycle_val_err = []
+        for pert in cycle:
+
+            liga = pert.split("~")[0]
+            ligb = pert.split("~")[1]
+            rev_pert = f"{ligb}~{liga}"
+        
+            if pert in pert_dict:
+                if pert_dict[pert][0] is not None:
+                    cycle_val.append(+pert_dict[pert][0])
+                    cycle_val_err.append(pert_dict[pert][1])
+                else:
+                    print(f"{pert} or {rev_pert} does not exist in the results for {cycle}. This cycle is not included.")
+                    break
+            elif rev_pert in pert_dict:
+                if pert_dict[rev_pert][0] is not None:
+                    cycle_val.append(-pert_dict[rev_pert][0])
+                    cycle_val_err.append(pert_dict[rev_pert][1])
+                else:
+                    print(f"{pert} or {rev_pert} does not exist in the results for {cycle}. This cycle is not included.")
+                    break
+
+        if not all(i is None for i in cycle_val):
+            cycle_vals.append(sum(cycle_val))
+        else:
+            pass
+
+    return (cycles_dict, cycle_vals, np.mean(cycle_vals), np.std(cycle_vals))
