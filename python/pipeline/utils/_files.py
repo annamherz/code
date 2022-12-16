@@ -20,7 +20,7 @@ def write_analysis_file(analysis, results_dir):
         # first, write a header if the file is created for the first time.
         if os.path.getsize(f"{results_dir}/final_summary_{analysis.pickle_ext}.csv") == 0:
             print(f"Starting {results_dir}/final_summary_{analysis.pickle_ext}.csv file.")
-            writer.writerow(["lig_1", "lig_2", "freenrg",
+            writer.writerow(["lig_0", "lig_1", "freenrg",
                             "error", "engine", "method"])
 
 
@@ -64,7 +64,7 @@ def write_analysis_file(analysis, results_dir):
             # first, write a header if the file is created for the first time.
             if os.path.getsize(results_file_path) == 0:
                 print(f"Starting {results_file_path} file.")
-                writer.writerow(["lig_1", "lig_2", "freenrg",
+                writer.writerow(["lig_0", "lig_1", "freenrg",
                                 "error", "engine", "estimator", "method"])
 
 

@@ -2,8 +2,8 @@ import BioSimSpace as BSS
 from BioSimSpace._SireWrappers import System as _System
 import os
 import warnings
-import pipeline
 
+import pipeline
 
 class validate():
     """class of staticmethods to return validated input
@@ -30,6 +30,44 @@ class validate():
             raise TypeError(f"{string} / 'string' must be of type 'str'.")
         
         return string
+
+
+    @staticmethod
+    def dictionary(dictionary):
+        """validates the dictionary
+
+        Args:
+            dictionary (dict): the dictionary
+
+        Raises:
+            TypeError: must be of type 'dict'
+
+        Returns:
+            dict: the dictionary
+        """
+        if not isinstance(dictionary, dict):
+            raise TypeError(f"{dictionary} / 'dictionary' must be of type 'dict'.")
+        
+        return dictionary
+
+
+    @staticmethod
+    def is_list(a_list):
+        """validates the list
+
+        Args:
+            a_list (list): the list
+
+        Raises:
+            TypeError: must be of type 'list'
+
+        Returns:
+            a_list: the list
+        """
+        if not isinstance(a_list, list):
+            raise TypeError(f"{a_list} / 'a_list' must be of type 'list'.")
+        
+        return a_list
 
 
     @staticmethod

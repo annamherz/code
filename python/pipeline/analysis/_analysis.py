@@ -208,6 +208,9 @@ class analyse():
 
         if self._try_pickle:
             do_pickle = analyse._check_pickle(self)
+        else:
+            do_pickle = False
+            
         if do_pickle:
             freenrg_rel, repeats_tuple_list = analyse._analyse_all_repeats_pickle(
                 self)

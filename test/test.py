@@ -16,21 +16,37 @@ from pipeline import *
 from pipeline.analysis import *
 from pipeline.utils import *
 
-work_dir = "/home/anna/Documents/code/test/AMBER_extracted/lig_ejm31~lig_ejm42"
-analysis = pipeline.analysis.analyse(work_dir)
 
-analysis_options = {'estimator': "MBAR", "method":"alchemlyb",
-                    "check_overlap":True,
-                    "try_pickle":True, 'save_pickle':True,
-                    "auto_equilibration": False,
-                    "truncate_percentage": 0,
-                    "truncate_keep":"start"}
+results_files = ["/home/anna/Documents/code/test/final_summary_AMBER_MBAR_alchemlyb_benchmark.csv",
+                 "/home/anna/Documents/code/test/final_summary_SOMD_MBAR_alchemlyb_benchmark.csv",
+                 "/home/anna/Documents/code/test/final_summary_GROMACS_MBAR_alchemlyb_benchmark.csv"
+                 ]
+engine = "SOMD"
+output_folder = "/home/anna/Documents/code/test"
+net_file = "/home/anna/Documents/benchmark/tyk2_benchmark/execution_model/network_combined.dat"
 
-analysis.set_options(analysis_options)
-analysis.analyse_all_repeats()
-analysis.plot_graphs()
-final_results_folder = f"{work_dir}/results"
-write_analysis_file(analysis, final_results_folder)
+perturbations, ligands, mod_results_files = get_info_network(results_files, net_file, extra_options={"engines":["Amber","gROMacs"]})
+
+
+# work_dir = ["/home/anna/Documents/code/test/AMBER_extracted/lig_ejm31~lig_ejm42",
+#             "/home/anna/Documents/code/test/GROMACS_extracted/lig_ejm31~lig_ejm42",
+#             "/home/anna/Documents/code/test/SOMD_extracted/lig_ejm31~lig_ejm42"]
+
+# for dir in work_dir:
+#     analysis = pipeline.analysis.analyse(dir)
+
+#     analysis_options = {'estimator': "MBAR", "method":"alchemlyb",
+#                         "check_overlap":True,
+#                         "try_pickle":True, 'save_pickle':True,
+#                         "auto_equilibration": True,
+#                         "truncate_percentage": 75,
+#                         "truncate_keep":"end"}
+
+#     analysis.set_options(analysis_options)
+#     analysis.analyse_all_repeats()
+#     analysis.plot_graphs()
+#     final_results_folder = f"{dir}/results"
+#     write_analysis_file(analysis, final_results_folder)
 
 # file = "/home/anna/Documents/benchmark/tyk2_benchmark/execution_model_rbfenn_test/protocol.dat"
 # system = BSS.IO.readMolecules(

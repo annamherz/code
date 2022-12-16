@@ -1,20 +1,13 @@
 
 # import libraries
 import BioSimSpace as BSS
-import os
-import glob
 import csv
 import numpy as np
-import math
 import pandas as pd
 import networkx as nx
-import yaml
 from scipy.stats import sem as sem
 from scipy.stats import bootstrap
 from sklearn.metrics import mean_absolute_error as mae
-import pickle
-import tempfile
-import itertools
 
 import matplotlib.pyplot as plt
 import csv
@@ -23,28 +16,41 @@ import pandas as pd
 
 from ..utils import *
 
-
-
-def get_info_network(engine=None, results_files=None, net_file=None, output_folder=None, extra_options=None):
+def get_info_network(results_files=None, net_file=None, output_folder=None, extra_options=None):
     # get info from a network file for engine
     # For the network that we are considering,
     # we want to get results files with these perturbations from the overall file that contains the large network results (if this is the case).
     # This is just good to have a consistent format of results to analyse.
-    if not engine:
-        raise ValueError("must specify an engine") # TODO make so can be BSS engines or all engines allowed
-    # TODO if not out_folder is a file path, raise issue
-    # if not engine:
-    #     raise ValueError("must specify an engine")    
-    # TODO if not temp folder make
+    
+    net_file = validate.file_path(net_file)
 
-    # get all the indivisual results file for that engine
-    # TODO if results file is empty, raise issue
-    # TODO print how many results files
-    # TODO extra options if want to change file name etc, also put if only want a specific engine here?
-    # otherwise will find all engines in network file and use this
+    len_results_files = 0
+    for file in results_files:
+        validate.file_path(file)
+        len_results_files += 1
+    print(f"there are : {len_results_files} results files.")
 
+    if not output_folder:
+        # will write as folder of first results file
+        output_folder = validate.folder_path(results_files[0].replace(results_files[0].split("/")[-1], "")[:-1])
+        print(f"using {output_folder} to write the results as none specified...")
+    
+    # set extra_options variables as defaults
+    engines = [eng.upper() for eng in BSS.FreeEnergy.engines()] # use all
+
+    if extra_options:
+        extra_options = validate.dictionary(extra_options)
+
+        if "engine" in extra_options.keys():
+            engines = [validate.engine(extra_options["engine"])]
+        if "engines" in extra_options.keys():
+            engines = validate.is_list(extra_options["engines"])
+            for engine in engines:
+                engine_val = validate.engine(engine)
+                engines = [engine_val if i == engine else i for i in engines]
+       
+    
     # We also want to create a list of the perturbations in our network.
-    # create a list of the perturbations
     perturbations = []
 
     # create a list of ligands
@@ -52,22 +58,24 @@ def get_info_network(engine=None, results_files=None, net_file=None, output_fold
 
     # use the network file to find the ligands and perturbations
     for line in open(f"{net_file}", "r"):
-        if line.split()[-1] == engine:
-            lig_0 = line.split()[0]
-            lig_1 = line.split()[1]
-            pert = f"{lig_0}~{lig_1}"
-            perturbations.append(pert)
-            if lig_0 not in ligands:
-                ligands.append(lig_0)
-            elif lig_1 not in ligands:
-                ligands.append(lig_1)
-            else:
-                pass
+        for engine in engines:
+            if line.split()[-1] == engine:
+                lig_0 = line.split()[0]
+                lig_1 = line.split()[1]
+                pert = f"{lig_0}~{lig_1}"
+                if pert not in perturbations:
+                    perturbations.append(pert)
+                if lig_0 not in ligands:
+                    ligands.append(lig_0)
+                elif lig_1 not in ligands:
+                    ligands.append(lig_1)
+                else:
+                    pass
 
     mod_results_files = []
 
     for file in results_files:
-        new_file_name = f"{output_folder}/results_{results_files.index(file)}_{engine}.csv"
+        new_file_name = f"{output_folder}/results_{results_files.index(file)}_{'_'.join(engines)}.csv"
         with open(new_file_name, "w") as result_file:
 
             writer = csv.writer(result_file, delimiter=",")
@@ -75,8 +83,8 @@ def get_info_network(engine=None, results_files=None, net_file=None, output_fold
 
             for row, index in pd.read_csv(file).iterrows():
                 pert = f"{index['lig_1']}~{index['lig_2']}"
-                if pert in perturbations:
-                    writer.writerow([index['lig_1'], index['lig_2'], index['freenrg'], index['error'], index['engine']])    
+                if pert in perturbations and index['engine'].strip() in engines:
+                        writer.writerow([index['lig_1'], index['lig_2'], index['freenrg'], index['error'], index['engine']])    
 
             mod_results_files.append(new_file_name)
 

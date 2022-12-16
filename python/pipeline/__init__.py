@@ -16,6 +16,6 @@ with _warnings.catch_warnings():
     except:
         raise EnvironmentError('BioSimSpace required: www.biosimspace.org')
 
+from . import utils
 from . import analysis
 from . import prep
-from . import utils
