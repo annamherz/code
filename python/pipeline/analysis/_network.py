@@ -28,7 +28,7 @@ def get_info_network(results_files=None, net_file=None, output_folder=None, extr
     for file in results_files:
         validate.file_path(file)
         len_results_files += 1
-    print(f"there are : {len_results_files} results files.")
+    # print(f"there are : {len_results_files} results files.")
 
     if not output_folder:
         # will write as folder of first results file
@@ -68,7 +68,7 @@ def get_info_network(results_files=None, net_file=None, output_folder=None, extr
                         perturbations.append(pert)
                     if lig_0 not in ligands:
                         ligands.append(lig_0)
-                    elif lig_1 not in ligands:
+                    if lig_1 not in ligands:
                         ligands.append(lig_1)
                     else:
                         pass
@@ -139,6 +139,9 @@ class graph():
             font_color = "white")
 
         if self._save_image:
+            plt.savefig(f"{self.file_dir}/analysis_network.png", dpi=300)
+        if file_dir:
+            file_dir = validate.folder_path(file_dir, create = True)
             plt.savefig(f"{file_dir}/analysis_network.png", dpi=300)
 
         plt.show()
@@ -226,3 +229,4 @@ class graph():
 
 
 # TODO in new - use functions from network and dictionary to make the results object
+# this would also incl the plotting which uses the network as well

@@ -19,6 +19,7 @@ import numpy as np
 import pandas as pd 
 
 from ..utils import *
+from ._convert import *
 
 # functions
 # TODO clean up and make sure have description at start
@@ -121,13 +122,13 @@ class make_dict():
 
 
     @staticmethod
-    def from_freenrgworkflows(experimental_DDGs, ligands, perturbations):
+    def experimental_from_freenrgworkflows(experimental_DDGs, ligands, perturbations):
         
         ligands = validate.is_list(ligands)
         perturbations = validate.is_list(perturbations)
 
         exper_val_dict = make_dict._from_freenrgworkflows_experimental_val(experimental_DDGs, ligands)
-        exper_diff_dict = make_dict._from_freenrgworkflows_experimental_val(exper_val_dict, perturbations)
+        exper_diff_dict = make_dict._from_freenrgworkflows_experimental_diff(exper_val_dict, perturbations)
 
         return exper_diff_dict, exper_val_dict
     
@@ -160,29 +161,61 @@ class make_dict():
         exper_diff_dict = {}
 
         # calculate the experimental RBFEs
-        # write these to a csv file
-        with open("experimental_perturbations.csv", "w") as exp_pert_file:
-            writer = csv.writer(exp_pert_file, delimiter=",")
-            writer.writerow(["lig_1","lig_2","freenrg","error","engine"])
 
-            for pert in perturbations:
-                lig_0 = pert.split("~")[0]
-                lig_1 = pert.split("~")[1]
-                # exclude from calculating if one of the ligands is not available
-                if exper_val_dict[lig_0][0] is None or exper_val_dict[lig_1][0] is None:
-                    exper_ddG =None
-                    exper_err = None
-                    exper_diff_dict.update({pert:(None, None)})
-                # if experimental data is available, calculate experimental perturbation and propagate
-                else:
-                    exper_ddG = exper_val_dict[lig_1][0] - exper_val_dict[lig_0][0]
-                    exper_err = math.sqrt(math.pow(exper_val_dict[lig_0][1], 2) + math.pow(exper_val_dict[lig_1][1], 2))
-                    exper_diff_dict.update({pert:(exper_ddG, exper_err)})
-
-                writer.writerow([lig_0, lig_1, exper_ddG, exper_err, "experimental"])
+        for pert in perturbations:
+            lig_0 = pert.split("~")[0]
+            lig_1 = pert.split("~")[1]
+            # exclude from calculating if one of the ligands is not available
+            if exper_val_dict[lig_0][0] is None or exper_val_dict[lig_1][0] is None:
+                exper_ddG =None
+                exper_err = None
+                exper_diff_dict.update({pert:(None, None)})
+            # if experimental data is available, calculate experimental perturbation and propagate
+            else:
+                exper_ddG = exper_val_dict[lig_1][0] - exper_val_dict[lig_0][0]
+                exper_err = math.sqrt(math.pow(exper_val_dict[lig_0][1], 2) + math.pow(exper_val_dict[lig_1][1], 2))
+                exper_diff_dict.update({pert:(exper_ddG, exper_err)})
         
         return exper_diff_dict
 
+
+    @staticmethod
+    def experimental_from_cinnabar(exper_dict, ligands, perturbations):
+        
+        ligands = validate.is_list(ligands)
+        perturbations = validate.is_list(perturbations)
+
+        exper_val_dict = make_dict._from_cinnabar_experimental_val(exper_dict, ligands)
+        exper_diff_dict = make_dict._from_cinnabar_experimental_diff(exper_val_dict, perturbations)
+
+        return exper_diff_dict, exper_val_dict
+
+    @staticmethod
+    def _from_cinnabar_experimental_val(exper_val_dict, ligands):
+
+        new_exper_val_dict ={}
+
+        for lig in ligands:
+            exper_dG = exper_val_dict[lig][0]
+            exper_err = exper_val_dict[lig][1]
+            new_exper_val_dict.update({lig:(exper_dG, exper_err)})
+
+        return new_exper_val_dict
+
+    @staticmethod
+    def _from_cinnabar_experimental_diff(exper_val_dict, perturbations):
+
+        exper_diff_dict = {}
+
+        # calculate the experimental RBFEs
+        for pert in perturbations:
+            lig_0 = pert.split("~")[0]
+            lig_1 = pert.split("~")[1]
+            exper_ddG = exper_val_dict[lig_1][0] - exper_val_dict[lig_0][0]
+            exper_err = math.sqrt(math.pow(exper_val_dict[lig_0][1], 2) + math.pow(exper_val_dict[lig_1][1], 2))
+            exper_diff_dict.update({pert:(exper_ddG, exper_err)})
+
+        return exper_diff_dict
 
     @staticmethod
     def cycle_closures(pert_dict, cycle_closures):
