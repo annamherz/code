@@ -445,6 +445,111 @@ def all_bar():
     plt.show()
 
 
+def outlier():
+    number_outliers_to_annotate = 5
+    engine = "GROMACS"
+
+    freenrg_df_plotting_scatter = values_dict[engine]["freenrg_df_pert"].dropna()
+
+    x = freenrg_df_plotting_scatter["freenrg_exp"]
+    y = freenrg_df_plotting_scatter["freenrg_fep"]
+    x_er = freenrg_df_plotting_scatter["err_exp"]
+    y_er = freenrg_df_plotting_scatter["err_fep"]    
+
+    # get an array of the MUE values comparing experimental and FEP values. Take the absolute values.
+    mue_values = abs(freenrg_df_plotting_scatter["freenrg_exp"] - freenrg_df_plotting_scatter["freenrg_fep"])
+
+    # find the n ligand names that are outliers.
+    outlier_names = mue_values.nlargest(number_outliers_to_annotate).index.values.tolist()
+    print(outlier_names)
+
+    # construct a list of labels to annotate the scatterplot with.
+    annot_labels = []
+    colours = []
+    for ligand in freenrg_df_plotting_scatter.index.values:
+        # if the ligand is an outlier, append the name to the annotation labels list.
+        if ligand in outlier_names:
+            annot_labels.append(ligand)
+            colours.append("hotpink")
+        else:
+            # if the ligand is not an outlier, append an empty string to the annotation labels list.
+            annot_labels.append("")
+            colours.append("teal")
+
+    # Create the same scatterplot as above. Can include some more of the formatting if needed.
+    plt.rc('font', size=12)
+    plt.figure(figsize=(10,10))
+
+    plt.scatter(x,y, zorder=10, c=colours)
+
+    #plotting error bars
+    plt.errorbar(x , y,
+                yerr=y_er,
+                # xerr=x_er,   # comment this line to hide experimental error bars \
+                            # as this can sometimes overcrowd the plot.
+                ls="none",
+                lw=0.5, 
+                capsize=2,
+                color="black",
+                zorder=5
+                )
+
+    # get the bounds. This can be done with min/max or simply by hand.
+    all_freenrg_values = np.concatenate([x.values,y.values])
+    min_lim = min(all_freenrg_values)   
+    max_lim = max(all_freenrg_values)
+
+    # can plot a line for ideal
+    # plt.plot((min_lim*1.3,max_lim*1.3),(min_lim*1.3,max_lim*1.3), color="teal")
+
+    # or if want to plot 1/2 kcal bounds
+    plt.fill_between(
+                    x=[-100, 100], 
+                    y2=[-100.25,99.75],
+                    y1=[-99.75, 100.25],
+                    lw=0, 
+                    zorder=-10,
+                    alpha=0.3,
+                    color="grey")
+    # upper bound:
+    plt.fill_between(
+                    x=[-100, 100], 
+                    y2=[-99.5,100.5],
+                    y1=[-99.75, 100.25],
+                    lw=0, 
+                    zorder=-10,
+                    color="grey", 
+                    alpha=0.2)
+    # lower bound:
+    plt.fill_between(
+                    x=[-100, 100], 
+                    y2=[-100.25,99.75],
+                    y1=[-100.5, 99.5],
+                    lw=0, 
+                    zorder=-10,
+                    color="grey", 
+                    alpha=0.2)
+
+    # for a scatterplot we want the axis ranges to be the same. 
+    plt.xlim(min_lim*1.3, max_lim*1.3)
+    plt.ylim(min_lim*1.3, max_lim*1.3)
+
+    plt.axhline(color="black", zorder=1)
+    plt.axvline(color="black", zorder=1)
+
+    plt.ylabel("Computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+    plt.xlabel("Experimental $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+
+    # then, after generating the figure, we can annotate:
+    for i, txt in enumerate(annot_labels):
+        plt.annotate(txt, 
+                    (freenrg_df_pert_plotting_scatter["freenrg_exp"].values.tolist()[i]+0.1,     # x coords
+                    freenrg_df_pert_plotting_scatter["freenrg_fep"].values.tolist()[i]+0.1),    # y coords
+                    size=15, color="hotpink")
+
+    # plt.savefig("analysis/fep_vs_exp_outlier_plot.png", dpi=300, bbox_inches='tight')
+    plt.show()    
+
 
 # TODO plot cinnabar, someway to get the stats things from cinnabar
 # can plot diff data series cinnabar?
