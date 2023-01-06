@@ -2,27 +2,32 @@ import sys
 import os
 import shutil
 
+from ._validate import *
+
 def add_header_simfile(trans_dir):
     """Adds header to simfiles if failed to generate.
 
     Args:
         trans_dir (str): path to the trans_dir for which headers will be added.
     """
-    if not isinstance(trans_dir, str):
-        raise TypeError(f"{trans_dir} must be of type string.")
-    if not os.path.exists(trans_dir):
-        raise ValueError(f"{trans_dir} does not exist as a path.")
+    trans_dir = validate.folder_path(trans_dir)
 
-    legs = [leg for leg in sorted(os.listdir(trans_dir))]
+    items_in_folder = [leg for leg in sorted(os.listdir(trans_dir))]
+    legs = []
 
-    for leg in legs:
-        if "bound" in leg or "free" not in leg:
-            legs.remove(leg)
+    for item in items_in_folder:
+        if not "pickle" in item:
+            if "bound" in item:
+                legs.append(item)
+            elif "free" in item:
+                legs.append(item)
+        else:
+            pass
 
     for leg in legs:
 
         lambdas = []
-        for dir in os.listdir(f"{trans_dir}/{leg}"):
+        for dir in sorted(os.listdir(f"{trans_dir}/{leg}")):
             if "lambda" in dir:
                 lambdas.append(dir.split("_")[1])
 
@@ -74,6 +79,7 @@ def add_header_simfile(trans_dir):
                     file = open(f"{direc}/simfile_header.dat", "w")
                 else:
                     file = open(f"{direc}/simfile_header.dat", "a")
+                # TODO fix so get info from simfile if possible eg re length
                 file.write("#This file was generated to fix the header \n")
                 file.write("#Using the somd command, of the molecular library Sire version <2022.3.0> \n")
                 file.write("#For more information visit: https://github.com/michellab/Sire \n")
@@ -101,51 +107,71 @@ def add_header_simfile(trans_dir):
             else:
                 pass
 
-def extract_output(main_dir, extract_dir=None):
+
+def extract_output_single(trans_dir, extract_dir=None):
     """Extracts only the output files from the 
 
     Args:
-        main_dir (str): Main directory
+        main_dir (str): Main directory, outputs directory.
     """
     # this should be the outputs directory
-    if not isinstance(main_dir, str):
-        raise TypeError("main_dir must be of type str")
+    trans_dir = validate.folder_path(trans_dir)
+
+    if not extract_dir:
+        extract_dir = f"{trans_dir.split('outputs')[0]}outputs_extracted{trans_dir.split('outputs')[1]}"
+
+    # make directory
+    extract_dir = validate.folder_path(extract_dir, create=True)
+
+    _extract_output(trans_dir, extract_dir)
+
+
+def extract_output_all(main_dir, extract_dir=None):
+    """Extracts only the output files from the 
+
+    Args:
+        main_dir (str): Main directory, outputs directory.
+    """
+    # this should be the outputs directory
+    main_dir = validate.folder_path(main_dir)
+    if main_dir.split("/")[-1] != "outputs":
+        raise ValueError(f"{main_dir} must be the outputs directory for extract all.")
 
     if not extract_dir:
         extract_dir = f"{main_dir}_extracted"
-    else:
-        if not isinstance(extract_dir, str):
-            raise TypeError("extract_dir must be of type str")
 
     # make directory
-    if not os.path.isdir(extract_dir):
-        os.mkdir(extract_dir)
+    extract_dir = validate.folder_path(extract_dir, create=True)
 
-    dir_list = [dirs[0] for dirs in os.walk(main_dir)]
+    _extract_output(main_dir, extract_dir)
+
+
+def _extract_output(folder, extract_dir):
+
+    dir_list = [dirs[0] for dirs in os.walk(folder)]
 
     for dirs in dir_list:
         if not "min" in dirs:
             if not "heat" in dirs:
                 if not "eq" in dirs:
-                    if not os.path.isdir(f"{extract_dir}{dirs.split(f'{main_dir}')[1]}"):
-                        os.mkdir(f"{extract_dir}{dirs.split(f'{main_dir}')[1]}")
-
-                    if "lambda" in dirs:                        
+                    if "lambda" in dirs:      
+                        new_dir = validate.folder_path(f"{extract_dir}{dirs.split(f'{folder}')[1]}", create=True)                  
                         if "AMBER" in dirs:
                             try:
-                                shutil.copyfile(f"{dirs}/amber.out", f"{extract_dir}/{dirs.split(f'{main_dir}')[1]}/amber.out")
+                                shutil.copyfile(f"{dirs}/amber.out", f"{new_dir}/amber.out")
                             except:
                                 print(f"{dirs} does not have a recognised AMBER input.")
                         elif "GROMACS" in dirs:
                             try:
-                                shutil.copyfile(f"{dirs}/gromacs.xvg", f"{extract_dir}/{dirs.split(f'{main_dir}')[1]}/gromacs.xvg")                        
+                                shutil.copyfile(f"{dirs}/gromacs.xvg", f"{new_dir}/gromacs.xvg")                        
                             except:
                                 print(f"{dirs} does not have a recognised GROMACS input.")
                         elif "SOMD" in dirs:
                             try:
-                                shutil.copyfile(f"{dirs}/simfile.dat", f"{extract_dir}/{dirs.split(f'{main_dir}')[1]}/simfile.dat")
+                                shutil.copyfile(f"{dirs}/simfile.dat", f"{new_dir}/simfile.dat")
                             except:
                                 print(f"{dirs} does not have a recognised SOMD input.")
 
-# TODO function that truncates the output
-# # eg so just 1ns of data, 2ns of data, etc                       
+
+
+# def extract_trajectory_frames(main_dir, extract_dir=None):

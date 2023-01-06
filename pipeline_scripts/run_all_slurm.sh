@@ -69,6 +69,8 @@ echo "FEP prep jobid is $jidfep"
 for i in "${!trans_array[@]}"; do
 jidprod=$(sbatch --dependency=afterany:${jidfep} --parsable --array=0-$((${win_array[i]}-1)) $scripts_dir/run_production_slurm.sh ${trans_array[i]} ${eng_array[i]} ${win_array[i]} $repeats)
 echo "Production jobid for ${trans_array[i]}, ${eng_array[i]} is $jidprod"
-jidana=$(sbatch --dependency=afterany:${jidprod} --parsable $scripts_dir/run_analysis_slurm.sh ${trans_array[i]} ${eng_array[i]})
+jidextract=$(sbatch --dependency=afterany:${jidfep} --parsable $scripts_dir/run_extract_output_slurm.sh ${trans_array[i]} ${eng_array[i]})
+echo "Extraction jobid for ${trans_array[i]}, ${eng_array[i]} is $jidextract"
+jidana=$(sbatch --dependency=afterany:${jidextract} --parsable $scripts_dir/run_analysis_slurm.sh ${trans_array[i]} ${eng_array[i]})
 echo "Analysis jobid for ${trans_array[i]} is $jidana"
 done
