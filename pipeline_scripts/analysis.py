@@ -44,13 +44,17 @@ analysis_options = {'estimator': "MBAR", "method":"alchemlyb",
                     "truncate_keep":"start"}
 
 main_dir = _os.environ["MAINDIRECTORY"]
-final_results_folder = f"{main_dir}/outputs"
 
 # find correct path, use extracted if it exists
 if _os.path.exists(f"{main_dir}/outputs/{engine}_extracted/{trans}"):
     path_to_dir = f"{main_dir}/outputs/{engine}_extracted/{trans}"
+    final_results_folder = f"{main_dir}/outputs"
+elif _os.path.exists(f"{main_dir}/outputs_extracted/{engine}/{trans}"):
+    path_to_dir = f"{main_dir}/outputs_extracted/{engine}/{trans}"
+    final_results_folder = f"{main_dir}/outputs_extracted"
 else:
     path_to_dir = f"{main_dir}/outputs/{engine}/{trans}"
+    final_results_folder = f"{main_dir}/outputs"
 
 if not _os.path.exists(path_to_dir):
     raise OSError(f"{path_to_dir} does not exist.")

@@ -18,18 +18,18 @@ from pipeline.utils import *
 
 
 # need the transdir, sys argv 1
-folder = "/home/anna/Documents/code/test/outputs/SOMD/lig_ejm31~lig_ejm42"
+folder = "/home/anna/Documents/code/test/outputs/GROMACS/lig_ejm31~lig_ejm42"
 # folder format is $MAINDIRECTORY/outputs/$2/$1
 
-# simfile header
-if "SOMD" in folder:
-    try:
-        add_header_simfile(folder)
-    except:
-        print(f"could not add the header to simfile in {folder}")
+# # simfile header
+# if "SOMD" in folder:
+#     try:
+#         add_header_simfile(folder)
+#     except:
+#         print(f"could not add the header to simfile in {folder}")
 
 # extract to output folder
-extract_output_single(folder)
+extract_trajectory_frames(folder, traj_lambdas=["0.0000"])
 
 # results_files = ["/home/anna/Documents/code/test/final_summary_AMBER_MBAR_alchemlyb_benchmark.csv",
 #                  "/home/anna/Documents/code/test/final_summary_SOMD_MBAR_alchemlyb_benchmark.csv"]
