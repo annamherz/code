@@ -3,6 +3,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=5
 #SBATCH --job-name=prod
+#SBATCH --time=24:00:00
 #SBATCH -o ../slurm_logs/prod_%A_%a.out
 #SBATCH -e ../slurm_logs/prod_%A_%a.err
 
