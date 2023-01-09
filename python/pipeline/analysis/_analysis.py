@@ -21,7 +21,7 @@ class analyse():
         # instantiate the class with the work directory
 
         self._work_dir = validate.folder_path(work_dir)
-        self._pickle_dir = self._work_dir + '/pickle'
+        self._pickle_dir = validate.folder_path(f"{self._work_dir}/pickle", create=True)
 
         # get the perturbation name and engine from the folder path
         try:

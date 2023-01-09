@@ -8,7 +8,7 @@ export scripts_dir="/home/anna/Documents/code/pipeline_scripts" # choose locatio
 
 # export all execution model files for later scripts
 export lig_file="/home/anna/Documents/benchmark/tyk2_benchmark/execution_model/ligands.dat"
-export net_file="/home/anna/Documents/benchmark/tyk2_benchmark/execution_model/network_combined.dat"
+export net_file="/home/anna/Documents/benchmark/tyk2_benchmark/execution_model/network_combined_extract.dat"
 export prot_file="/home/anna/Documents/benchmark/tyk2_benchmark/execution_model/protocol.dat"
 
 # make sure engines etc are sourced correctly
