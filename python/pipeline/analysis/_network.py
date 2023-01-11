@@ -100,7 +100,7 @@ def get_info_network(net_file=None, results_files=None, extra_options=None):
 
     return (perturbations, ligands)
             
-class graph():
+class net_graph():
     
     def __init__(self, ligands, perturbations, file_dir=None):
 
@@ -113,7 +113,7 @@ class graph():
         else:
             self._save_image = False
 
-        graph._gen_graph(self)
+        net_graph._gen_graph(self)
 
     def _gen_graph(self):
 

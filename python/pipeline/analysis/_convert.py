@@ -112,6 +112,7 @@ class convert:
         # first check if the experimental values are a dict or a file
         try:
             exper_val_dict = validate.dictionary(exper_val)
+            is_file = False
         except:
             validate.file_path(exper_val)
             is_file = True

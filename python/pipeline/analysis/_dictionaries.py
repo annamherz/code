@@ -178,6 +178,20 @@ class make_dict():
         
         return exper_diff_dict
 
+    @staticmethod
+    def from_freenrgworkflows_network_analyser(computed_relative_DDGs):
+
+        freenrg_dict = {}
+
+        # append computed freenrg and error.
+        for item in computed_relative_DDGs:
+            ligand = list(item.keys())[0]
+            freenrg = list(item.values())[0]
+            error = list(item.values())[1]
+
+            freenrg_dict.update({ligand:(freenrg, error)})
+
+        return freenrg_dict
 
     @staticmethod
     def experimental_from_cinnabar(exper_dict, ligands, perturbations):

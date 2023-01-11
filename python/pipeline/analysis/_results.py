@@ -1,13 +1,14 @@
 import BioSimSpace as BSS
 import os
 import itertools as it
+import sys
 
 from ..utils import *
 from ._network import *
 from ._plotting import *
 from ._dictionaries import *
 
-class analysis_engine():
+class analysis_engines():
     """class to analyse results files and plot
     """
 
@@ -36,8 +37,8 @@ class analysis_engine():
         
         # get files from results directory
         self._results_directory = validate.folder_path(results_directory)
-        self._results_repeat_files = analysis_engine._get_results_repeat_files(self)  
-        self._results_files = analysis_engine._get_results_files(self)
+        self._results_repeat_files = analysis_engines._get_results_repeat_files(self)  
+        self._results_files = analysis_engines._get_results_files(self)
 
         if not exp_file:
             print("please set an experimental yml file so this can be used, eg using .get_experimental(exp_file). ")
@@ -64,12 +65,12 @@ class analysis_engine():
         # get info from the network
         self.perturbations = None
         self.ligands = None  
-        analysis_engine._set_network(self) # get network info
+        analysis_engines._set_network(self) # get network info
 
         # read the extra options
-        analysis_engine._set_default_options(self)
+        analysis_engines._set_default_options(self)
         if extra_options:
-            analysis_engine.set_options(extra_options)
+            analysis_engines.set_options(extra_options)
         
         # as not yet computed, set this to false
         self._is_computed = False
@@ -141,6 +142,11 @@ class analysis_engine():
         self._save_pickle = True
         self._try_pickle = True
 
+        self._fwf_experimental_DDGs = None
+        self._fwf_computed_relative_DDGs = {}
+
+        # TODO set other default self outputs to None
+
 
     def set_options(self, options_dict):
 
@@ -194,28 +200,117 @@ class analysis_engine():
 
         return pert_dict
 
+    def _get_exp_fwf(self, fwf_path=None):
+        # using freenergworkflows
+        if not fwf_path:
+            raise ValueError("pls incl the path to freenergworkflows")
+        sys.path.insert(1, fwf_path)
+        import experiments
+
+        # first need to convert the yml file into one useable by freenergworkflows
+        exp_file_dat = f"{self.exp_file.split('.')[0]}_exp_dat.dat"
+        convert.yml_into_freenrgworkflows(self.exp_file, exp_file_dat)
+        experiments = experiments.ExperimentalData()
+        experiments.compute_affinities(exp_file_dat, data_type="IC50", comments="#", delimiter=",")
+        experimental_DDGs = experiments.freeEnergiesInKcal
+
+        exp_pert_dict,exp_lig_dict = make_dict.experimental_from_freenrgworkflows(experimental_DDGs, self.ligands, self.perturbations)
+        self._fwf_experimental_DDGs = experimental_DDGs
+
+        return exp_lig_dict, exp_pert_dict
+
+
+    def _get_ana_fwf(self, fwf_path=None, engine=None):
+        # using freenergworkflows 
+        if not fwf_path:
+            raise ValueError("pls incl the path to freenergworkflows")
+        sys.path.insert(1, fwf_path)
+        import networkanalysis
+
+        if not engine:
+            raise ValueError("please incl an engine")
+
+        # using the network analyser
+        nA = networkanalysis.NetworkAnalyser()
+
+        first_file = False
+        for file_name in self._results_repeat_files[engine]:
+            if first_file is False:
+                nA.read_perturbations_pandas(file_name, comments='#')
+                first_file = True
+            else:
+                # add more replicates to the graph. FreeNrgWorkflows will take care of averaging 
+                # the free energies as well as propagating the error.
+                nA.add_data_to_graph_pandas(file_name)
+
+        computed_relative_DDGs = nA.freeEnergyInKcal
+
+        freenrg_dict = make_dict.from_freenrgworkflows_network_analyser(computed_relative_DDGs)
+        self._fwf_computed_relative_DDGs.update({engine : computed_relative_DDGs})
+
+        return freenrg_dict
+
+
+    def _get_stats_fwf(self, fwf_path=None, engine=None):
+        # using freenergworkflows 
+        if not fwf_path:
+            raise ValueError("pls incl the path to freenergworkflows")
+        sys.path.insert(1, fwf_path)
+        import stats
+
+        if not engine:
+            raise ValueError("please incl an engine")
+
+        computed_relative_DDGs = self._fwf_computed_relative_DDGs[engine]
+        experimental_DDGs = self._fwf_experimental_DDGs
+
+        _stats = stats.freeEnergyStats()
+        _stats.generate_statistics(computed_relative_DDGs,experimental_DDGs,repeats=10000)
+        r_confidence = _stats.R_confidence
+        tau_confidence = _stats.tau_confidence
+        mue_confidence = _stats.mue_confidence
+        print ("R confidence is:   %.2f < %.2f < %.2f" %(r_confidence[1], r_confidence[0], r_confidence[2]))
+        print ("MUE confidence is: %.2f < %.2f < %.2f" %(mue_confidence[1], mue_confidence[0], mue_confidence[2]))
+        print ("Tau confidence is: %.2f < %.2f < %.2f" %(tau_confidence[1], tau_confidence[0], tau_confidence[2]))
+
+        return r_confidence, tau_confidence, mue_confidence 
+
+
     def compute(self):
 
         # compute the experimental for perturbations
-        analysis_engine.get_experimental(self) # get experimental val dict
-        analysis_engine.get_experimental_pert(self) # from cinnabar expeirmental diff ? make_dict class
+        analysis_engines.get_experimental(self) # get experimental val dict
+        analysis_engines.get_experimental_pert(self) # from cinnabar expeirmental diff ? make_dict class
 
+        # get the files into cinnabar format for analysis
+        for eng in self.engines:
+            results_files = self._results_repeat_files[eng]
+            convert.cinnabar_file(results_files, self.exper_val_dict, f"{self.results_folder}/cinnabar_{eng}")
+            # TODO some way to incl extension for the files in the naming here, or alternatively own folder is good
+        
         # compute the per ligand for the network
 
         # compute the cycle closure
 
         # make a dict of the computed results
-        comp_dict = make_dict.comp_results(results_files=self._values_dict["results_files"], 
-                                            perturbations=self._values_dict["perts"],
-                                            output_file=f"{res_folder}/{comp_pert_file_name}_{eng}",
-                                            engine=eng)
-        self._values_dict["pert_results"] = comp_dict
+        # comp_dict = make_dict.comp_results(results_files=self._values_dict["results_files"], 
+        #                                     perturbations=self._values_dict["perts"],
+        #                                     output_file=f"{res_folder}/{comp_pert_file_name}_{eng}",
+        #                                     engine=eng)
+        # self._values_dict["pert_results"] = comp_dict
 
         self._is_computed = True
 
         # to use cinnabar, first get the results files, exper dict, and convert this using cinnabar_file method written in _convert
         # make so have cinnabar file ready to go for plotting and analysis w it
 
+    def draw_graph(self):
+
+        graph = net_graph(self.ligands,self.perturbations)
+        graph.draw_graph()
+
+        # TODO also incl cinnabar graph drawing functionality?
+        # TODO eng specific graph drawing or this doesnt matter
 
     # for all have engine options if only want to plot a single engine
     def plot_bar_pert(self, engine=None):
