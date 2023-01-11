@@ -89,3 +89,47 @@ def write_analysis_file(analysis, results_dir):
                     f"{analysis.repeats_tuple_list[r][1]} and the error is {analysis.repeats_tuple_list[r][2]} "+
                     f"for {analysis.perturbation}, {analysis.engine}.")
                 writer.writerow(data_point)
+
+
+def write_modified_results_files(results_files, perturbations, output_folder=None, extra_options=None):
+
+    len_results_files = 0
+    for file in results_files:
+        validate.file_path(file)
+        len_results_files += 1
+    # print(f"there are : {len_results_files} results files.")
+
+    if not output_folder:
+        # will write as folder of first results file
+        output_folder = validate.folder_path(results_files[0].replace(results_files[0].split("/")[-1], "")[:-1])
+        print(f"using {output_folder} to write the results as none specified...")
+    
+    # set extra_options variables as defaults
+    engines = [eng.upper() for eng in BSS.FreeEnergy.engines()] # use all
+
+    if extra_options:
+        extra_options = validate.dictionary(extra_options)
+
+        if "engine" in extra_options.keys():
+            engines = [validate.engine(extra_options["engine"])]
+        if "engines" in extra_options.keys():
+            engines = validate.is_list(extra_options["engines"])
+            for engine in engines:
+                engine_val = validate.engine(engine)
+                engines = [engine_val if i == engine else i for i in engines]
+       
+    mod_results_files = []
+
+    for file in results_files:
+        new_file_name = f"{output_folder}/results_{results_files.index(file)}_{'_'.join(engines)}.csv"
+        with open(new_file_name, "w") as result_file:
+
+            writer = csv.writer(result_file, delimiter=",")
+            writer.writerow(["lig_1","lig_2","freenrg","error","engine"])
+
+            for row, index in pd.read_csv(file).iterrows():
+                pert = f"{index['lig_1']}~{index['lig_2']}"
+                if pert in perturbations and index['engine'].strip() in engines:
+                        writer.writerow([index['lig_1'], index['lig_2'], index['freenrg'], index['error'], index['engine']])    
+
+            mod_results_files.append(new_file_name)

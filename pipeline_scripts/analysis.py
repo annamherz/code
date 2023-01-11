@@ -1,4 +1,4 @@
-# analysis script for all the diff engines
+# analysis script for a single pert
 # anna
 
 from inspect import BoundArguments
@@ -45,16 +45,18 @@ analysis_options = {'estimator': "MBAR", "method":"alchemlyb",
 
 main_dir = _os.environ["MAINDIRECTORY"]
 
+# TODO final results folder has a method for the analysis option used?
+
 # find correct path, use extracted if it exists
 if _os.path.exists(f"{main_dir}/outputs/{engine}_extracted/{trans}"):
     path_to_dir = f"{main_dir}/outputs/{engine}_extracted/{trans}"
-    final_results_folder = f"{main_dir}/outputs"
+    final_results_folder = f"{main_dir}/outputs/results"
 elif _os.path.exists(f"{main_dir}/outputs_extracted/{engine}/{trans}"):
     path_to_dir = f"{main_dir}/outputs_extracted/{engine}/{trans}"
-    final_results_folder = f"{main_dir}/outputs_extracted"
+    final_results_folder = f"{main_dir}/outputs_extracted/results"
 else:
     path_to_dir = f"{main_dir}/outputs/{engine}/{trans}"
-    final_results_folder = f"{main_dir}/outputs"
+    final_results_folder = f"{main_dir}/outputs/results"
 
 if not _os.path.exists(path_to_dir):
     raise OSError(f"{path_to_dir} does not exist.")
@@ -63,10 +65,11 @@ print(f'analysing results for {path_to_dir}')
 print(f"using {analysis_options} for analysis")
 
 # using the pipeline module for analysis
-analysis = analyse(path_to_dir)
-analysis.set_options(analysis_options)
-avg, error, repeats_tuple_list = analysis.analyse_all_repeats()
-analysis.plot_graphs()
+analysed_pert = analyse(path_to_dir)
+analysed_pert.set_options(analysis_options)
+avg, error, repeats_tuple_list = analysed_pert.analyse_all_repeats()
+analysed_pert.plot_graphs()
 
 # write the final result
-write_analysis_file(analysis, final_results_folder)
+write_analysis_file(analysed_pert, final_results_folder)
+# TODO change so also class method

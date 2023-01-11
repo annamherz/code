@@ -16,24 +16,30 @@ import pandas as pd
 
 from ..utils import *
 
-def get_info_network(results_files=None, net_file=None, output_folder=None, extra_options=None):
+def get_info_network(net_file=None, results_files=None, extra_options=None):
     # get info from a network file for engine
     # For the network that we are considering,
     # we want to get results files with these perturbations from the overall file that contains the large network results (if this is the case).
     # This is just good to have a consistent format of results to analyse.
     
-    net_file = validate.file_path(net_file)
+    use_net_file = False
 
-    len_results_files = 0
-    for file in results_files:
-        validate.file_path(file)
-        len_results_files += 1
-    # print(f"there are : {len_results_files} results files.")
+    if net_file:
+        try:
+            net_file = validate.file_path(net_file)
+            use_net_file = True
+        except:
+            print("can't use net_file, will use results files instead.")
 
-    if not output_folder:
-        # will write as folder of first results file
-        output_folder = validate.folder_path(results_files[0].replace(results_files[0].split("/")[-1], "")[:-1])
-        print(f"using {output_folder} to write the results as none specified...")
+    if not use_net_file:
+        try:
+            results_files = validate.is_list(results_files)
+            for file in results_files:
+                validate.file_path(file)
+        except Exception as e:
+            print(e)
+            print("cant use network or results files, please provide one or the other.")
+            raise
     
     # set extra_options variables as defaults
     engines = [eng.upper() for eng in BSS.FreeEnergy.engines()] # use all
@@ -52,46 +58,48 @@ def get_info_network(results_files=None, net_file=None, output_folder=None, extr
     
     # We also want to create a list of the perturbations in our network.
     perturbations = []
-
     # create a list of ligands
     ligands = []
 
-    # use the network file to find the ligands and perturbations
-    with open(f"{net_file}", "r") as file:
-        for line in file:
-            for engine in engines:
-                if line.split()[-1] == engine:
-                    lig_0 = line.split()[0]
-                    lig_1 = line.split()[1]
-                    pert = f"{lig_0}~{lig_1}"
-                    if pert not in perturbations:
-                        perturbations.append(pert)
-                    if lig_0 not in ligands:
-                        ligands.append(lig_0)
-                    if lig_1 not in ligands:
-                        ligands.append(lig_1)
-                    else:
-                        pass
+    if use_net_file:
+        # use the network file to find the ligands and perturbations
+        with open(f"{net_file}", "r") as file:
+            for line in file:
+                for engine in engines:
+                    if line.split()[-1] == engine:
+                        lig_0 = line.split()[0]
+                        lig_1 = line.split()[1]
+                        pert = f"{lig_0}~{lig_1}"
+                        if pert not in perturbations:
+                            perturbations.append(pert)
+                        if lig_0 not in ligands:
+                            ligands.append(lig_0)
+                        if lig_1 not in ligands:
+                            ligands.append(lig_1)
+                        else:
+                            pass
+    
+    else:
+        for res_file in results_files:
+            # use the network file to find the ligands and perturbations
+            with open(f"{res_file}", "r") as file:
+                for line in file:
+                    for engine in engines:
+                        if line.split(",")[4] == engine:
+                            lig_0 = line.split(",")[0]
+                            lig_1 = line.split(",")[1]
+                            pert = f"{lig_0}~{lig_1}"
+                            if pert not in perturbations:
+                                perturbations.append(pert)
+                            if lig_0 not in ligands:
+                                ligands.append(lig_0)
+                            if lig_1 not in ligands:
+                                ligands.append(lig_1)
+                            else:
+                                pass     
 
-    mod_results_files = []
-
-    for file in results_files:
-        new_file_name = f"{output_folder}/results_{results_files.index(file)}_{'_'.join(engines)}.csv"
-        with open(new_file_name, "w") as result_file:
-
-            writer = csv.writer(result_file, delimiter=",")
-            writer.writerow(["lig_1","lig_2","freenrg","error","engine"])
-
-            for row, index in pd.read_csv(file).iterrows():
-                pert = f"{index['lig_1']}~{index['lig_2']}"
-                if pert in perturbations and index['engine'].strip() in engines:
-                        writer.writerow([index['lig_1'], index['lig_2'], index['freenrg'], index['error'], index['engine']])    
-
-            mod_results_files.append(new_file_name)
-
-    return (perturbations, ligands, mod_results_files)
-
-
+    return (perturbations, ligands)
+            
 class graph():
     
     def __init__(self, ligands, perturbations, file_dir=None):

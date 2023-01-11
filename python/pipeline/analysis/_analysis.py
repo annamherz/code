@@ -81,9 +81,7 @@ class analyse():
 
     def set_options(self, options_dict):
 
-        if not isinstance(options_dict, dict):
-            # add so it has to be std or smth else
-            raise TypeError("'options_dict' must be of type 'dict'.")
+        options_dict = validate.dictionary(options_dict)
 
         if "estimator" in options_dict:
             self.estimator = validate.string(options_dict["estimator"])

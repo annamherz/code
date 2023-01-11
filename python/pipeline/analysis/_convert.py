@@ -67,33 +67,40 @@ class convert:
         return kcal_val
 
     @staticmethod
-    def yml_into_exper_dict(exp_file, exp_file_dat, data_format=None):
+    def yml_into_exper_dict(exp_file, data_format=None):
         
-        # format of the data from yml into freenrgworkflows is uM
-        convert.yml_into_freenrgworkflows(exp_file, exp_file_dat)
+        exp_file = validate.file_path(exp_file)
+
+        with open(exp_file, "r") as file:
+            data = yaml.safe_load(file) # loads as dictionary
+
+        exper_raw_dict = {}
+        for key in data.keys(): # write for each ligand that was in yaml file
+            if data[key]['measurement']['unit'] == 'uM':
+                exper_raw_dict[key] = (data[key]['measurement']['value'], data[key]['measurement']['error'])
+            elif data[key]['measurement']['unit'] == 'nM':
+                exper_raw_dict[key] = ("{:.4f}".format(data[key]['measurement']['value']/1000), data[key]['measurement']['error']/1000)
 
         exper_val_dict = {}
+        for key in exper_raw_dict.keys():
 
-        with open(exp_file_dat, "r") as file:
-            for line in file:
-                if not "ligand" in line: # dont use header
-                    lig = line.split(",")[0]
+                lig = str(key)
 
-                    exp_val = float(line.split(",")[1].strip())
-                    # convert into kcal mol
-                    exp_kcal = convert.convert_M_kcal(exp_val)
+                exp_val = float(exper_raw_dict[key][0])
+                # convert into kcal mol
+                exp_kcal = convert.convert_M_kcal(exp_val)
 
-                    # convert both upper and lower error bounds for this too
-                    # get average and keep this as the error
-                    err = float(line.split(",")[2].strip())
-                    exp_upper = exp_val + err
-                    exp_lower = exp_val - err
-                    exp_upper_kcal = convert.convert_M_kcal(exp_upper)
-                    exp_lower_kcal = convert.convert_M_kcal(exp_lower)
-                    err_kcal = abs(exp_upper_kcal - exp_lower_kcal)/2
+                # convert both upper and lower error bounds for this too
+                # get average and keep this as the error
+                err = float(exper_raw_dict[key][1])
+                exp_upper = exp_val + err
+                exp_lower = exp_val - err
+                exp_upper_kcal = convert.convert_M_kcal(exp_upper)
+                exp_lower_kcal = convert.convert_M_kcal(exp_lower)
+                err_kcal = abs(exp_upper_kcal - exp_lower_kcal)/2
 
-                    # add to dict
-                    exper_val_dict.update({lig:(exp_kcal, err_kcal)})            
+                # add to dict
+                exper_val_dict.update({lig:(exp_kcal, err_kcal)})            
 
         return exper_val_dict
 
