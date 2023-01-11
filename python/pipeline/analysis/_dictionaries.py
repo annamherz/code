@@ -33,7 +33,7 @@ class make_dict():
 
     
     @staticmethod
-    def comp_results(results_files=None, perturbations=None, output_file=None, engine=None):
+    def comp_results(results_files=None, perturbations=None, engine=None, output_file=None):
         
         results_files = validate.is_list(results_files)
         for file in results_files:
@@ -83,6 +83,7 @@ class make_dict():
         # put these into a dictionary
         comp_diff_dict = {}
 
+        # TODO combine this with file writer for network in _files
         if output_file:
             # write these to a csv file
             with open(f"{output_file}.csv", "w") as comp_pert_file:
@@ -194,18 +195,29 @@ class make_dict():
         return freenrg_dict
 
     @staticmethod
-    def experimental_from_cinnabar(exper_dict, ligands, perturbations):
+    def from_cinnabar_network(network):
+
+        freenrg_dict = {}
+
+        for node in network.graph.nodes(data=True):
+            freenrg_dict.update({node[1]["name"]:(node[1]["calc_DG"], node[1]["calc_dDG"])})
+        
+        return freenrg_dict
+
+
+    @staticmethod
+    def experimental_for_network(exper_dict, ligands, perturbations):
         
         ligands = validate.is_list(ligands)
         perturbations = validate.is_list(perturbations)
 
-        exper_val_dict = make_dict._from_cinnabar_experimental_val(exper_dict, ligands)
-        exper_diff_dict = make_dict._from_cinnabar_experimental_diff(exper_val_dict, perturbations)
+        exper_val_dict = make_dict._exper_from_ligands(exper_dict, ligands)
+        exper_diff_dict = make_dict._exper_from_perturbations(exper_val_dict, perturbations)
 
         return exper_diff_dict, exper_val_dict
 
     @staticmethod
-    def _from_cinnabar_experimental_val(exper_val_dict, ligands):
+    def _exper_from_ligands(exper_val_dict, ligands):
 
         new_exper_val_dict ={}
 
@@ -217,7 +229,7 @@ class make_dict():
         return new_exper_val_dict
 
     @staticmethod
-    def _from_cinnabar_experimental_diff(exper_val_dict, perturbations):
+    def _exper_from_perturbations(exper_val_dict, perturbations):
 
         exper_diff_dict = {}
 

@@ -8,6 +8,8 @@ from ._network import *
 from ._plotting import *
 from ._dictionaries import *
 
+import cinnabar
+from cinnabar import wrangle,plotting
 class analysis_engines():
     """class to analyse results files and plot
     """
@@ -75,6 +77,17 @@ class analysis_engines():
         # as not yet computed, set this to false
         self._is_computed = False
 
+        # set all the dicts for analysis
+        self.calc_val_dict = {}
+        self.calc_pert_dict = {}
+        self.exper_val_dict = None
+        self.exper_pert_dict = None
+
+        self._cinnabar_networks = {}
+
+        self._fwf_experimental_DDGs = None
+        self._fwf_computed_relative_DDGs = {}
+        self._cinnabar_networks = {}
 
     def _get_results_repeat_files(self):
         res_dir = self._results_directory
@@ -142,9 +155,6 @@ class analysis_engines():
         self._save_pickle = True
         self._try_pickle = True
 
-        self._fwf_experimental_DDGs = None
-        self._fwf_computed_relative_DDGs = {}
-
         # TODO set other default self outputs to None
 
 
@@ -181,7 +191,7 @@ class analysis_engines():
         # TODO more checks for type of data
         exper_val_dict = convert.yml_into_exper_dict(exp_file) # this output is in kcal/mol
 
-        new_exper_val_dict = make_dict._from_cinnabar_experimental_val(exper_val_dict, self.ligands)
+        new_exper_val_dict = make_dict._exper_from_ligands(exper_val_dict, self.ligands)
 
         self.exper_val_dict = new_exper_val_dict
 
@@ -194,11 +204,108 @@ class analysis_engines():
         else:
             exper_val_dict = self.exper_val_dict
         
-        pert_dict = make_dict._from_cinnabar_experimental_diff(exper_val_dict, self.perturbations)
+        pert_dict = make_dict._exper_from_perturbations(exper_val_dict, self.perturbations)
 
         self.exper_pert_dict = pert_dict
 
         return pert_dict
+
+
+    def compute(self):
+
+        # get all the dictionaries needed for plotting
+        analysis_engines._compute_dicts(self)
+        
+        # compute the cycle closure
+
+        self._is_computed = True
+
+
+    def _compute_dicts(self):
+
+        # compute the experimental for perturbations
+        analysis_engines.get_experimental(self) # get experimental val dict
+        analysis_engines.get_experimental_pert(self) # from cinnabar expeirmental diff ? make_dict class
+
+        # get the files into cinnabar format for analysis
+        for eng in self.engines:
+            results_files = self._results_repeat_files[eng]
+            convert.cinnabar_file(results_files, self.exper_val_dict, f"{self.results_folder}/cinnabar_{eng}")
+            # TODO some way to incl extension for the files in the naming here, or alternatively own folder is good
+        
+        # compute the per ligand for the network
+        for eng in self.engines:
+            network = wrangle.FEMap(f"{self.results_folder}/cinnabar_{eng}.csv")
+            self._cinnabar_networks.update({eng:network})
+            self.calc_val_dict.update({eng: make_dict.from_cinnabar_network(network)})
+
+        # get dictionary for the perturbations
+        for eng in self.engines:
+            calc_diff_dict = make_dict.comp_results(self._results_repeat_files[eng], self.perturbations, eng)
+            self.calc_pert_dict.update({eng:calc_diff_dict})
+
+
+    def draw_graph(self):
+        
+        if not self._is_computed:
+            print("values are not computed, will do this now...")
+            analysis_engines.compute(self)
+        
+        else:
+            pass
+
+
+        # TODO also incl cinnabar graph drawing functionality?
+        # TODO eng specific graph drawing or this doesnt matter
+
+    # for all have engine options if only want to plot a single engine
+    def plot_bar_pert(self, engine=None):
+
+        if not engine:
+            engines = self.engines
+        else:
+            engines = [validate.engine(engine)]
+
+        # plot one can also just use the cinnabar plotting if just one
+
+    def plot_bar_lig(self, engines=None):
+
+        if not engine:
+            engines = self.engines
+        else:
+            engines = [validate.engine(engine)]
+
+    def plot_scatter_pert(self, engines=None):
+
+        if not engine:
+            engines = self.engines
+        else:
+            engines = [validate.engine(engine)]
+
+    def plot_scatter_lig(self, engines=None):
+
+        if not engine:
+            engines = self.engines
+        else:
+            engines = [validate.engine(engine)]
+
+
+    # def plot_convergence()
+    # def statistical_analysis()
+    # # check if can extract stats from the cinnabar stuff
+    # def cycle_closure()
+
+        
+        # dict to df for plotting, check if df in variables if not remake
+
+
+
+# for analysis between diff engines
+#         # calc mae between
+#         # stat compare convergence
+#         # compare how fast reach concurrent results for length of runs?
+
+
 
     def _get_exp_fwf(self, fwf_path=None):
         # using freenergworkflows
@@ -275,94 +382,3 @@ class analysis_engines():
 
         return r_confidence, tau_confidence, mue_confidence 
 
-
-    def compute(self):
-
-        # compute the experimental for perturbations
-        analysis_engines.get_experimental(self) # get experimental val dict
-        analysis_engines.get_experimental_pert(self) # from cinnabar expeirmental diff ? make_dict class
-
-        # get the files into cinnabar format for analysis
-        for eng in self.engines:
-            results_files = self._results_repeat_files[eng]
-            convert.cinnabar_file(results_files, self.exper_val_dict, f"{self.results_folder}/cinnabar_{eng}")
-            # TODO some way to incl extension for the files in the naming here, or alternatively own folder is good
-        
-        # compute the per ligand for the network
-
-        # compute the cycle closure
-
-        # make a dict of the computed results
-        # comp_dict = make_dict.comp_results(results_files=self._values_dict["results_files"], 
-        #                                     perturbations=self._values_dict["perts"],
-        #                                     output_file=f"{res_folder}/{comp_pert_file_name}_{eng}",
-        #                                     engine=eng)
-        # self._values_dict["pert_results"] = comp_dict
-
-        self._is_computed = True
-
-        # to use cinnabar, first get the results files, exper dict, and convert this using cinnabar_file method written in _convert
-        # make so have cinnabar file ready to go for plotting and analysis w it
-
-    def draw_graph(self):
-
-        graph = net_graph(self.ligands,self.perturbations)
-        graph.draw_graph()
-
-        # TODO also incl cinnabar graph drawing functionality?
-        # TODO eng specific graph drawing or this doesnt matter
-
-    # for all have engine options if only want to plot a single engine
-    def plot_bar_pert(self, engine=None):
-
-        if not engine:
-            engines = self.engines
-        else:
-            engines = [validate.engine(engine)]
-
-        # plot one can also just use the cinnabar plotting if just one
-
-    def plot_bar_lig(self, engines=None):
-
-        if not engine:
-            engines = self.engines
-        else:
-            engines = [validate.engine(engine)]
-
-    def plot_scatter_pert(self, engines=None):
-
-        if not engine:
-            engines = self.engines
-        else:
-            engines = [validate.engine(engine)]
-
-    def plot_scatter_lig(self, engines=None):
-
-        if not engine:
-            engines = self.engines
-        else:
-            engines = [validate.engine(engine)]
-
-
-    # def plot_convergence()
-    # def statistical_analysis()
-    # # check if can extract stats from the cinnabar stuff
-    # def cycle_closure()
-
-        
-        # dict to df for plotting, check if df in variables if not remake
-
-
-
-# for analysis between diff engines
-#         # calc mae between
-#         # stat compare convergence
-#         # compare how fast reach concurrent results for length of runs?
-
-        # self._values_dict = {}
-        # self._values_dict["pert_results"] = None
-        # self._values_dict["val_results"] = None
-        # self._values_dict["freenrg_df_pert"] = None
-        # self._values_dict["freenrg_df_val"] = None
-        # self._values_dict["freenrgworkflows_ouput"] = None
-        # self._values_dict["cycle_closures"] = None
