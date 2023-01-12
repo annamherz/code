@@ -41,7 +41,7 @@ class make_dict():
         
         perturbations = validate.is_list(perturbations)
 
-        # TODO some way to get engine from results files?
+        # TODO some way to get engine from results files? - or only read for certain engines
         # make a dictionary with the results of the files
         comp_dict_list = {}
         comp_err_dict_list = {}
@@ -111,14 +111,42 @@ class make_dict():
                     except:
                         comp_ddG = None
                         comp_err = None
-                    
-                    # TODO some way to incl units - attributes?
 
                     #update the dictionary for plotting later
                     comp_diff_dict.update({pert:(comp_ddG, comp_err)})
 
                     writer.writerow([lig_0, lig_1, comp_ddG, comp_err, engine])
         
+        else:
+            for pert in perturbations:
+                lig_0 = pert.split("~")[0]
+                lig_1 = pert.split("~")[1]
+                
+                # check if the perturbations calculated are also those in the network file and if any are missing
+                try:
+                    # find the values in the dictionary
+                    ddGs = comp_dict_list[pert]
+                    ddGs_error = comp_err_dict_list[pert]
+                    # calculate the average and the error
+                    comp_ddG = np.average(ddGs)
+                    # comp_ddG = np.average([ddG.value() for ddG in ddGs])
+                    if len(ddGs) == 1:
+                        comp_err = ddGs_error.value()
+                    else:
+                        comp_err = sem(ddGs)
+                        # comp_err = sem([ddG.value() for ddG in ddGs])
+            
+                # if unable to calculate one of the perturbations, this is a None value.
+                except:
+                    comp_ddG = None
+                    comp_err = None
+                
+                # TODO some way to incl units - attributes?
+
+                #update the dictionary for plotting later
+                comp_diff_dict.update({pert:(comp_ddG, comp_err)})
+        
+
         return comp_diff_dict
 
 
@@ -195,14 +223,83 @@ class make_dict():
         return freenrg_dict
 
     @staticmethod
-    def from_cinnabar_network(network):
+    def from_cinnabar_network_edges(network, calc_exp, perturbations):
+
+        if calc_exp not in ["calc","exp"]:
+            raise ValueError("calc_exp must be either 'calc' or 'exp'")
+
+        freenrg_dict = {}
+
+        name_dict = {}
+        for node in network.graph.nodes(data=True):
+            name_dict.update({node[0]: node[1]["name"]})
+
+        for edge in network.graph.edges(data=True):
+            lig_0 = name_dict[edge[0]]
+            lig_1 = name_dict[edge[1]]
+            pert = f"{lig_0}~{lig_1}"
+            anti_pert = f"{lig_1}~{lig_0}"
+            if pert in perturbations:
+                pert_name = pert
+                add_dict = True
+            elif anti_pert in perturbations:
+                pert_name = anti_pert
+                add_dict = True
+            else:
+                add_dict = False
+            
+            if add_dict:
+                freenrg_dict.update({pert_name:(edge[2][f"{calc_exp}_DDG"], edge[2][f"{calc_exp}_dDDG"])})
+        
+        return freenrg_dict
+
+    @staticmethod
+    def from_cinnabar_network_node(network, calc_exp, normalise=False):
+
+        if calc_exp not in ["calc","exp"]:
+            raise ValueError("calc_exp must be either 'calc' or 'exp'")
 
         freenrg_dict = {}
 
         for node in network.graph.nodes(data=True):
-            freenrg_dict.update({node[1]["name"]:(node[1]["calc_DG"], node[1]["calc_dDG"])})
+            freenrg_dict.update({node[1]["name"]:(node[1][f"{calc_exp}_DG"], node[1][f"{calc_exp}_dDG"])})
         
-        return freenrg_dict
+        if normalise:
+            normalised_freenrg_dict = make_dict._normalise_data(freenrg_dict)
+            return normalised_freenrg_dict
+        else:
+            return freenrg_dict
+
+
+    @staticmethod
+    def _normalise_data(data):
+        # normalise either a list / np / dict of data
+
+        try:
+            data_dict = validate.dictionary(data)
+            is_dict = True
+        except:
+            data = validate.is_list(data)
+            is_dict = False
+        
+        if is_dict:
+            normalised_dict = {}
+            values = []
+            for val in data_dict.values():
+                values.append(float(val[0])) # incase it is a tuple of vals
+            avg_val = np.mean(values)
+            for key in data_dict:
+                normalised_dict.update({key:(float(data_dict[key][0]) - avg_val, data_dict[key][1])}) # also incl error
+
+            return normalised_dict
+        
+        else:
+            avg_val = np.mean(data)
+            normalised_data = []
+            for val in data:
+                normalised_data.append(val - avg_val)
+            
+            return normalised_data
 
 
     @staticmethod

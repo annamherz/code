@@ -14,9 +14,11 @@ class analysis_engines():
     """class to analyse results files and plot
     """
 
-    def __init__(self, results_directory, exp_file=None, engines=None, net_file=None, res_folder=None, extra_options=None):
+    def __init__(self, results_directory, exp_file=None, engines=None, net_file=None, res_folder=None, file_ext=None, extra_options=None):
         
         # TODO some way to consider different extensions for analysis methods
+        # use same style of file ext as written by the analysis, maybe using same extra options dict format?
+
         # get engines for analysis
         if not engines:
             self.engines = BSS.FreeEnergy.engines()
@@ -78,16 +80,23 @@ class analysis_engines():
         self._is_computed = False
 
         # set all the dicts for analysis
-        self.calc_val_dict = {}
-        self.calc_pert_dict = {}
-        self.exper_val_dict = None
-        self.exper_pert_dict = None
+        # per engine dicts
+        self.calc_pert_dict = {} # diff from the results repeat files, average
+        self.cinnabar_calc_val_dict = {}  # from the cinnabar network analysis
+        self.normalised_exper_val_dict = {} # normalised from the cinnabar network analysis
+        self.cinnabar_calc_pert_dict = {} # from cinnabar network edges
+        self.cinnabar_exper_pert_dict = {} # from cinnabar network edges
 
+        # solo dicts for exper
+        self.exper_val_dict = None # yml converted into experimental values, actual, for ligands in object
+        self.exper_pert_dict = None # yml converted into experimental values, actual, for perturbations in object
+
+        # storing the nx digraphs, per engine
         self._cinnabar_networks = {}
 
+        # for checking against free energy workflows
         self._fwf_experimental_DDGs = None
         self._fwf_computed_relative_DDGs = {}
-        self._cinnabar_networks = {}
 
     def _get_results_repeat_files(self):
         res_dir = self._results_directory
@@ -230,19 +239,24 @@ class analysis_engines():
         # get the files into cinnabar format for analysis
         for eng in self.engines:
             results_files = self._results_repeat_files[eng]
-            convert.cinnabar_file(results_files, self.exper_val_dict, f"{self.results_folder}/cinnabar_{eng}")
+            convert.cinnabar_file(results_files, self.exper_val_dict, f"{self.results_folder}/cinnabar_{eng}", perturbations=self.perturbations)
             # TODO some way to incl extension for the files in the naming here, or alternatively own folder is good
         
-        # compute the per ligand for the network
-        for eng in self.engines:
+            # compute the per ligand for the network
             network = wrangle.FEMap(f"{self.results_folder}/cinnabar_{eng}.csv")
             self._cinnabar_networks.update({eng:network})
-            self.calc_val_dict.update({eng: make_dict.from_cinnabar_network(network)})
 
-        # get dictionary for the perturbations
-        for eng in self.engines:
-            calc_diff_dict = make_dict.comp_results(self._results_repeat_files[eng], self.perturbations, eng)
+            # for self plotting of per ligand
+            self.cinnabar_calc_val_dict.update({eng: make_dict.from_cinnabar_network_node(network, "calc")})
+            self.normalised_exper_val_dict.update({eng: make_dict.from_cinnabar_network_node(network, "exp", normalise=True)})
+
+            # for self plotting of per pert
+            calc_diff_dict = make_dict.comp_results(self._results_repeat_files[eng], self.perturbations, eng) # older method
             self.calc_pert_dict.update({eng:calc_diff_dict})
+            # from cinnabar graph
+            self.cinnabar_calc_pert_dict.update({eng: make_dict.from_cinnabar_network_edges(network, "calc", self.perturbations)})
+            self.cinnabar_exper_pert_dict.update({eng: make_dict.from_cinnabar_network_edges(network, "exp", self.perturbations)})
+
 
 
     def draw_graph(self):
@@ -258,6 +272,15 @@ class analysis_engines():
         # TODO also incl cinnabar graph drawing functionality?
         # TODO eng specific graph drawing or this doesnt matter
 
+
+    def get_stats_cinnabar(self):
+        pass
+
+        # do for all networks in dict ie engines, also save
+
+        self.statistics
+
+
     # for all have engine options if only want to plot a single engine
     def plot_bar_pert(self, engine=None):
 
@@ -269,7 +292,8 @@ class analysis_engines():
         # plot one can also just use the cinnabar plotting if just one
 
     def plot_bar_lig(self, engines=None):
-
+        
+        # TODO add file path, if cinnabar or other (if just one engine)
         if not engine:
             engines = self.engines
         else:
@@ -304,7 +328,7 @@ class analysis_engines():
 #         # calc mae between
 #         # stat compare convergence
 #         # compare how fast reach concurrent results for length of runs?
-
+    
 
 
     def _get_exp_fwf(self, fwf_path=None):
@@ -382,3 +406,6 @@ class analysis_engines():
 
         return r_confidence, tau_confidence, mue_confidence 
 
+
+
+# TODO new class that inherits from above, so can compare different methods

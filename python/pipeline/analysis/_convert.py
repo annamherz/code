@@ -105,7 +105,7 @@ class convert:
         return exper_val_dict
 
     @staticmethod
-    def cinnabar_file(results_files, exper_val, output_file):
+    def cinnabar_file(results_files, exper_val, output_file, perturbations=None):
         # files is a list of files
         # output file
 
@@ -151,5 +151,13 @@ class convert:
                             lig_1 = line.split(",")[1]
                             comp_ddG = line.split(",")[2]
                             comp_err = line.split(",")[3]
-                
-                            writer.writerow([lig_0, lig_1, comp_ddG, comp_err, "0.0"])
+
+                            if perturbations:
+                                pert = f"{lig_0}~{lig_1}"
+                                if pert in perturbations:
+                                    writer.writerow([lig_0, lig_1, comp_ddG, comp_err, "0.0"])
+                                else:
+                                    pass
+
+                            else:
+                                writer.writerow([lig_0, lig_1, comp_ddG, comp_err, "0.0"])
