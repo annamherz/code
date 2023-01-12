@@ -381,6 +381,8 @@ class make_dict():
             else:
                 pass
 
+            cycles_dict.update({"_".join(cycle):(sum(cycle_val), cycle_val_err)}) # TODO also incl the error for a cycle depending on whether or not std or other error
+
         return (cycles_dict, cycle_vals, np.mean(cycle_vals), np.std(cycle_vals))
 
 

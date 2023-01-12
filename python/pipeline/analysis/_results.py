@@ -93,6 +93,10 @@ class analysis_engines():
 
         # storing the nx digraphs, per engine
         self._cinnabar_networks = {}
+        # overall graph
+        self.network_graph = None
+        # cycles
+        self.cycle_dict = {}
 
         # for checking against free energy workflows
         self._fwf_experimental_DDGs = None
@@ -226,6 +230,10 @@ class analysis_engines():
         analysis_engines._compute_dicts(self)
         
         # compute the cycle closure
+        self._make_graph()
+        analysis_engines._compute_cycle_closure(self)
+
+        # get statistics
 
         self._is_computed = True
 
@@ -258,27 +266,71 @@ class analysis_engines():
             self.cinnabar_exper_pert_dict.update({eng: make_dict.from_cinnabar_network_edges(network, "exp", self.perturbations)})
 
 
+    def _make_graph(self):
+        
+        graph = net_graph(self.ligands, self.perturbations)
+        self.network_graph = graph
+   
 
-    def draw_graph(self):
+    def draw_graph(self, output_dir=None, use_cinnabar=False, engine=None):
         
-        if not self._is_computed:
-            print("values are not computed, will do this now...")
-            analysis_engines.compute(self)
-        
+        if use_cinnabar:
+            if engine:
+                engines = [engine]
+            else:
+                engines = self.engines
+
+            for eng in self.engines:
+                if output_dir:
+                    file_name = f"{output_dir}/cinnabar_network_{eng}.png"
+                else:
+                    file_name = None
+                self._cinnabar_networks[eng].draw_graph(file_name=file_name)
+
         else:
-            pass
+            if not self.network_graph:
+                self._make_graph()
+
+            self.network_graph.draw_graph(file_dir=output_dir)
 
 
         # TODO also incl cinnabar graph drawing functionality?
         # TODO eng specific graph drawing or this doesnt matter
 
 
+    def _compute_cycle_closure(self):
+
+        # cycle closures
+
+        if not self.network_graph:
+            self._make_graph()
+        
+        network_graph = self.network_graph
+
+        for eng in self.engines:
+
+            pert_dict = self.calc_pert_dict[eng] # TODO can also use pert dict from cinnabar?
+
+            cycle_closures = network_graph.cycle_closures()
+
+            cycles = make_dict.cycle_closures(pert_dict, cycle_closures)    
+
+            # print(f"{eng} cycle vals is {cycles[1]}")
+            # print(f"{eng} cycle mean is {cycles[2]}")
+            # print(f"{eng} cycle deviation is {cycles[3]}")
+
+            self.cycle_dict.update({eng:(cycles[0], cycles[1], cycles[2], cycles[3])}) # the cycles dict
+
+    def _compute_statistics(self):
+        pass
+    # def statistical_analysis()
+    # # check if can extract stats from the cinnabar stuff
+
     def get_stats_cinnabar(self):
         pass
 
         # do for all networks in dict ie engines, also save
 
-        self.statistics
 
 
     # for all have engine options if only want to plot a single engine
@@ -315,21 +367,11 @@ class analysis_engines():
 
 
     # def plot_convergence()
-    # def statistical_analysis()
-    # # check if can extract stats from the cinnabar stuff
-    # def cycle_closure()
-
-        
-        # dict to df for plotting, check if df in variables if not remake
 
 
 
-# for analysis between diff engines
-#         # calc mae between
-#         # stat compare convergence
-#         # compare how fast reach concurrent results for length of runs?
-    
 
+    # freenergworkflows stuff for comparison
 
     def _get_exp_fwf(self, fwf_path=None):
         # using freenergworkflows
@@ -409,3 +451,10 @@ class analysis_engines():
 
 
 # TODO new class that inherits from above, so can compare different methods
+
+
+
+# for analysis between diff engines
+#         # calc mae between
+#         # stat compare convergence
+#         # compare how fast reach concurrent results for length of runs?

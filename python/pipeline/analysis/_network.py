@@ -185,6 +185,7 @@ class net_graph():
 
 
     def add_weight(self, input_data=None):
+        # these weights are for the lomap or rbfenn score
         
         if not input_data:
             raise ValueError("need some kind of input to add weights from! dict or file.")
