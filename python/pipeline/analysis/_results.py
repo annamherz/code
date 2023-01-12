@@ -9,7 +9,7 @@ from ._plotting import *
 from ._dictionaries import *
 
 import cinnabar
-from cinnabar import wrangle,plotting
+from cinnabar import wrangle,plotting,stats
 class analysis_engines():
     """class to analyse results files and plot
     """
@@ -234,6 +234,11 @@ class analysis_engines():
         analysis_engines._compute_cycle_closure(self)
 
         # get statistics
+        self.pert_statistics = {}
+        self.val_statistics = {}
+        # for eng in self.engines:
+            # self.pert_statistics.update({eng: self.compute_statistics(pert_val="pert", engine=eng)})
+            # self.val_statistics.update({eng: self.compute_statistics(pert_val="val", engine=eng)})
 
         self._is_computed = True
 
@@ -321,9 +326,41 @@ class analysis_engines():
 
             self.cycle_dict.update({eng:(cycles[0], cycles[1], cycles[2], cycles[3])}) # the cycles dict
 
-    def _compute_statistics(self):
-        pass
-    # def statistical_analysis()
+
+# TODO make a static method?
+    def compute_statistics(self, pert_val=None, engine=None, x=None, y=None, xerr=None, yerr=None):
+
+        eng = validate.engine(engine)
+
+        if eng:
+            if pert_val == "pert":
+                x = [val[0] for val in self.cinnabar_exper_pert_dict[eng]]
+                y = [val[0] for val in self.cinnabar_calc_pert_dict[eng]]
+                xerr = np.asarray([val[1] for val in self.cinnabar_exper_pert_dict[eng]])
+                yerr = np.asarray([val[1] for val in self.cinnabar_calc_pert_dict[eng]])
+            elif pert_val == "val":
+                x = [val[0] for val in self.normalised_exper_val_dict[eng]]
+                y = [val[0] for val in self.cinnabar_calc_val_dict[eng]]
+                xerr = np.asarray([val[1] for val in self.normalised_exper_val_dict[eng]])
+                yerr = np.asarray([val[1] for val in self.cinnabar_calc_val_dict[eng]])          
+            else:
+                raise ValueError("pert_val must be 'pert' for perturbations or 'val' for values")      
+        else:
+            x = x
+            y = y
+            xerr = xerr
+            yerr = yerr
+
+        statistics  = ["RMSE", "MUE"]
+        statistics_string = ""
+
+        for statistic in statistics:
+            s = stats.bootstrap_statistic(x, y, xerr, yerr, statistic=statistic)
+            string = f"{statistic}:   {s['mle']:.2f} [95%: {s['low']:.2f}, {s['high']:.2f}] " + "\n"
+            statistics_string += string
+            
+        return statistics_string
+
     # # check if can extract stats from the cinnabar stuff
 
     def get_stats_cinnabar(self):
