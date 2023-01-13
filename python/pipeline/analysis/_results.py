@@ -11,6 +11,7 @@ from ._dictionaries import *
 
 import cinnabar
 from cinnabar import wrangle,plotting,stats
+
 class analysis_engines():
     """class to analyse results files and plot
     """
@@ -106,6 +107,9 @@ class analysis_engines():
         # for checking against free energy workflows
         self._fwf_experimental_DDGs = None
         self._fwf_computed_relative_DDGs = {}
+
+        # for plotting
+        self._plotting_object = None
 
     def _get_results_repeat_files(self):
         res_dir = self._results_directory
@@ -269,7 +273,7 @@ class analysis_engines():
             # TODO some way to incl extension for the files in the naming here, or alternatively own folder is good
         
             # compute the per ligand for the network
-            network = wrangle.FEMap(f"{self.results_folder}/cinnabar_{eng}.csv")
+            network = wrangle.FEMap(f"{self.results_folder}/cinnabar_{eng}_{self.file_ext}.csv")
             self._cinnabar_networks.update({eng:network})
 
             # for self plotting of per ligand
@@ -341,42 +345,72 @@ class analysis_engines():
             self.cycle_dict.update({eng:(cycles[0], cycles[1], cycles[2], cycles[3])}) # the cycles dict
 
 
-    def plot_all(self):
-        pass
+    def _initalise_plotting_object(self, check=False):
 
-    # for all have engine options if only want to plot a single engine
+        # if not checking, always make
+        if not check:
+            self._plotting_object = plotting_engines(analysis_object=self)
+
+        # if checking, first see if it exists and if not make
+        elif check:
+            if not self._plotting_object:
+                self._plotting_object = plotting_engines(analysis_object=self)
+
+
+    def plot_all(self):
+
+        self._initalise_plotting_object(check=True)
+        plot_obj = self._plotting_object
+
+
     def plot_bar_pert(self, engine=None):
 
-        if not engine:
-            engines = self.engines
-        else:
-            engines = [validate.engine(engine)]
+        self._initalise_plotting_object(check=True)
+        plot_obj = self._plotting_object
+        plot_obj.bar(pert_val="pert", engines=engine)
 
-        # plotting(self)
-        # plotting for cinnabar just using the cinnabar plotting here if just one
+    def plot_bar_lig(self, engine=None):
+
+        self._initalise_plotting_object(check=True)
+        plot_obj = self._plotting_object
+        plot_obj.bar(pert_val="val", engines=engine)
 
 
-    def plot_bar_lig(self, engines=None):
+    def plot_scatter_pert(self, engine=None, use_cinnabar=False):
         
-        # TODO add file path, if cinnabar or other (if just one engine)
-        if not engine:
-            engines = self.engines
+        if use_cinnabar:
+            try:
+                engine = validate.engine(engine)
+            except:
+                print("for cinnabar plotting, can only have one engine. Please use the engine keyword to define.")
+                return
+            
+            plotting.plot_DDGs(self._cinnabar_networks[engine].graph,
+                              filename=f"{self.results_folder}/DDGs_{engine}_{self.file_ext}.png",
+                              title=f"DDGs for {engine} with {self.file_ext}")
+
         else:
-            engines = [validate.engine(engine)]
+            self._initalise_plotting_object(check=True)
+            plot_obj = self._plotting_object
+            plot_obj.scatter(pert_val="pert", engines=engine)
 
-    def plot_scatter_pert(self, engines=None):
+    def plot_scatter_lig(self, engine=None, use_cinnabar=False):
+        
+        if use_cinnabar:
+            try:
+                engine = validate.engine(engine)
+            except:
+                print("for cinnabar plotting, can only have one engine. Please use the engine keyword to define.")
+                return
+            
+            plotting.plot_DGs(self._cinnabar_networks[engine].graph,
+                              filename=f"{self.results_folder}/DGs_{engine}_{self.file_ext}.png",
+                              title=f"DGs for {engine} with {self.file_ext}")
 
-        if not engine:
-            engines = self.engines
         else:
-            engines = [validate.engine(engine)]
-
-    def plot_scatter_lig(self, engines=None):
-
-        if not engine:
-            engines = self.engines
-        else:
-            engines = [validate.engine(engine)]
+            self._initalise_plotting_object(check=True)
+            plot_obj = self._plotting_object
+            plot_obj.scatter(pert_val="val", engines=engine)
 
 
     # def plot_convergence()

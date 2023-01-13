@@ -451,7 +451,7 @@ class plotting_engines():
         plt.show()
 
 
-    def outlier():
+    def outlier(self):
         number_outliers_to_annotate = 5
         engine = "GROMACS"
 
