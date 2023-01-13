@@ -189,10 +189,12 @@ class extract():
                                 except:
                                     print(f"{dirs} does not have a recognised SOMD input.")
         
-    def extract_frames(self, traj_lambdas=None, rmsd=True):
+        
+    def extract_frames(self, traj_lambdas=None, rmsd=True, overwrite=False):
 
         trans_dir = self.trans_dir
         rmsd = validate.boolean(rmsd)
+        overwrite = validate.boolean(overwrite)
 
         # get all lambda windows
         items_in_folder = [leg for leg in sorted(os.listdir(trans_dir))]
@@ -220,11 +222,26 @@ class extract():
             for lam in lambdas:
                 # only do it for considered lambdas
                 if lam in traj_lambdas:
+
+                    # get target directory for extraction and create
                     direc = f"{trans_dir}/{leg}/lambda_{lam}"
-
-
                     traj_extract_dir = f"{direc.replace(self.trans_dir, self.extract_dir)}"
                     traj_extract_dir = validate.folder_path(traj_extract_dir, create=True)
+
+                    # check if the output files already exist in the target directory
+                    if not overwrite:
+                        file_exists = False
+                        onlyfiles = [f for f in os.listdir(traj_extract_dir) if os.path.isfile(f"{traj_extract_dir}/{f}")]
+                        if "system_0.pdb" in onlyfiles:
+                            file_exists = True
+                        if rmsd:
+                            if "rmsd_ligand.png" in onlyfiles:
+                                file_exists = True
+                            else:
+                                file_exists = False
+
+                        if file_exists:
+                            return
                     
                     # create mda universe based on file type
                     if "SOMD" in direc:
