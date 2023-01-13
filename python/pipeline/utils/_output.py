@@ -241,6 +241,7 @@ class extract():
                                 file_exists = False
 
                         if file_exists:
+                            print("traj extracted already exists, will NOT extract again.")
                             return
                     
                     # create mda universe based on file type

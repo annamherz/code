@@ -413,6 +413,12 @@ class analysis_engines():
             plot_obj.scatter(pert_val="val", engines=engine)
 
 
+    def plot_outliers(self, engine=None, outliers=5, pert_val="pert"):
+
+        self._initalise_plotting_object(check=True)
+        plot_obj = self._plotting_object
+        plot_obj.outlier(pert_val=pert_val, engines=engine, outliers=outliers)  
+
     # def plot_convergence()
 
 

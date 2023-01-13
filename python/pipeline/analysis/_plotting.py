@@ -303,10 +303,8 @@ class plotting_engines():
             plt.xlabel("ligands")
         plt.xticks(x_locs, freenrg_df_plotting.index, rotation=70, ha="right")
         plt.legend()
-        if len(engines) == 3:
-            eng_name = "all"
-        else:
-            eng_name = "_".join(str(eng) for eng in engines)
+
+        eng_name = self._get_eng_name(engines)
         plt.savefig(f"{self.results_folder}/fep_vs_exp_barplot_{pert_val}_{self.file_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
         plt.show()
 
@@ -408,22 +406,7 @@ class plotting_engines():
                         color="grey", 
                         alpha=0.2)
 
-        # get the bounds. This can be done with min/max or simply by hand.
-        all_freenrg_values_pre = []
-        for eng in engines:
-            freenrg_df_plotting = self.freenrg_df_dict[eng][pert_val].dropna()
-            x = np.array(freenrg_df_plotting["freenrg_exp"]).tolist()
-            y = np.array(freenrg_df_plotting["freenrg_fep"]).tolist()
-            all_freenrg_values_pre.append(x)
-            all_freenrg_values_pre.append(y)
-
-        all_freenrg_values = []
-        for sublist in all_freenrg_values_pre:
-            for item in sublist:
-                all_freenrg_values.append(item)
-
-        min_lim = min(all_freenrg_values)   
-        max_lim = max(all_freenrg_values)
+        min_lim, max_lim = self._get_bounds_scatter(engines, self.freenrg_df_dict, pert_val)
 
         # for a scatterplot we want the axis ranges to be the same. 
         plt.xlim(min_lim*1.3, max_lim*1.3)
@@ -442,68 +425,83 @@ class plotting_engines():
             plt.ylabel("$\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
             plt.xlabel("Experimental $\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
 
-        if len(engines) == 3:
-            eng_name = "all"
-        else:
-            eng_name = "_".join(str(eng) for eng in engines)
-
+        eng_name = self._get_eng_name(engines)
         plt.savefig(f"{self.results_folder}/fep_vs_exp_scatterplot_{pert_val}_{self.file_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
         plt.show()
 
 
-    def outlier(self):
-        number_outliers_to_annotate = 5
-        engine = "GROMACS"
+    def outlier(self, pert_val="pert", engines=None, outliers=3):
 
-        freenrg_df_plotting_scatter = values_dict[engine]["freenrg_df_pert"].dropna()
+        pert_val = validate.string(pert_val)
+        if pert_val not in ["pert","val"]:
+            raise ValueError("pert_val must be either 'pert' or 'val'")
 
-        x = freenrg_df_plotting_scatter["freenrg_exp"]
-        y = freenrg_df_plotting_scatter["freenrg_fep"]
-        x_er = freenrg_df_plotting_scatter["err_exp"]
-        y_er = freenrg_df_plotting_scatter["err_fep"]    
+        if engines:
+            engines = self._plotting_engines(engines)
+        # if no engines provided, use the defaults that were set based on the analysis object
+        else:
+            engines = self.engines
 
-        # get an array of the MUE values comparing experimental and FEP values. Take the absolute values.
-        mue_values = abs(freenrg_df_plotting_scatter["freenrg_exp"] - freenrg_df_plotting_scatter["freenrg_fep"])
+        number_outliers_to_annotate = validate.integer(outliers)
 
-        # find the n ligand names that are outliers.
-        outlier_names = mue_values.nlargest(number_outliers_to_annotate).index.values.tolist()
-        print(outlier_names)
-
-        # construct a list of labels to annotate the scatterplot with.
-        annot_labels = []
-        colours = []
-        for ligand in freenrg_df_plotting_scatter.index.values:
-            # if the ligand is an outlier, append the name to the annotation labels list.
-            if ligand in outlier_names:
-                annot_labels.append(ligand)
-                colours.append("hotpink")
-            else:
-                # if the ligand is not an outlier, append an empty string to the annotation labels list.
-                annot_labels.append("")
-                colours.append("teal")
-
-        # Create the same scatterplot as above. Can include some more of the formatting if needed.
+        # plot a scatter plot
         plt.rc('font', size=12)
-        plt.figure(figsize=(10,10))
+        fig, ax = plt.subplots(figsize=(10,10))
 
-        plt.scatter(x,y, zorder=10, c=colours)
+        lines = []
 
-        #plotting error bars
-        plt.errorbar(x , y,
-                    yerr=y_er,
-                    # xerr=x_er,   # comment this line to hide experimental error bars \
-                                # as this can sometimes overcrowd the plot.
-                    ls="none",
-                    lw=0.5, 
-                    capsize=2,
-                    color="black",
-                    zorder=5
-                    )
+        for eng in engines:
 
-        # get the bounds. This can be done with min/max or simply by hand.
-        all_freenrg_values = np.concatenate([x.values,y.values])
-        min_lim = min(all_freenrg_values)   
-        max_lim = max(all_freenrg_values)
+            col = self.colours[eng]
+
+            freenrg_df_plotting = self.freenrg_df_dict[eng][pert_val].dropna()
+            x = freenrg_df_plotting["freenrg_exp"]
+            y = freenrg_df_plotting["freenrg_fep"]
+            x_er = freenrg_df_plotting["err_exp"]
+            y_er = freenrg_df_plotting["err_fep"]  
+
+            # get an array of the MUE values comparing experimental and FEP values. Take the absolute values.
+            mue_values = abs(x - y)
+ 
+            # find the n ligand names that are outliers.
+            outlier_names = mue_values.nlargest(number_outliers_to_annotate).index.values.tolist()
+            print(outlier_names)
+
+            # construct a list of labels to annotate the scatterplot with.
+            annot_labels = []
+            colours = []
+            for label in freenrg_df_plotting.index.values:
+                # if the ligand is an outlier, append the name to the annotation labels list.
+                if label in outlier_names:
+                    if len(engines) > 1:
+                        annot_labels.append(f"{label}, {eng}")
+                    else:
+                        annot_labels.append(f"{label}")
+                    colours.append(self.colours["experimental"])
+                else:
+                    # if the ligand is not an outlier, append an empty string to the annotation labels list.
+                    annot_labels.append("")
+                    colours.append(self.colours[eng])
+
+            scatterplot = [plt.scatter(x, y, zorder=10, c=colours)] 
+            lines += plt.plot(0,0,c=col, label=eng)
+            plt.errorbar(x , y,
+                        yerr=y_er,
+                        xerr=x_er,   # comment this line to hide experimental error bars \
+                                    # as this can sometimes overcrowd the plot.
+                        ls="none",
+                        lw=0.5, 
+                        capsize=2,
+                        color="black",
+                        zorder=5
+                        )
+
+            # then, after generating the figure, we can annotate:
+            for i, txt in enumerate(annot_labels):
+                plt.annotate(txt, 
+                            (freenrg_df_plotting["freenrg_exp"].values.tolist()[i]+0.1,     # x coords
+                            freenrg_df_plotting["freenrg_fep"].values.tolist()[i]+0.1),    # y coords
+                            size=15, color=self.colours["experimental"])
 
         # can plot a line for ideal
         # plt.plot((min_lim*1.3,max_lim*1.3),(min_lim*1.3,max_lim*1.3), color="teal")
@@ -536,27 +534,58 @@ class plotting_engines():
                         color="grey", 
                         alpha=0.2)
 
-        # for a scatterplot we want the axis ranges to be the same. 
+        # for a scatterplot we want the axis ranges to be the same.
+        min_lim, max_lim = self._get_bounds_scatter(engines, self.freenrg_df_dict, pert_val)
         plt.xlim(min_lim*1.3, max_lim*1.3)
         plt.ylim(min_lim*1.3, max_lim*1.3)
 
         plt.axhline(color="black", zorder=1)
         plt.axvline(color="black", zorder=1)
 
-        plt.ylabel("Computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
-        plt.xlabel("Experimental $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+        plt.title(f"Computed vs Experimental outliers for {self.file_ext.replace('_',',')}")
+        if pert_val == "pert":
+            plt.ylabel("$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+            plt.xlabel("Experimental $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+        elif pert_val == "val":
+            plt.ylabel("$\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+            plt.xlabel("Experimental $\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
 
-        # then, after generating the figure, we can annotate:
-        for i, txt in enumerate(annot_labels):
-            plt.annotate(txt, 
-                        (freenrg_df_pert_plotting_scatter["freenrg_exp"].values.tolist()[i]+0.1,     # x coords
-                        freenrg_df_pert_plotting_scatter["freenrg_fep"].values.tolist()[i]+0.1),    # y coords
-                        size=15, color="hotpink")
-
-        # plt.savefig("analysis/fep_vs_exp_outlier_plot.png", dpi=300, bbox_inches='tight')
+        eng_name = self._get_eng_name(engines)
+        plt.savefig(f"{self.results_folder}/fep_vs_exp_outlierplot_{pert_val}_{self.file_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
         plt.show()    
 
+    # some functions so cleaner in plotting functions
+    @staticmethod
+    def _get_eng_name(engines):
 
+        if len(engines) == 3:
+            eng_name = "all"
+        else:
+            eng_name = "_".join(str(eng) for eng in engines)
+
+        return eng_name
+    
+    @staticmethod
+    def _get_bounds_scatter(engines, freenrg_df_dict, pert_val):
+
+        # get the bounds. This can be done with min/max or simply by hand.
+        all_freenrg_values_pre = []
+        for eng in engines:
+            freenrg_df_plotting = freenrg_df_dict[eng][pert_val].dropna()
+            x = np.array(freenrg_df_plotting["freenrg_exp"]).tolist()
+            y = np.array(freenrg_df_plotting["freenrg_fep"]).tolist()
+            all_freenrg_values_pre.append(x)
+            all_freenrg_values_pre.append(y)
+
+        all_freenrg_values = []
+        for sublist in all_freenrg_values_pre:
+            for item in sublist:
+                all_freenrg_values.append(item)
+
+        min_lim = min(all_freenrg_values)   
+        max_lim = max(all_freenrg_values)
+
+        return min_lim, max_lim
 
     def mae_df_make():
         # TODO funcion for this in dictionaries?
