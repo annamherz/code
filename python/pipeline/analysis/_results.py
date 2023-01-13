@@ -33,7 +33,8 @@ class analysis_engines():
                     self.engines = val_engines
                 # if single engine string, put into list
                 except:
-                    engines = validate(engines)
+                    engines = validate.string(engines)
+                    engines = validate.engine(engines)
                     self.engines = [engines]
             except:
                 print("engine input not recognised. Will use all engines.")
@@ -86,12 +87,13 @@ class analysis_engines():
         # per engine dicts
         self.calc_pert_dict = {} # diff from the results repeat files, average
         self.cinnabar_calc_val_dict = {}  # from the cinnabar network analysis
-        self.normalised_exper_val_dict = {} # normalised from the cinnabar network analysis
+        self.cinnabar_exper_val_dict = {} # normalised from the cinnabar network analysis
         self.cinnabar_calc_pert_dict = {} # from cinnabar network edges
         self.cinnabar_exper_pert_dict = {} # from cinnabar network edges
 
         # solo dicts for exper
         self.exper_val_dict = None # yml converted into experimental values, actual, for ligands in object
+        self.normalised_exper_val_dict = None # yml converted into experimental values, then normalised
         self.exper_pert_dict = None # yml converted into experimental values, actual, for perturbations in object
 
         # storing the nx digraphs, per engine
@@ -211,11 +213,15 @@ class analysis_engines():
         # TODO more checks for type of data
         exper_val_dict = convert.yml_into_exper_dict(exp_file) # this output is in kcal/mol
 
+        # experimental value dict
         new_exper_val_dict = make_dict._exper_from_ligands(exper_val_dict, self.ligands)
-
         self.exper_val_dict = new_exper_val_dict
 
-        return new_exper_val_dict
+        # normalise the experimental values
+        normalised_exper_val_dict = make_dict._exper_from_ligands(exper_val_dict, self.ligands, normalise=True)
+        self.normalised_exper_val_dict = normalised_exper_val_dict
+
+        return new_exper_val_dict, normalised_exper_val_dict
 
     def get_experimental_pert(self, exper_val_dict=None):
 
@@ -253,7 +259,7 @@ class analysis_engines():
     def _compute_dicts(self):
 
         # compute the experimental for perturbations
-        self.get_experimental() # get experimental val dict
+        self.get_experimental() # get experimental val dict and normalised dict
         self.get_experimental_pert() # from cinnabar expeirmental diff ? make_dict class
 
         # get the files into cinnabar format for analysis
@@ -268,11 +274,12 @@ class analysis_engines():
 
             # for self plotting of per ligand
             self.cinnabar_calc_val_dict.update({eng: make_dict.from_cinnabar_network_node(network, "calc")})
-            self.normalised_exper_val_dict.update({eng: make_dict.from_cinnabar_network_node(network, "exp", normalise=True)})
+            self.cinnabar_exper_val_dict.update({eng: make_dict.from_cinnabar_network_node(network, "exp", normalise=True)})
 
             # for self plotting of per pert
             calc_diff_dict = make_dict.comp_results(self._results_repeat_files[eng], self.perturbations, eng) # older method
             self.calc_pert_dict.update({eng:calc_diff_dict})
+
             # from cinnabar graph
             self.cinnabar_calc_pert_dict.update({eng: make_dict.from_cinnabar_network_edges(network, "calc", self.perturbations)})
             self.cinnabar_exper_pert_dict.update({eng: make_dict.from_cinnabar_network_edges(network, "exp", self.perturbations)})
@@ -388,9 +395,9 @@ class analysis_engines():
                 xerr = np.asarray([val[1] for val in self.cinnabar_exper_pert_dict[eng]])
                 yerr = np.asarray([val[1] for val in self.cinnabar_calc_pert_dict[eng]])
             elif pert_val == "val":
-                x = [val[0] for val in self.normalised_exper_val_dict[eng]]
+                x = [val[0] for val in self.cinnabar_exper_val_dict[eng]]
                 y = [val[0] for val in self.cinnabar_calc_val_dict[eng]]
-                xerr = np.asarray([val[1] for val in self.normalised_exper_val_dict[eng]])
+                xerr = np.asarray([val[1] for val in self.cinnabar_exper_val_dict[eng]])
                 yerr = np.asarray([val[1] for val in self.cinnabar_calc_val_dict[eng]])          
             else:
                 raise ValueError("pert_val must be 'pert' for perturbations or 'val' for values")      

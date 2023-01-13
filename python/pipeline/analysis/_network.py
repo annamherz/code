@@ -95,11 +95,32 @@ def get_info_network(net_file=None, results_files=None, extra_options=None):
                                 ligands.append(lig_0)
                             if lig_1 not in ligands:
                                 ligands.append(lig_1)
-                            else:
-                                pass     
+                        else:
+                            pass     
 
     return (perturbations, ligands)
-            
+
+
+def get_info_network_from_dict(res_dict):
+    # get info for the network from a perturbation results dictionary
+
+    res_dict = validate.dictionary(res_dict)
+
+    perturbations = []
+    ligands = []
+
+    for key in res_dict.keys():
+        lig_0 = key.split("~")[0]
+        lig_1 = key.split("~")[1]
+        if key not in perturbations:
+            perturbations.append(key)
+        if lig_0 not in ligands:
+            ligands.append(lig_0)
+        if lig_1 not in ligands:
+            ligands.append(lig_1)
+
+    return (perturbations, ligands)
+
 class net_graph():
     
     def __init__(self, ligands, perturbations, file_dir=None):

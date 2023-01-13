@@ -270,6 +270,52 @@ class make_dict():
         else:
             return freenrg_dict
 
+    @staticmethod
+    def experimental_for_network(exper_dict, ligands, perturbations):
+        
+        ligands = validate.is_list(ligands)
+        perturbations = validate.is_list(perturbations)
+
+        exper_val_dict = make_dict._exper_from_ligands(exper_dict, ligands)
+        exper_diff_dict = make_dict._exper_from_perturbations(exper_val_dict, perturbations)
+
+        return exper_diff_dict, exper_val_dict
+
+    @staticmethod
+    def _exper_from_ligands(exper_val_dict, ligands, normalise=False):
+
+        exper_val_dict = validate.dictionary(exper_val_dict)
+        ligands = validate.is_list(ligands)
+        normalise = validate.boolean(normalise)
+
+        new_exper_val_dict ={}
+
+        for lig in ligands:
+            exper_dG = exper_val_dict[lig][0]
+            exper_err = exper_val_dict[lig][1]
+            new_exper_val_dict.update({lig:(exper_dG, exper_err)})
+        
+        if normalise:
+            normalised_exper_val_dict = make_dict._normalise_data(new_exper_val_dict)
+            return normalised_exper_val_dict
+        else:
+            return new_exper_val_dict
+
+
+    @staticmethod
+    def _exper_from_perturbations(exper_val_dict, perturbations):
+
+        exper_diff_dict = {}
+
+        # calculate the experimental RBFEs
+        for pert in perturbations:
+            lig_0 = pert.split("~")[0]
+            lig_1 = pert.split("~")[1]
+            exper_ddG = exper_val_dict[lig_1][0] - exper_val_dict[lig_0][0]
+            exper_err = math.sqrt(math.pow(exper_val_dict[lig_0][1], 2) + math.pow(exper_val_dict[lig_1][1], 2))
+            exper_diff_dict.update({pert:(exper_ddG, exper_err)})
+
+        return exper_diff_dict
 
     @staticmethod
     def _normalise_data(data):
@@ -301,44 +347,6 @@ class make_dict():
             
             return normalised_data
 
-
-    @staticmethod
-    def experimental_for_network(exper_dict, ligands, perturbations):
-        
-        ligands = validate.is_list(ligands)
-        perturbations = validate.is_list(perturbations)
-
-        exper_val_dict = make_dict._exper_from_ligands(exper_dict, ligands)
-        exper_diff_dict = make_dict._exper_from_perturbations(exper_val_dict, perturbations)
-
-        return exper_diff_dict, exper_val_dict
-
-    @staticmethod
-    def _exper_from_ligands(exper_val_dict, ligands):
-
-        new_exper_val_dict ={}
-
-        for lig in ligands:
-            exper_dG = exper_val_dict[lig][0]
-            exper_err = exper_val_dict[lig][1]
-            new_exper_val_dict.update({lig:(exper_dG, exper_err)})
-
-        return new_exper_val_dict
-
-    @staticmethod
-    def _exper_from_perturbations(exper_val_dict, perturbations):
-
-        exper_diff_dict = {}
-
-        # calculate the experimental RBFEs
-        for pert in perturbations:
-            lig_0 = pert.split("~")[0]
-            lig_1 = pert.split("~")[1]
-            exper_ddG = exper_val_dict[lig_1][0] - exper_val_dict[lig_0][0]
-            exper_err = math.sqrt(math.pow(exper_val_dict[lig_0][1], 2) + math.pow(exper_val_dict[lig_1][1], 2))
-            exper_diff_dict.update({pert:(exper_ddG, exper_err)})
-
-        return exper_diff_dict
 
     @staticmethod
     def cycle_closures(pert_dict, cycle_closures):
