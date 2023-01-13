@@ -419,7 +419,17 @@ class analysis_engines():
         plot_obj = self._plotting_object
         plot_obj.outlier(pert_val=pert_val, engines=engine, outliers=outliers)  
 
-    # def plot_convergence()
+    # def plot_convergence(self):
+
+    #     self._initalise_plotting_object(check=True)
+    #     plot_obj = self._plotting_object
+        
+    #     output_dir = f"{self.results_folder}/convergence_plots/{self.file_ext}"
+        
+    #     for pert in self.perturbations:
+    #         plot_obj.outlier(perturbation=pert, engines=self.engines, output_dir=output_dir)  
+
+
 
 
 
