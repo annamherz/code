@@ -11,7 +11,7 @@ def write_analysis_file(analysis, results_dir):
     # data point for average
     data_point_avg = [analysis.ligand_0, analysis.ligand_0,
                       analysis.freenrg, analysis.error,
-                      analysis.engine, analysis.pickle_ext]
+                      analysis.engine, analysis.file_ext]
 
     # use csv to open the results file.
     final_summary_file = f"{results_dir}/final_summary_{analysis.engine.upper()}.csv"
@@ -56,7 +56,7 @@ def write_analysis_file(analysis, results_dir):
                       analysis.repeats_tuple_list[r][1],
                       analysis.repeats_tuple_list[r][2],
                       analysis.engine,
-                      analysis.pickle_ext
+                      analysis.file_ext
                       ]
         results_file_path = f"{results_dir}/repeat_{no_repeats.index(r)}_{analysis.engine.upper()}.csv"
         with open(results_file_path, "a") as freenrg_writefile:

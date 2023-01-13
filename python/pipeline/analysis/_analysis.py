@@ -46,8 +46,10 @@ class analyse():
         self.repeats_tuple_list = []
 
         # intialise other things
-        analyse._get_repeat_folders(self)
-        analyse._set_default_options(self)
+        self._get_repeat_folders()
+        self._set_default_options()
+        self._file_ext()
+        self._pickle_ext()
         self.is_analysed = False
 
 
@@ -65,14 +67,24 @@ class analyse():
         self._truncate_percentage = 0  # no truncation
         self._truncate_keep = "end"
 
+    def _file_ext(self):
+
+        file_ext = (f"{self.estimator}_{self.method}_"+
+                    f"eq{str(self._auto_equilibration).lower()}_"+
+                    f"stats{str(self._statistical_inefficiency).lower()}_"+
+                    f"truncate{str(self._truncate_percentage)}{self._truncate_keep}")
+
+        self.file_ext = file_ext
+
+        return file_ext
 
     def _pickle_ext(self):
 
+        if not self.file_ext:
+            self._file_ext()
+
         pickle_ext = (f"{self.perturbation}_{self.engine}_"+
-        f"{self.estimator}_{self.method}_"+
-        f"eq{str(self._auto_equilibration).lower()}_"+
-        f"stats{str(self._statistical_inefficiency).lower()}_"+
-        f"truncate{str(self._truncate_percentage)}{self._truncate_keep}")
+                      f"{self.file_ext}")
 
         self.pickle_ext = pickle_ext
 
@@ -118,6 +130,10 @@ class analyse():
             if self._truncate_keep not in ['start', 'end']:
                 raise ValueError(
                     "'truncate_keep' must be either 'start' or 'end'.")
+
+        # reset the file extensions
+        self._file_ext()
+        self._pickle_ext()
 
 
     def _get_repeat_folders(self):
@@ -169,7 +185,7 @@ class analyse():
     def _check_pickle(self):
 
         try_pickle = True
-        pickle_ext = analyse._pickle_ext(self)
+        pickle_ext = self.pickle_ext
 
         # try loading in if previously calculated
         if try_pickle:
@@ -419,7 +435,7 @@ class analyse():
     def save_pickle(self):
 
         self._pickle_dir = validate.folder_path(self._pickle_dir, create=True)
-        pickle_ext = analyse._pickle_ext(self)
+        pickle_ext = self.pickle_ext
 
         if not self.is_analysed:
             warnings.warn(
@@ -493,7 +509,7 @@ class analyse():
                         name = str(b) + '_bound'
                         overlap = self._bound_matrix_dict[name]
                         ax = BSS.FreeEnergy.Relative.plot(
-                            overlap, work_dir=graph_dir, file_name=f"{name}_overlap_MBAR")
+                            overlap, work_dir=graph_dir, file_name=f"{name}_overlap_MBAR_{self.pickle_ext}")
                     except Exception as e:
                         print(e)
                         print(f"could not plt overlap matrix for {name}")
@@ -503,7 +519,7 @@ class analyse():
                         name = str(f) + '_free'
                         overlap = self._free_matrix_dict[name]
                         ax = BSS.FreeEnergy.Relative.plot(
-                            overlap, work_dir=graph_dir, file_name=f"{name}_overlap_MBAR")
+                            overlap, work_dir=graph_dir, file_name=f"{name}_overlap_MBAR_{self.pickle_ext}")
                     except Exception as e:
                         print(e)
                         print(f"could not plt overlap matrix for {name}")
@@ -515,7 +531,7 @@ class analyse():
                     overlap = self._bound_matrix_dict[name]
                     try:
                         ax = BSS.FreeEnergy.Relative.plot(
-                            overlap, work_dir=graph_dir, file_name=f"{name}_dHdl_TI")
+                            overlap, work_dir=graph_dir, file_name=f"{name}_dHdl_TI_{self.pickle_ext}")
                     except Exception as e:
                         print(e)
                         print(f"could not plt dhdl for {name}")
@@ -525,7 +541,7 @@ class analyse():
                     overlap = self._free_matrix_dict[name]
                     try:
                         ax = BSS.FreeEnergy.Relative.plot(
-                            overlap, work_dir=graph_dir, file_name=f"{name}_dHdl_TI")
+                            overlap, work_dir=graph_dir, file_name=f"{name}_dHdl_TI_{self.pickle_ext}")
                     except Exception as e:
                         print(e)
                         print(f"could not plt dhdl for {name}")

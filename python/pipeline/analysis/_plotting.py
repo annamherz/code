@@ -24,48 +24,72 @@ from ..utils import *
 
 class plotting():
 
-    def __init__(self, analysis_object):
+    def __init__(self, analysis_object=None):
 
-        self._analysis_object = analysis_object
+        if analysis_object:
+            self._analysis_object = analysis_object
+            self.analysis_obj_into_format()
 
-        plotting.colours()
+        # set the colours
+        self.colours()
+        self.style()
 
         # get info about things for plotting from analysis
 
         # get number of engines - if multiple
 
+    def analysis_obj_into_format(self):
+
+        ana_obj = self._analysis_object
         
+        # analysis information
+        self.engines = sorted(ana_obj.engines)
+        self.ligands = ana_obj.ligands
+        self.perturbations = ana_obj.perturbations
+        
+        # file extension
+        self._file_ext()
 
-    def colours(self, colour_dict=None):
+        # dictionaries of engines for plotting from cinnabar
+        self.calc_val_dict = ana_obj.cinnabar_calc_val_dict
+        self.exper_val_dict = ana_obj.normalised_exper_val_dict
+        self.calc_pert_dict = ana_obj.cinnabar_calc_pert_dict
+        self.exper_pert_dict = ana_obj.cinnabar_exper_pert_dict
+        # experimental calculated directly from exp values (for bar)
+        self.all_exper_pert_dict = ana_obj.exper_pert_dict
 
-        default_colour_dict = {"AMBER":"orange",
-                    "SOMD":"darkturquoise",
-                    "GROMACS":"orchid",
-                    "experimental":"midnightblue"
-                    }
-        allowed_keys = ["AMBER","SOMD","GROMACS","experimental"]
+        # TODO dict to df  - somehow get these into plotting consistently w function
 
-        if not colour_dict:
-            colour_dict = default_colour_dict
+    def _file_ext(self):
 
+        file_ext = self._analysis_object.file_ext
+
+        if file_ext == ".+":
+            self.file_ext = ""
         else:
-            colour_dict = validate.dictionary(colour_dict)
-            for key in colour_dict:
-                if key not in allowed_keys:
-                    raise ValueError(f"{colour_dict} may only have the keys in {allowed_keys}.")
-                # replace in the default dict and have this as new colour dict
-                default_colour_dict[key] = colour_dict[key]
-                colour_dict = default_colour_dict
+            self.file_ext = file_ext
 
-        self.colours = colour_dict
-        
-        return colour_dict
+        return file_ext
+
+    def dict_to_df():
+
+        # construct dict with experimental freenrg and error and computed
+        for eng in engines:
+            freenrg_pert_dict = {}
+            for pert in values_dict[eng]["perts"]:
+                exp_ddG = values_dict["experimental"]["pert_results"][pert][0]
+                exp_err = values_dict["experimental"]["pert_results"][pert][1]
+                comp_ddG = values_dict[eng]["pert_results"][pert][0]
+                comp_err = values_dict[eng]["pert_results"][pert][1]
+                freenrg_pert_dict[pert] = [exp_ddG, exp_err, comp_ddG, comp_err]
+            freenrg_df_pert = pd.DataFrame(freenrg_pert_dict, index=["freenrg_exp", "err_exp", "freenrg_fep", "err_fep"]).transpose()
+            values_dict[eng]["freenrg_df_pert"] = freenrg_df_pert
+
+            # save our results to a file that can be opened in e.g. Excel.
+            freenrg_df_pert.to_csv(f"{res_folder}/fep_diff_results_table_{self.file_ext}_{eng}.csv")
+
 
     def overall_dict():
-
-        # good idea to check the network considering etc.
-        # can use the perts obtained from the get_info_network, and then plot this.
-        # can collate all perts and ligands for all engines as well
 
         all_perturbations = []
         all_ligands = []
@@ -96,124 +120,107 @@ class plotting():
                                                 engine=eng)
             values_dict[eng]["pert_results"] = comp_dict
 
-        # also want to save exp results for plotting and comparison
-
-        # first need to convert the yml file into one useable by freenergworkflows
-        convert_yml_into_freenrgworkflows(exp_file, exp_file_dat)
-        # TODO diff exp conversion that doesnt rely on freenrgworkflows
-        # using freenergworkflows to convert
-        experiments = experiments.ExperimentalData()
-        experiments.compute_affinities(exp_file_dat, data_type="IC50", comments="#", delimiter=",")
-        experimental_DDGs = experiments.freeEnergiesInKcal
-
-        exp_pert_dict,exp_lig_dict = freenrgworkflows_into_dict(experimental_DDGs, all_ligands, all_perturbations)
 
         values_dict["experimental"]["perts"] = all_perturbations
         values_dict["experimental"]["ligs"] = all_ligands
         values_dict["experimental"]["pert_results"] = exp_pert_dict
         values_dict["experimental"]["val_results"] = exp_lig_dict
-        values_dict["experimental"]["freenrgworkflows_ouput"] = experimental_DDGs
 
 
+    def colours(self, colour_dict=None):
+
+        default_colour_dict = {"AMBER":"orange",
+                    "SOMD":"darkturquoise",
+                    "GROMACS":"orchid",
+                    "experimental":"midnightblue"
+                    }
+        allowed_keys = ["AMBER","SOMD","GROMACS","experimental"]
+
+        if not colour_dict:
+            colour_dict = default_colour_dict
+
+        else:
+            colour_dict = validate.dictionary(colour_dict)
+            for key in colour_dict:
+                if key not in allowed_keys:
+                    raise ValueError(f"{colour_dict} may only have the keys in {allowed_keys}.")
+                # replace in the default dict and have this as new colour dict
+                default_colour_dict[key] = colour_dict[key]
+                colour_dict = default_colour_dict
+
+        self.colours = colour_dict
+        
+        return colour_dict
+
+    def style(self):
+        pass
+
+    def _bar_spacing(self):
+
+        placement_dict = {}
+
+        if len(self.engines) == 3:
+            width = 0.15  # set bar width
+            placement = [-width*(3/2), -width*(1/2), width*(1/2), width*(3/2)]
+        elif len(self.engines) == 2:
+            width = 0.23  # set bar width
+            placement = [-width*(2/2), 0, width*(2/2)]
+        elif len(self.engines) == 1:
+            width = 0.4  # set bar width
+            placement = [-width*(1/2), width*(1/2)]
 
 
-    def convergence():
-        engine = ['AMBER','SOMD','GROMACS']
-        # trans = ['ejm42~ejm31','ejm42~ejm55','ejm54~ejm42','ejm55~ejm54','2w~2z','67~60','60~63']
-        trans = ['ejm55~ejm54']
+        for eng,place in zip(self.engines, placement):
+            placement_dict.update({eng:place}) # for each engine
+        placement_dict.update({"experimental":placement[-1]}) # add experimental
 
-        colour = ['orange','orchid','darkturquoise','midnightblue']
-        colour_dict = {"AMBER":"orange","SOMD":"darkturquoise","GROMACS":"orchid","experimental":"midnightblue"}
-        # plot the convergence w time
-        for tra in trans:
-            prot = "tyk2"
-
-            for leg in [ 'free','bound']:
-                plt.figure()
-                lines = []
-                for eng,col in zip(engine,colour):
-                    # with open (f'/home/anna/Documents/benchmark/{prot}/outputs/{eng}/{tra}/{leg}_pmf_{tra}_{eng}.pickle', 'rb') as handle:
-                    with open (f'/home/anna/Documents/benchmark/{prot}/pickles/{leg}_pmf_{tra}_{eng}.pickle', 'rb') as handle:
-                        pmf_dict = pickle.load(handle)
-                    lines += plt.plot(0,0,c=col, label=eng)
-                    for repeat in pmf_dict:
-                        pmf = pmf_dict[repeat]
-                        x =[]
-                        y=[]
-                        yerr = []
-                        for p in pmf:
-                            x.append(p[0])
-                            y.append(p[1]*(1/BSS.Units.Energy.kcal_per_mol))
-                            yerr.append(p[2]*(1/BSS.Units.Energy.kcal_per_mol))
-                        plt.errorbar(x,y,yerr=yerr,color=col, ecolor='black')
-                plt.xlim(xmin=0,xmax=1)
-                plt.ylabel("Computed $\Delta$G$_{transformation}$ / kcal$\cdot$mol$^{-1}$")
-                plt.xlabel("Lambda")
-                labels = [l.get_label() for l in lines]
-                plt.legend(lines, labels)
-                plt.title(f"Convergence, {leg} for {tra}")
-                plt.savefig(f'/home/anna/Documents/benchmark/{prot}/outputs/{eng}/{tra}/convergence_{leg}.png')
-
-            # plotting delta delta G
-
-            plt.figure()
-            lines = []
-            for eng in engine:
-                # with open (f'/home/anna/Documents/benchmark/{prot}/outputs/{eng}/{tra}/bound_pmf_{tra}_{eng}.pickle', 'rb') as handle:
-                with open (f'/home/anna/Documents/benchmark/{prot}/pickles/bound_pmf_{tra}_{eng}.pickle', 'rb') as handle:
-                    bound_pmf_dict = pickle.load(handle)
-                # with open (f'/home/anna/Documents/benchmark/{prot}/outputs/{eng}/{tra}/free_pmf_{tra}_{eng}.pickle', 'rb') as handle:
-                with open (f'/home/anna/Documents/benchmark/{prot}/pickles/free_pmf_{tra}_{eng}.pickle', 'rb') as handle:
-                    free_pmf_dict = pickle.load(handle)
-                lines += plt.plot(0,0,c=colour_dict[eng], label=eng)
-                for repf,repb in zip(free_pmf_dict,bound_pmf_dict):
-                    bound_pmf = bound_pmf_dict[repb]
-                    free_pmf = free_pmf_dict[repf]
-                    x = []
-                    y = []
-                    yerr = []
-                    for pb,pf in zip(bound_pmf,free_pmf):
-                        x.append(pb[0])
-                        y.append((pb[1]*(1/BSS.Units.Energy.kcal_per_mol))-(pf[1]*(1/BSS.Units.Energy.kcal_per_mol)))
-                        yerr.append((pb[2]*(1/BSS.Units.Energy.kcal_per_mol))+(pf[2]*(1/BSS.Units.Energy.kcal_per_mol)))
-                    plt.errorbar(x,y,yerr=yerr,color=colour_dict[eng])
-            plt.xlim(xmin=0,xmax=1)
-            plt.ylabel("Computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
-            plt.xlabel("Lambda")
-            labels = [l.get_label() for l in lines]
-            plt.legend(lines, labels)
-            plt.title(f"Convergence for {tra}")
-            plt.savefig(f'/home/anna/Documents/benchmark/{prot}/outputs/{eng}/{tra}/convergence_deltadeltaG.png')
+        self._bar_spacing = placement_dict
+        self._bar_width = width
+        
+        return placement_dict
 
 
-    def dict_to_df():
+    def bar(self):
 
-        # construct dict with experimental freenrg and error and computed
-        for eng in engines:
-            freenrg_pert_dict = {}
-            for pert in values_dict[eng]["perts"]:
-                exp_ddG = values_dict["experimental"]["pert_results"][pert][0]
-                exp_err = values_dict["experimental"]["pert_results"][pert][1]
-                comp_ddG = values_dict[eng]["pert_results"][pert][0]
-                comp_err = values_dict[eng]["pert_results"][pert][1]
-                freenrg_pert_dict[pert] = [exp_ddG, exp_err, comp_ddG, comp_err]
-            freenrg_df_pert = pd.DataFrame(freenrg_pert_dict, index=["freenrg_exp", "err_exp", "freenrg_fep", "err_fep"]).transpose()
-            values_dict[eng]["freenrg_df_pert"] = freenrg_df_pert
+        plt.rc('font', size=12)
+        fig, ax = plt.subplots(figsize=(15,8))
 
-            # save our results to a file that can be opened in e.g. Excel.
-            freenrg_df_pert.to_csv(f"{res_folder}/fep_diff_results_table_{file_ext_out}_{eng}.csv")
+        for eng in self.engines:
+
+            colour = self.colours[eng]
+            place = self._bar_spacing[eng]
+
+            freenrg_df_pert_plotting_bar = values_dict[eng]["freenrg_df_pert"].fillna(0)
+            x = freenrg_df_pert_plotting_bar["freenrg_exp"]
+            y = freenrg_df_pert_plotting_bar["freenrg_fep"]
+            x_er = freenrg_df_pert_plotting_bar["err_exp"]
+            y_er = freenrg_df_pert_plotting_bar["err_fep"]    
+
+            # determine positions for X axis labels.
+            x_locs = np.arange(len(freenrg_df_pert_plotting_bar))
+
+            # plot both our experimental and FEP free energies using an offset on the x position so bars don't overlap.
+
+            ax.bar(x_locs + self._bar_spacing[eng], height=freenrg_df_pert_plotting_bar["freenrg_fep"], width=self._bar_width, yerr=freenrg_df_pert_plotting_bar["err_fep"],
+                            label=eng, color=col)
+
+        # plot experimental
+        ax.bar(x_locs + self._bar_spacing["experimental"], height=freenrg_df_pert_plotting_bar["freenrg_exp"], width=self._bar_width, yerr=freenrg_df_pert_plotting_bar["err_exp"],
+                        label='Experimental', color=colour[-1]) 
+
+        #plt.xlabel('ΔΔG for experimental (kcal/mol)')
+        #plt.ylabel('ΔΔG for calculated (kcal/mol)')
+        # format the plot further.
+        plt.axhline(color="black")
+        plt.title(f"Computed vs Experimental for {protein.upper()} and {self.file_ext.replace('_',',')}")
+        plt.ylabel("$\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+        plt.xticks(x_locs, freenrg_df_pert_plotting_bar.index, rotation=70, ha="right")
+        plt.legend()
+
+        plt.savefig(f"{res_folder}/fep_vs_exp_barplot_pert_{self.file_ext}_all.png", dpi=300, bbox_inches='tight')
+        plt.show()
 
 
-    def mae_df_make():
-        # TODO funcion for this in dictionaries?
-
-        mae_pert_df, mae_pert_df_err = calc_mae(values_dict, "perts")
-
-        print(mae_pert_df)
-        print(mae_pert_df_err)
-
-        mae_pert_df.to_csv(f"{res_folder}/mae_pert_{file_ext_out}.csv", sep=" ")
-        mae_pert_df_err.to_csv(f"{res_folder}/mae_pert_err_{file_ext_out}.csv", sep=" ")
 
 
     def one_scatter():
@@ -288,48 +295,12 @@ class plotting():
             plt.axhline(color="black", zorder=1)
             plt.axvline(color="black", zorder=1)
 
-            plt.title(f"Computed vs Experimental with {engine} and {file_ext_out.replace('_',',')}")
+            plt.title(f"Computed vs Experimental with {engine} and {self.file_ext.replace('_',',')}")
             plt.ylabel("Computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
             plt.xlabel("Experimental $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
 
-            plt.savefig(f"{res_folder}/fep_vs_exp_scatterplot_pert_{file_ext_out}_{engine}.png", dpi=300, bbox_inches='tight')
+            plt.savefig(f"{res_folder}/fep_vs_exp_scatterplot_pert_{self.file_ext}_{engine}.png", dpi=300, bbox_inches='tight')
             plt.show()
-
-
-    def one_bar():
-
-        for engine in engines:
-            # else, if want to substitute w 0 if it is the experimental values, eg for bar charts
-            # THIS DOES NOT WORK FOR SCATTER PLOTS - they will all be at 0, this is only useable for bar plots
-            freenrg_df_pert_plotting_bar = values_dict[engine]["freenrg_df_pert"].fillna(0)
-
-            # initiate an empty figure with fixed dimensions.
-            fig, ax = plt.subplots(figsize=(15,8))
-
-            # determine positions for X axis labels.
-            x_locs = np.arange(len(freenrg_df_pert_plotting_bar))
-
-            # set bar width
-            width = 0.35  
-
-            # plot both our experimental and FEP free energies using an offset on the x position so bars don't overlap.
-            ax.bar(x_locs - width/2, height=freenrg_df_pert_plotting_bar["freenrg_exp"], width=width, yerr=freenrg_df_pert_plotting_bar["err_exp"],
-                            label='Experimental')
-            ax.bar(x_locs + width/2, height=freenrg_df_pert_plotting_bar["freenrg_fep"], width=width, yerr=freenrg_df_pert_plotting_bar["err_fep"],
-                            label='FEP')
-            
-            # format the plot further.
-            plt.axhline(color="black")
-            plt.title(f"Computed vs Experimental with {engine} and {file_ext_out.replace('_',',')}")
-            plt.ylabel("$\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
-            plt.xticks(x_locs, freenrg_df_pert_plotting_bar.index, rotation=70, ha="right")
-            plt.legend()
-
-            plt.savefig(f"{res_folder}/fep_vs_exp_barplot_pert_{file_ext_out}_{engine}.png", dpi=300, bbox_inches='tight')
-            plt.show()
-
-# TODO one bar and one scatter can also go into all, just using one engine
-
 
     def all_scatter():
 
@@ -429,60 +400,15 @@ class plotting():
 
         #plt.xlabel('ΔΔG for experimental (kcal/mol)')
         #plt.ylabel('ΔΔG for calculated (kcal/mol)')
-        # plt.title(f"Computed vs Experimental FEP for {protein.upper()}, {file_ext_out.replace('_', ',')}")
+        # plt.title(f"Computed vs Experimental FEP for {protein.upper()}, {self.file_ext.replace('_', ',')}")
         plt.ylabel("Computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
         plt.xlabel("Experimental $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
 
         # plt.legend()
 
-        plt.savefig(f"{res_folder}/fep_vs_exp_scatterplot_pert_{file_ext_out}_all.png", dpi=300, bbox_inches='tight')
+        plt.savefig(f"{res_folder}/fep_vs_exp_scatterplot_pert_{self.file_ext}_all.png", dpi=300, bbox_inches='tight')
         plt.show()
 
-
-    def all_bar():
-
-        plt.rc('font', size=12)
-        fig, ax = plt.subplots(figsize=(15,8))
-
-        colour = ['darkturquoise','orange','orchid','midnightblue']
-        # set bar width
-        width = 0.15  
-        placement = [-width*(3/2), -width*(1/2), width*(1/2), width*(3/2)]
-
-        for eng,col,place in zip(engines,colour,placement):
-
-            freenrg_df_pert_plotting_bar = values_dict[eng]["freenrg_df_pert"].fillna(0)
-            x = freenrg_df_pert_plotting_bar["freenrg_exp"]
-            y = freenrg_df_pert_plotting_bar["freenrg_fep"]
-            x_er = freenrg_df_pert_plotting_bar["err_exp"]
-            y_er = freenrg_df_pert_plotting_bar["err_fep"]    
-
-            # determine positions for X axis labels.
-            x_locs = np.arange(len(freenrg_df_pert_plotting_bar))
-
-            # plot both our experimental and FEP free energies using an offset on the x position so bars don't overlap.
-
-            ax.bar(x_locs + place, height=freenrg_df_pert_plotting_bar["freenrg_fep"], width=width, yerr=freenrg_df_pert_plotting_bar["err_fep"],
-                            label=eng, color=col)
-
-        # plot experimental
-        ax.bar(x_locs + placement[-1], height=freenrg_df_pert_plotting_bar["freenrg_exp"], width=width, yerr=freenrg_df_pert_plotting_bar["err_exp"],
-                        label='Experimental', color=colour[-1]) 
-
-        #plt.xlabel('ΔΔG for experimental (kcal/mol)')
-        #plt.ylabel('ΔΔG for calculated (kcal/mol)')
-        # format the plot further.
-        plt.axhline(color="black")
-        plt.title(f"Computed vs Experimental for {protein.upper()} and {file_ext_out.replace('_',',')}")
-        plt.ylabel("$\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
-        plt.xticks(x_locs, freenrg_df_pert_plotting_bar.index, rotation=70, ha="right")
-        plt.legend()
-
-        plt.savefig(f"{res_folder}/fep_vs_exp_barplot_pert_{file_ext_out}_all.png", dpi=300, bbox_inches='tight')
-        plt.show()
-
-    def _bar_spacing():
-        pass
 
     def outlier():
         number_outliers_to_annotate = 5
@@ -590,8 +516,89 @@ class plotting():
         plt.show()    
 
 
-    # TODO plot cinnabar, someway to get the stats things from cinnabar
+
+    def mae_df_make():
+        # TODO funcion for this in dictionaries?
+
+        mae_pert_df, mae_pert_df_err = calc_mae(values_dict, "perts")
+
+        print(mae_pert_df)
+        print(mae_pert_df_err)
+
+        mae_pert_df.to_csv(f"{res_folder}/mae_pert_{self.file_ext}.csv", sep=" ")
+        mae_pert_df_err.to_csv(f"{res_folder}/mae_pert_err_{self.file_ext}.csv", sep=" ")
+
+
     # can plot diff data series cinnabar?
     # plot cycle closure things?
-    # remove all freenrg workflow things
-    # rewrite exp calculation
+
+
+
+def plot_convergence():
+    engine = ['AMBER','SOMD','GROMACS']
+    # trans = ['ejm42~ejm31','ejm42~ejm55','ejm54~ejm42','ejm55~ejm54','2w~2z','67~60','60~63']
+    trans = ['ejm55~ejm54']
+
+    colour = ['orange','orchid','darkturquoise','midnightblue']
+    colour_dict = {"AMBER":"orange","SOMD":"darkturquoise","GROMACS":"orchid","experimental":"midnightblue"}
+    # plot the convergence w time
+    for tra in trans:
+        prot = "tyk2"
+
+        for leg in [ 'free','bound']:
+            plt.figure()
+            lines = []
+            for eng,col in zip(engine,colour):
+                # with open (f'/home/anna/Documents/benchmark/{prot}/outputs/{eng}/{tra}/{leg}_pmf_{tra}_{eng}.pickle', 'rb') as handle:
+                with open (f'/home/anna/Documents/benchmark/{prot}/pickles/{leg}_pmf_{tra}_{eng}.pickle', 'rb') as handle:
+                    pmf_dict = pickle.load(handle)
+                lines += plt.plot(0,0,c=col, label=eng)
+                for repeat in pmf_dict:
+                    pmf = pmf_dict[repeat]
+                    x =[]
+                    y=[]
+                    yerr = []
+                    for p in pmf:
+                        x.append(p[0])
+                        y.append(p[1]*(1/BSS.Units.Energy.kcal_per_mol))
+                        yerr.append(p[2]*(1/BSS.Units.Energy.kcal_per_mol))
+                    plt.errorbar(x,y,yerr=yerr,color=col, ecolor='black')
+            plt.xlim(xmin=0,xmax=1)
+            plt.ylabel("Computed $\Delta$G$_{transformation}$ / kcal$\cdot$mol$^{-1}$")
+            plt.xlabel("Lambda")
+            labels = [l.get_label() for l in lines]
+            plt.legend(lines, labels)
+            plt.title(f"Convergence, {leg} for {tra}")
+            plt.savefig(f'/home/anna/Documents/benchmark/{prot}/outputs/{eng}/{tra}/convergence_{leg}.png')
+
+        # plotting delta delta G
+
+        plt.figure()
+        lines = []
+        for eng in engine:
+            # with open (f'/home/anna/Documents/benchmark/{prot}/outputs/{eng}/{tra}/bound_pmf_{tra}_{eng}.pickle', 'rb') as handle:
+            with open (f'/home/anna/Documents/benchmark/{prot}/pickles/bound_pmf_{tra}_{eng}.pickle', 'rb') as handle:
+                bound_pmf_dict = pickle.load(handle)
+            # with open (f'/home/anna/Documents/benchmark/{prot}/outputs/{eng}/{tra}/free_pmf_{tra}_{eng}.pickle', 'rb') as handle:
+            with open (f'/home/anna/Documents/benchmark/{prot}/pickles/free_pmf_{tra}_{eng}.pickle', 'rb') as handle:
+                free_pmf_dict = pickle.load(handle)
+            lines += plt.plot(0,0,c=colour_dict[eng], label=eng)
+            for repf,repb in zip(free_pmf_dict,bound_pmf_dict):
+                bound_pmf = bound_pmf_dict[repb]
+                free_pmf = free_pmf_dict[repf]
+                x = []
+                y = []
+                yerr = []
+                for pb,pf in zip(bound_pmf,free_pmf):
+                    x.append(pb[0])
+                    y.append((pb[1]*(1/BSS.Units.Energy.kcal_per_mol))-(pf[1]*(1/BSS.Units.Energy.kcal_per_mol)))
+                    yerr.append((pb[2]*(1/BSS.Units.Energy.kcal_per_mol))+(pf[2]*(1/BSS.Units.Energy.kcal_per_mol)))
+                plt.errorbar(x,y,yerr=yerr,color=colour_dict[eng])
+        plt.xlim(xmin=0,xmax=1)
+        plt.ylabel("Computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+        plt.xlabel("Lambda")
+        labels = [l.get_label() for l in lines]
+        plt.legend(lines, labels)
+        plt.title(f"Convergence for {tra}")
+        plt.savefig(f'/home/anna/Documents/benchmark/{prot}/outputs/{eng}/{tra}/convergence_deltadeltaG.png')
+

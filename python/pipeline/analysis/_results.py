@@ -2,6 +2,7 @@ import BioSimSpace as BSS
 import os
 import itertools as it
 import sys
+import re
 
 from ..utils import *
 from ._network import *
@@ -16,8 +17,7 @@ class analysis_engines():
 
     def __init__(self, results_directory, exp_file=None, engines=None, net_file=None, res_folder=None, file_ext=None, extra_options=None):
         
-        # TODO some way to consider different extensions for analysis methods
-        # use same style of file ext as written by the analysis, maybe using same extra options dict format?
+        self._results_directory = validate.folder_path(results_directory)
 
         # get engines for analysis
         if not engines:
@@ -39,11 +39,6 @@ class analysis_engines():
                 print("engine input not recognised. Will use all engines.")
                 self.engines = BSS.FreeEnergy.engines()
         
-        # get files from results directory
-        self._results_directory = validate.folder_path(results_directory)
-        self._results_repeat_files = analysis_engines._get_results_repeat_files(self)  
-        self._results_files = analysis_engines._get_results_files(self)
-
         if not exp_file:
             print("please set an experimental yml file so this can be used, eg using .get_experimental(exp_file). ")
             self.exp_file = None
@@ -64,17 +59,25 @@ class analysis_engines():
             self.results_folder = validate.folder_path(res_folder, create=True)
             self.graph_dir = validate.folder_path(f"{res_folder}/graphs", create=True)
 
+        if not file_ext:
+            self.file_ext = ".+" # wildcard, all files in the folder included
+        else:
+            self.file_ext = validate.string(file_ext)
+            # TODO add so can also read in dictionary like analysis??
 
+        # get files from results directory
+        self._results_repeat_files = self._get_results_repeat_files()  
+        self._results_files = self._get_results_files()
 
         # get info from the network
         self.perturbations = None
         self.ligands = None  
-        analysis_engines._set_network(self) # get network info
+        self._set_network() # get network info
 
         # read the extra options
-        analysis_engines._set_default_options(self)
+        self._set_default_options()
         if extra_options:
-            analysis_engines.set_options(extra_options)
+            self.set_options(extra_options)
         
         # as not yet computed, set this to false
         self._is_computed = False
@@ -108,7 +111,8 @@ class analysis_engines():
         rep_files = []
         for file in all_files:
             if "repeat" in file:
-                rep_files.append(f"{res_dir}/{file}")
+                if re.search(self.file_ext, file):
+                    rep_files.append(f"{res_dir}/{file}")
         
         files_dict = {}
         
@@ -116,7 +120,8 @@ class analysis_engines():
             eng_files = []
             for file in rep_files:
                 if eng in file:
-                    eng_files.append(file)
+                    if re.search(self.file_ext, file):
+                        eng_files.append(file)
             files_dict[eng] = eng_files
         
         return files_dict
@@ -127,7 +132,8 @@ class analysis_engines():
         sum_files = []
         for file in all_files:
             if "summary" in file:
-                sum_files.append(f"{res_dir}/{file}")
+                if re.search(self.file_ext, file):
+                    sum_files.append(f"{res_dir}/{file}")
         
         files_dict = {}
         
@@ -135,7 +141,8 @@ class analysis_engines():
             eng_files = []
             for file in sum_files:
                 if eng in file:
-                    eng_files.append(file)
+                    if re.search(self.file_ext, file):
+                        eng_files.append(file)
             files_dict[eng] = eng_files
         
         return files_dict
@@ -163,7 +170,7 @@ class analysis_engines():
 
         self._compute_experimental = True
         self._compute_per_ligand = True
-        self._comupute_cycle_closure = True
+        self._comupute_cycles = True
 
         self._save_pickle = True
         self._try_pickle = True
@@ -180,7 +187,7 @@ class analysis_engines():
         if "compute_per_ligand" in options_dict:
             self._compute_per_ligand = validate.boolean(options_dict["compute_per_ligand"])
         if "compute_cycle_closure" in options_dict:
-            self._compute_cycle_closure = validate.boolean(options_dict["compute_cycle_closure"])
+            self._compute_cycles = validate.boolean(options_dict["compute_cycles"])
         if "XXXX" in options_dict:
             self._XXXX = validate.boolean(options_dict["XXXX"])
 
@@ -227,11 +234,11 @@ class analysis_engines():
     def compute(self):
 
         # get all the dictionaries needed for plotting
-        analysis_engines._compute_dicts(self)
+        self._compute_dicts()
         
         # compute the cycle closure
         self._make_graph()
-        analysis_engines._compute_cycle_closure(self)
+        self._compute_cycle_closures()
 
         # get statistics
         self.pert_statistics = {}
@@ -246,13 +253,13 @@ class analysis_engines():
     def _compute_dicts(self):
 
         # compute the experimental for perturbations
-        analysis_engines.get_experimental(self) # get experimental val dict
-        analysis_engines.get_experimental_pert(self) # from cinnabar expeirmental diff ? make_dict class
+        self.get_experimental() # get experimental val dict
+        self.get_experimental_pert() # from cinnabar expeirmental diff ? make_dict class
 
         # get the files into cinnabar format for analysis
         for eng in self.engines:
             results_files = self._results_repeat_files[eng]
-            convert.cinnabar_file(results_files, self.exper_val_dict, f"{self.results_folder}/cinnabar_{eng}", perturbations=self.perturbations)
+            convert.cinnabar_file(results_files, self.exper_val_dict, f"{self.results_folder}/cinnabar_{eng}_{self.file_ext}", perturbations=self.perturbations)
             # TODO some way to incl extension for the files in the naming here, or alternatively own folder is good
         
             # compute the per ligand for the network
@@ -285,9 +292,9 @@ class analysis_engines():
             else:
                 engines = self.engines
 
-            for eng in self.engines:
+            for eng in engines:
                 if output_dir:
-                    file_name = f"{output_dir}/cinnabar_network_{eng}.png"
+                    file_name = f"{output_dir}/cinnabar_network_{eng}_{self.file_ext}.png"
                 else:
                     file_name = None
                 self._cinnabar_networks[eng].draw_graph(file_name=file_name)
@@ -303,7 +310,7 @@ class analysis_engines():
         # TODO eng specific graph drawing or this doesnt matter
 
 
-    def _compute_cycle_closure(self):
+    def _compute_cycle_closures(self):
 
         # cycle closures
 
@@ -325,6 +332,48 @@ class analysis_engines():
             # print(f"{eng} cycle deviation is {cycles[3]}")
 
             self.cycle_dict.update({eng:(cycles[0], cycles[1], cycles[2], cycles[3])}) # the cycles dict
+
+
+    def plot_all(self):
+        pass
+
+    # for all have engine options if only want to plot a single engine
+    def plot_bar_pert(self, engine=None):
+
+        if not engine:
+            engines = self.engines
+        else:
+            engines = [validate.engine(engine)]
+
+        # plotting(self)
+        # plotting for cinnabar just using the cinnabar plotting here if just one
+
+
+    def plot_bar_lig(self, engines=None):
+        
+        # TODO add file path, if cinnabar or other (if just one engine)
+        if not engine:
+            engines = self.engines
+        else:
+            engines = [validate.engine(engine)]
+
+    def plot_scatter_pert(self, engines=None):
+
+        if not engine:
+            engines = self.engines
+        else:
+            engines = [validate.engine(engine)]
+
+    def plot_scatter_lig(self, engines=None):
+
+        if not engine:
+            engines = self.engines
+        else:
+            engines = [validate.engine(engine)]
+
+
+    # def plot_convergence()
+
 
 
 # TODO make a static method?
@@ -367,45 +416,6 @@ class analysis_engines():
         pass
 
         # do for all networks in dict ie engines, also save
-
-
-
-    # for all have engine options if only want to plot a single engine
-    def plot_bar_pert(self, engine=None):
-
-        if not engine:
-            engines = self.engines
-        else:
-            engines = [validate.engine(engine)]
-
-        # plot one can also just use the cinnabar plotting if just one
-
-    def plot_bar_lig(self, engines=None):
-        
-        # TODO add file path, if cinnabar or other (if just one engine)
-        if not engine:
-            engines = self.engines
-        else:
-            engines = [validate.engine(engine)]
-
-    def plot_scatter_pert(self, engines=None):
-
-        if not engine:
-            engines = self.engines
-        else:
-            engines = [validate.engine(engine)]
-
-    def plot_scatter_lig(self, engines=None):
-
-        if not engine:
-            engines = self.engines
-        else:
-            engines = [validate.engine(engine)]
-
-
-    # def plot_convergence()
-
-
 
 
     # freenergworkflows stuff for comparison
