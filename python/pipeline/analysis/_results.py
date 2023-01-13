@@ -419,6 +419,22 @@ class analysis_engines():
         plot_obj = self._plotting_object
         plot_obj.outlier(pert_val=pert_val, engines=engine, outliers=outliers)  
 
+    
+    def plot_histogram_pert(self, engine=None):
+
+        self._initalise_plotting_object(check=True)
+        plot_obj = self._plotting_object
+        plot_obj.histogram(engines=engine, pert_val="pert")
+
+    def plot_histogram_lig(self, engine=None):
+
+        self._initalise_plotting_object(check=True)
+        plot_obj = self._plotting_object
+        plot_obj.histogram(engines=engine, pert_val="val")
+    
+    # TODO histogram plot for each repeat
+
+
     # def plot_convergence(self):
 
     #     self._initalise_plotting_object(check=True)

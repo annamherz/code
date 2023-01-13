@@ -8,17 +8,19 @@ import math
 import pandas as pd
 import networkx as nx
 import yaml
-from scipy.stats import sem as sem
-from scipy.stats import bootstrap
-from sklearn.metrics import mean_absolute_error as mae
 import pickle
 import tempfile
 import itertools
 import matplotlib.pyplot as plt
+import matplotlib.mlab as mlab
 import csv
 import numpy as np
 import pandas as pd 
 from rdkit import Chem
+
+from scipy.stats import sem as sem
+from scipy.stats import bootstrap, norm
+from sklearn.metrics import mean_absolute_error as mae
 
 from ..utils import *
 from ._network import *
@@ -601,3 +603,74 @@ class plotting_engines():
 
     # can plot diff data series cinnabar?
     # plot cycle closure things?
+
+    def histogram(self, engines=None, pert_val="pert"):
+        # TODO this is currently plotting the standarf error of the 
+
+        pert_val = validate.string(pert_val)
+        if pert_val not in ["pert","val"]:
+            raise ValueError("pert_val must be either 'pert' or 'val'")
+
+        if engines:
+            engines = self._plotting_engines(engines)
+        # if no engines provided, use the defaults that were set based on the analysis object
+        else:
+            engines = self.engines
+
+        best_fit_dict = {}
+
+        for eng in engines:
+
+            # set plot defaults
+            plt.rc('font', size=12)
+            fig, ax = plt.subplots(figsize=(8,8))
+            col = self.colours[eng]
+     
+            freenrg_df_plotting = self.freenrg_df_dict[eng][pert_val].dropna()
+            x = freenrg_df_plotting["err_fep"]            
+
+            # no_bins = int(len(freenrg_df_plotting["err_exp"])/8)
+            no_bins = 6
+
+            # Fit a normal distribution to the data, mean and standard deviation
+            mu, std = norm.fit(x)
+    
+            # plot histogram
+            plt.hist(x, bins=no_bins, density=True, alpha=0.7, color=col, edgecolor="grey")
+            
+            # Plot the PDF.
+            xmin, xmax = plt.xlim()
+            x = np.linspace(xmin, xmax, 100)
+            y = norm.pdf(x, mu, std)
+            
+            plt.plot(x, y, '--', linewidth=2, color=self.colours["experimental"])
+            
+            best_fit_dict.update({eng:y})
+
+            #plot
+            plt.xlabel('Error')
+            plt.ylabel('Frequency')
+            plt.title(f"Distribution of error for {eng} \n mu = {mu:.3f} , std = {std:.3f}")
+            plt.savefig(f"{self.results_folder}/fep_vs_exp_histogram_{pert_val}_{self.file_ext}_{eng}.png", dpi=300, bbox_inches='tight')
+            plt.show()
+
+
+        # plot the distributions
+        fig, ax = plt.subplots(figsize=(10,10))
+        
+        #TODO some way to get x
+        
+        lines = []
+
+        for eng in engines:
+            col = self.colours[eng]
+            plt.plot(x, best_fit_dict[eng], 'k', linewidth=2, color=col)
+            lines += plt.plot(0,0,c=col, label=eng)
+
+        labels = [l.get_label() for l in lines]
+        plt.legend(lines, labels, loc='upper left')
+
+        plt.xlabel('Error')
+        plt.ylabel('Frequency')  
+        plt.savefig(f"{self.results_folder}/fep_vs_exp_dormal_dist_{pert_val}_{self.file_ext}_all.png", dpi=300, bbox_inches='tight')
+        plt.show()
