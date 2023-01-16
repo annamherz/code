@@ -536,6 +536,9 @@ class plotting_engines():
                         color="grey", 
                         alpha=0.2)
 
+        labels = [l.get_label() for l in lines]
+        plt.legend(lines, labels, loc='upper left')
+        
         # for a scatterplot we want the axis ranges to be the same.
         min_lim, max_lim = self._get_bounds_scatter(engines, self.freenrg_df_dict, pert_val)
         plt.xlim(min_lim*1.3, max_lim*1.3)
@@ -567,6 +570,8 @@ class plotting_engines():
 
         return eng_name
     
+    # TODO method to get the
+
     @staticmethod
     def _get_bounds_scatter(engines, freenrg_df_dict, pert_val):
 
@@ -604,8 +609,8 @@ class plotting_engines():
     # can plot diff data series cinnabar?
     # plot cycle closure things?
 
-    def histogram(self, engines=None, pert_val="pert"):
-        # TODO this is currently plotting the standarf error of the 
+    def histogram(self, engines=None, pert_val="pert", data_dict=None):
+        # TODO this is currently plotting the standard error of the 
 
         pert_val = validate.string(pert_val)
         if pert_val not in ["pert","val"]:
@@ -616,8 +621,13 @@ class plotting_engines():
         # if no engines provided, use the defaults that were set based on the analysis object
         else:
             engines = self.engines
+        
+        # TODO use data_dict to take in other info?
+        # have this as a list of values from the pickles from the analysis?
+        # #wanna take in data from repeat results files, this data is in results function ???
 
         best_fit_dict = {}
+        histogram_dict = {}
 
         for eng in engines:
 
@@ -627,10 +637,10 @@ class plotting_engines():
             col = self.colours[eng]
      
             freenrg_df_plotting = self.freenrg_df_dict[eng][pert_val].dropna()
-            x = freenrg_df_plotting["err_fep"]            
+            x = freenrg_df_plotting["err_fep"]    
 
             # no_bins = int(len(freenrg_df_plotting["err_exp"])/8)
-            no_bins = 6
+            no_bins = 6 # TODO calculate no of bins so min and max per bin
 
             # Fit a normal distribution to the data, mean and standard deviation
             mu, std = norm.fit(x)
@@ -645,7 +655,8 @@ class plotting_engines():
             
             plt.plot(x, y, '--', linewidth=2, color=self.colours["experimental"])
             
-            best_fit_dict.update({eng:y})
+            best_fit_dict.update({eng:((x, y), mu, std)})
+            # TODO also save as pickle, and also save as tipe with mu and std
 
             #plot
             plt.xlabel('Error')
@@ -654,23 +665,30 @@ class plotting_engines():
             plt.savefig(f"{self.results_folder}/fep_vs_exp_histogram_{pert_val}_{self.file_ext}_{eng}.png", dpi=300, bbox_inches='tight')
             plt.show()
 
+            # add to histogram dict for shared plotting
+            histogram_dict.update({eng: fig})
+
 
         # plot the distributions
         fig, ax = plt.subplots(figsize=(10,10))
-        
-        #TODO some way to get x
-        
+
         lines = []
 
         for eng in engines:
             col = self.colours[eng]
-            plt.plot(x, best_fit_dict[eng], 'k', linewidth=2, color=col)
+            plt.plot(best_fit_dict[eng][0][0], best_fit_dict[eng][0][1], 'k', linewidth=2, color=col)
             lines += plt.plot(0,0,c=col, label=eng)
 
         labels = [l.get_label() for l in lines]
-        plt.legend(lines, labels, loc='upper left')
+        plt.legend(lines, labels, loc='upper right')
 
         plt.xlabel('Error')
         plt.ylabel('Frequency')  
-        plt.savefig(f"{self.results_folder}/fep_vs_exp_dormal_dist_{pert_val}_{self.file_ext}_all.png", dpi=300, bbox_inches='tight')
+        eng_name = self._get_eng_name(engines)
+        plt.title(f"Distribution of error for {eng_name}, {pert_val}")
+        plt.savefig(f"{self.results_folder}/fep_vs_exp_normal_dist_{pert_val}_{self.file_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
         plt.show()
+
+        histogram_dict.update({"dist": fig})
+
+        return histogram_dict

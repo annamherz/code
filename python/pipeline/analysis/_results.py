@@ -66,6 +66,8 @@ class analysis_engines():
         else:
             self.file_ext = validate.string(file_ext)
             # TODO add so can also read in dictionary like analysis??
+        
+        # TODO add a file ext extra option for when writing out the files re naming eg so can incl diff networks
 
         # get files from results directory
         self._results_repeat_files = self._get_results_repeat_files()  
@@ -386,7 +388,7 @@ class analysis_engines():
                 return
             
             plotting.plot_DDGs(self._cinnabar_networks[engine].graph,
-                              filename=f"{self.results_folder}/DDGs_{engine}_{self.file_ext}.png",
+                              filename=f"{self.graph_dir}/DDGs_{engine}_{self.file_ext}.png",
                               title=f"DDGs for {engine} with {self.file_ext}")
 
         else:
@@ -404,7 +406,7 @@ class analysis_engines():
                 return
             
             plotting.plot_DGs(self._cinnabar_networks[engine].graph,
-                              filename=f"{self.results_folder}/DGs_{engine}_{self.file_ext}.png",
+                              filename=f"{self.graph_dir}/DGs_{engine}_{self.file_ext}.png",
                               title=f"DGs for {engine} with {self.file_ext}")
 
         else:
