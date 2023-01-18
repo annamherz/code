@@ -50,8 +50,10 @@ class analysis_engines():
         if not net_file:
             print("no network file, will use all perturbations found in results files from the results dir.")
             self._net_file = None
+            self.net_ext = "network"
         else:
             self._net_file = validate.file_path(net_file)
+            self.net_ext = validate.string(f"{net_file.split('/')[-1].split('.')[0]}")
         
         if not res_folder:
             print("no results output folder provided, writing all output to the 'results_directory'.")
@@ -68,6 +70,7 @@ class analysis_engines():
             # TODO add so can also read in dictionary like analysis??
         
         # TODO add a file ext extra option for when writing out the files re naming eg so can incl diff networks
+        # Actually add network info
 
         # get files from results directory
         self._results_repeat_files = self._get_results_repeat_files()  
@@ -271,11 +274,10 @@ class analysis_engines():
         # get the files into cinnabar format for analysis
         for eng in self.engines:
             results_files = self._results_repeat_files[eng]
-            convert.cinnabar_file(results_files, self.exper_val_dict, f"{self.results_folder}/cinnabar_{eng}_{self.file_ext}", perturbations=self.perturbations)
-            # TODO some way to incl extension for the files in the naming here, or alternatively own folder is good
+            convert.cinnabar_file(results_files, self.exper_val_dict, f"{self.results_folder}/cinnabar_{eng}_{self.file_ext}_{self.net_ext}", perturbations=self.perturbations)
         
             # compute the per ligand for the network
-            network = wrangle.FEMap(f"{self.results_folder}/cinnabar_{eng}_{self.file_ext}.csv")
+            network = wrangle.FEMap(f"{self.results_folder}/cinnabar_{eng}_{self.file_ext}_{self.net_ext}.csv")
             self._cinnabar_networks.update({eng:network})
 
             # for self plotting of per ligand
@@ -307,7 +309,7 @@ class analysis_engines():
 
             for eng in engines:
                 if output_dir:
-                    file_name = f"{output_dir}/cinnabar_network_{eng}_{self.file_ext}.png"
+                    file_name = f"{output_dir}/cinnabar_network_{eng}_{self.file_ext}_{self.net_ext}.png"
                 else:
                     file_name = None
                 self._cinnabar_networks[eng].draw_graph(file_name=file_name)
@@ -388,8 +390,8 @@ class analysis_engines():
                 return
             
             plotting.plot_DDGs(self._cinnabar_networks[engine].graph,
-                              filename=f"{self.graph_dir}/DDGs_{engine}_{self.file_ext}.png",
-                              title=f"DDGs for {engine} with {self.file_ext}")
+                              filename=f"{self.graph_dir}/DDGs_{engine}_{self.file_ext}_{self.net_ext}.png",
+                              title=f"DDGs for {engine} with {self.file_ext}, {self.net_ext}")
 
         else:
             self._initalise_plotting_object(check=True)
@@ -406,8 +408,8 @@ class analysis_engines():
                 return
             
             plotting.plot_DGs(self._cinnabar_networks[engine].graph,
-                              filename=f"{self.graph_dir}/DGs_{engine}_{self.file_ext}.png",
-                              title=f"DGs for {engine} with {self.file_ext}")
+                              filename=f"{self.graph_dir}/DGs_{engine}_{self.file_ext}_{self.net_ext}.png",
+                              title=f"DGs for {engine} with {self.file_ext}, {self.net_ext}")
 
         else:
             self._initalise_plotting_object(check=True)

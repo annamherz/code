@@ -500,7 +500,7 @@ class analyse():
                 "can't plot, not all repeats have been analysed. please self.analyse_all_repeats() first!")
 
         else:
-            graph_dir = validate.folder_path(self._work_dir + '/graphs')
+            graph_dir = validate.folder_path(self._work_dir + '/graphs', create=True)
 
             if self.estimator == "MBAR":
 

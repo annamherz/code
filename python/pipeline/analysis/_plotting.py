@@ -61,6 +61,7 @@ class plotting_engines():
         
         # file extension
         self._file_ext()
+        self._net_ext()
 
         # dictionaries of engines for plotting from cinnabar
         self.calc_val_dict = ana_obj.cinnabar_calc_val_dict
@@ -79,13 +80,23 @@ class plotting_engines():
             self.file_ext = "na"
         else:
             self.file_ext = file_ext
-
+ 
         return file_ext
+    
+    def _net_ext(self):
+
+        net_ext = self._analysis_object.net_ext
+        self.net_ext = net_ext    
+
+        return net_ext    
     
     def set_file_ext(self, file_ext):
 
         self.file_ext = validate.string(file_ext)
 
+    def set_net_ext(self, net_ext):
+
+        self.net_ext = validate.string(net_ext)
 
     def _analysis_dicts_to_df(self):
 
@@ -149,7 +160,7 @@ class plotting_engines():
                 freenrg_df_dict[eng][pv] = freenrg_df
 
                 # save our results to a file that can be opened in e.g. Excel.
-                freenrg_df.to_csv(f"{self.results_folder}/fep_{pv}_results_table_{self.file_ext}_{eng}.csv")
+                freenrg_df.to_csv(f"{self.results_folder}/fep_{pv}_results_table_{self.file_ext}_{self.net_ext}_{eng}.csv")
         
         self.freenrg_df_dict = freenrg_df_dict
 
@@ -296,7 +307,7 @@ class plotting_engines():
         #plt.ylabel('ΔΔG for calculated (kcal/mol)')
         # format the plot further.
         plt.axhline(color="black")
-        plt.title(f"Computed vs Experimental for {self.file_ext.replace('_',',')}")
+        plt.title(f"Computed vs Experimental for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}")
         if pert_val == "pert":
             plt.ylabel("$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
             plt.xlabel("perturbations")
@@ -307,7 +318,7 @@ class plotting_engines():
         plt.legend()
 
         eng_name = self._get_eng_name(engines)
-        plt.savefig(f"{self.results_folder}/fep_vs_exp_barplot_{pert_val}_{self.file_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(f"{self.results_folder}/fep_vs_exp_barplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
         plt.show()
 
 
@@ -419,7 +430,7 @@ class plotting_engines():
 
         #plt.xlabel('ΔΔG for experimental (kcal/mol)')
         #plt.ylabel('ΔΔG for calculated (kcal/mol)')
-        plt.title(f"Computed vs Experimental for {self.file_ext.replace('_',',')}")
+        plt.title(f"Computed vs Experimental for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}")
         if pert_val == "pert":
             plt.ylabel("$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
             plt.xlabel("Experimental $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
@@ -428,7 +439,7 @@ class plotting_engines():
             plt.xlabel("Experimental $\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
 
         eng_name = self._get_eng_name(engines)
-        plt.savefig(f"{self.results_folder}/fep_vs_exp_scatterplot_{pert_val}_{self.file_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(f"{self.results_folder}/fep_vs_exp_scatterplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
         plt.show()
 
 
@@ -547,7 +558,7 @@ class plotting_engines():
         plt.axhline(color="black", zorder=1)
         plt.axvline(color="black", zorder=1)
 
-        plt.title(f"Computed vs Experimental outliers for {self.file_ext.replace('_',',')}")
+        plt.title(f"Computed vs Experimental outliers for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}")
         if pert_val == "pert":
             plt.ylabel("$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
             plt.xlabel("Experimental $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
@@ -556,7 +567,7 @@ class plotting_engines():
             plt.xlabel("Experimental $\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
 
         eng_name = self._get_eng_name(engines)
-        plt.savefig(f"{self.results_folder}/fep_vs_exp_outlierplot_{pert_val}_{self.file_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(f"{self.results_folder}/fep_vs_exp_outlierplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
         plt.show()    
 
     # some functions so cleaner in plotting functions
@@ -602,8 +613,8 @@ class plotting_engines():
         print(mae_pert_df)
         print(mae_pert_df_err)
 
-        mae_pert_df.to_csv(f"{res_folder}/mae_pert_{self.file_ext}.csv", sep=" ")
-        mae_pert_df_err.to_csv(f"{res_folder}/mae_pert_err_{self.file_ext}.csv", sep=" ")
+        mae_pert_df.to_csv(f"{res_folder}/mae_pert_{self.file_ext}_{self.net_ext}.csv", sep=" ")
+        mae_pert_df_err.to_csv(f"{res_folder}/mae_pert_err_{self.file_ext}_{self.net_ext}.csv", sep=" ")
 
 
     # can plot diff data series cinnabar?
@@ -661,8 +672,8 @@ class plotting_engines():
             #plot
             plt.xlabel('Error')
             plt.ylabel('Frequency')
-            plt.title(f"Distribution of error for {eng} \n mu = {mu:.3f} , std = {std:.3f}")
-            plt.savefig(f"{self.results_folder}/fep_vs_exp_histogram_{pert_val}_{self.file_ext}_{eng}.png", dpi=300, bbox_inches='tight')
+            plt.title(f"Distribution of error for {eng}, {self.net_ext.replace('_',',')} \n mu = {mu:.3f} , std = {std:.3f}")
+            plt.savefig(f"{self.results_folder}/fep_vs_exp_histogram_{pert_val}_{self.file_ext}_{self.net_ext}_{eng}.png", dpi=300, bbox_inches='tight')
             plt.show()
 
             # add to histogram dict for shared plotting
@@ -685,8 +696,8 @@ class plotting_engines():
         plt.xlabel('Error')
         plt.ylabel('Frequency')  
         eng_name = self._get_eng_name(engines)
-        plt.title(f"Distribution of error for {eng_name}, {pert_val}")
-        plt.savefig(f"{self.results_folder}/fep_vs_exp_normal_dist_{pert_val}_{self.file_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
+        plt.title(f"Distribution of error for {eng_name} , {self.net_ext.replace('_',',')}, {pert_val}")
+        plt.savefig(f"{self.results_folder}/fep_vs_exp_normal_dist_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
         plt.show()
 
         histogram_dict.update({"dist": fig})

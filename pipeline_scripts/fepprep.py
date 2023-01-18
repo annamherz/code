@@ -53,9 +53,14 @@ if not found:
         f"The perturbation {trans} (or the reverse) with {num_lambda} windows using {engine_query} was not found in {net_file}.")
 
 # parse protocol file
+print("reading in the protocol file...")
 protocol = pipeline_protocol(prot_file) # instantiate the protocol as an object
+print("validating the protocol file...")
 protocol.validate() # validate all the input
-protocol.rewrite_protocol() # rewrite protocol file
+# print("rewriting the protocol file...")
+# protocol.rewrite_protocol() # rewrite protocol file
+# print("the protocol is now:")
+# protocol.print_protocol()
 # add the number of lambdas and engine to the protocol
 protocol.num_lambda = validate.num_lambda(num_lambda)
 protocol.engine = validate.engine(engine_query)

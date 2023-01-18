@@ -1,5 +1,6 @@
 import BioSimSpace as BSS
 from BioSimSpace._SireWrappers import System as _System
+from BioSimSpace._SireWrappers import Molecule as _Molecule
 import os
 import warnings
 import networkx as nx
@@ -579,6 +580,30 @@ class validate():
 
         return system
 
+    @staticmethod
+    def molecule(molecule):
+        """Check if BSS molecule
+
+        Args:
+            molecule (BioSimSpace._SireWrappers._molecule.Molecule): the molecule
+
+        Raises:
+            TypeError: if not BioSimSpace._SireWrappers._system.System or if not BioSimSpace._SireWrappers._molecule.Molecule
+
+        Returns:
+            BioSimSpace._SireWrappers._molecule.Molecule: a single molecule
+        """
+
+        if not isinstance(molecule, _Molecule):
+            if not isinstance(molecule, _System):
+                raise TypeError("'molecule' must be a BSS molecule (or system)!.")
+            else: # if it is a system, convert to a molecule
+                warnings.warn("a BSS system was passed. The first molecule in the system will be taken.")
+                system = molecule
+                molecule = system[0]
+
+        return molecule     
+
 
     @staticmethod
     def analysis(analysis, analysed=True):
@@ -603,3 +628,4 @@ class validate():
                 raise ValueError("'analysis' must have already been analysed!.")
 
         return analysis
+    

@@ -8,13 +8,20 @@ from ..utils._validate import *
 
 class pipeline_protocol():
 
-    def __init__(self, file):
+    def __init__(self, file, auto_validate=False):
         # instantiate the class with the protocol file
         self._prot_file = validate.file_path(file)
-        print(self._prot_file)
-        self._query_dict = pipeline_protocol._read_protocol(self)
+        # print(self._prot_file)
+        self._query_dict = self._read_protocol()
         # update query dict if anything is missing
-        self._query_dict = pipeline_protocol._check_query(self)
+        self._query_dict = self._check_query()
+
+        auto_validate = validate.boolean(auto_validate)
+        if auto_validate:
+            self.validate()
+            self._is_validated = True
+        else:
+            self._is_validated = False
 
 
     def _read_protocol(self):
@@ -137,7 +144,22 @@ class pipeline_protocol():
                 self.timestep = validate.integer(4)
             else:
                 self.timestep = validate.integer(2)
-
+            
+            self._query_dict['timestep'] = self.timestep
+            self._query_dict['timestep unit'] = "fs"
+            self._is_validated = True
 
         except ValueError as e:
             print(f"There is a problem with the input provided in {self._prot_file}.\n Error is:\n {e}")
+
+    
+    def print_protocol(self):
+
+        if not self._is_validated:
+            print("please validate the pipeline protocol first.")
+        
+        else:
+            query_dict = self._query_dict
+
+            for query in query_dict.keys():
+                print(f"{query} : {query_dict[query]}")

@@ -17,7 +17,7 @@ date
 start=`date +%s`
 
 echo "Folder for these runs is : $MAINDIRECTORY"
-echo "The transformation is $1 using $2 windows and $3 as the MD engine with $4 repeats"
+echo "The transformation is $1 using $3 windows and $2 as the MD engine with $4 repeats"
 
 # TODO some way to get these from the execution model also ? as is in the network.dat
 # define no of windows based on sys arg 2

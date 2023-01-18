@@ -9,12 +9,12 @@ def write_analysis_file(analysis, results_dir):
     results_dir = validate.folder_path(results_dir, create=True)
 
     # data point for average
-    data_point_avg = [analysis.ligand_0, analysis.ligand_0,
+    data_point_avg = [analysis.ligand_0, analysis.ligand_1,
                       analysis.freenrg, analysis.error,
                       analysis.engine, analysis.file_ext]
 
     # use csv to open the results file.
-    final_summary_file = f"{results_dir}/final_summary_{analysis.engine.upper()}.csv"
+    final_summary_file = f"{results_dir}/final_summary_{analysis.engine.upper()}_{analysis.file_ext}.csv"
     with open(final_summary_file, "a") as freenrg_writefile:
         writer = csv.writer(freenrg_writefile)
 
@@ -58,7 +58,7 @@ def write_analysis_file(analysis, results_dir):
                       analysis.engine,
                       analysis.file_ext
                       ]
-        results_file_path = f"{results_dir}/repeat_{no_repeats.index(r)}_{analysis.engine.upper()}.csv"
+        results_file_path = f"{results_dir}/repeat_{no_repeats.index(r)}_{analysis.engine.upper()}_{analysis.file_ext}.csv"
         with open(results_file_path, "a") as freenrg_writefile:
             writer = csv.writer(freenrg_writefile)
 
