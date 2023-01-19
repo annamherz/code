@@ -39,7 +39,12 @@ class make_dict():
         for file in results_files:
             validate.file_path(file)
         
-        perturbations = validate.is_list(perturbations)
+        if perturbations:
+            perturbations = validate.is_list(perturbations)
+            make_pert_list = False
+        else:
+            make_pert_list = True
+            perturbations = []
 
         # TODO some way to get engine from results files? - or only read for certain engines
         # make a dictionary with the results of the files
@@ -53,7 +58,13 @@ class make_dict():
                 lig_0 = row[0]
                 lig_1 = row[1]
                 pert = f"{lig_0}~{lig_1}"
+
+                if make_pert_list:
+                    if pert not in perturbations:
+                        perturbations.append(pert)
+
                 if not isinstance(row[2], float):
+                    # to convert ?
                     ddG = BSS.Types.Energy(float(row[2].split()[0]),row[2].split()[-1])
                 else:
                     ddG = row[2]
@@ -76,8 +87,8 @@ class make_dict():
                 else:
                     # As key is not in dict,
                     # so, add key-value pair
-                    comp_dict_list[pert] = ddG
-                    comp_err_dict_list[pert] = ddG_err
+                    comp_dict_list[pert] = [ddG]
+                    comp_err_dict_list[pert] = [ddG_err]
 
         # now calculate all the avg and SEM for the network perturbations
         # put these into a dictionary
@@ -88,7 +99,11 @@ class make_dict():
             # write these to a csv file
             with open(f"{output_file}.csv", "w") as comp_pert_file:
                 writer = csv.writer(comp_pert_file, delimiter=",")
-                writer.writerow(["lig_1","lig_2","freenrg","error","engine"])
+                if engine:
+                    writer.writerow(["lig_1","lig_2","freenrg","error","engine"])
+                else:
+                    writer.writerow(["lig_1","lig_2","freenrg","error","source"])
+                
                 for pert in perturbations:
                     lig_0 = pert.split("~")[0]
                     lig_1 = pert.split("~")[1]
@@ -102,7 +117,8 @@ class make_dict():
                         comp_ddG = np.average(ddGs)
                         # comp_ddG = np.average([ddG.value() for ddG in ddGs])
                         if len(ddGs) == 1:
-                            comp_err = ddGs_error.value()
+                            # comp_err = ddGs_error.value()
+                            comp_err = ddGs_error[0]
                         else:
                             comp_err = sem(ddGs)
                             # comp_err = sem([ddG.value() for ddG in ddGs])
@@ -115,36 +131,39 @@ class make_dict():
                     #update the dictionary for plotting later
                     comp_diff_dict.update({pert:(comp_ddG, comp_err)})
 
-                    writer.writerow([lig_0, lig_1, comp_ddG, comp_err, engine])
-        
-        else:
-            for pert in perturbations:
-                lig_0 = pert.split("~")[0]
-                lig_1 = pert.split("~")[1]
-                
-                # check if the perturbations calculated are also those in the network file and if any are missing
-                try:
-                    # find the values in the dictionary
-                    ddGs = comp_dict_list[pert]
-                    ddGs_error = comp_err_dict_list[pert]
-                    # calculate the average and the error
-                    comp_ddG = np.average(ddGs)
-                    # comp_ddG = np.average([ddG.value() for ddG in ddGs])
-                    if len(ddGs) == 1:
-                        comp_err = ddGs_error.value()
+                    if engine:
+                        writer.writerow([lig_0, lig_1, comp_ddG, comp_err, engine])
                     else:
-                        comp_err = sem(ddGs)
-                        # comp_err = sem([ddG.value() for ddG in ddGs])
-            
-                # if unable to calculate one of the perturbations, this is a None value.
-                except:
-                    comp_ddG = None
-                    comp_err = None
-                
-                # TODO some way to incl units - attributes?
+                        writer.writerow([lig_0, lig_1, comp_ddG, comp_err, "source"])
 
-                #update the dictionary for plotting later
-                comp_diff_dict.update({pert:(comp_ddG, comp_err)})
+
+        for pert in perturbations:
+            lig_0 = pert.split("~")[0]
+            lig_1 = pert.split("~")[1]
+            
+            # check if the perturbations calculated are also those in the network file and if any are missing
+            try:
+                # find the values in the dictionary
+                ddGs = comp_dict_list[pert]
+                ddGs_error = comp_err_dict_list[pert]
+                # calculate the average and the error
+                comp_ddG = np.average(ddGs)
+                # comp_ddG = np.average([ddG.value() for ddG in ddGs])
+                if len(ddGs) == 1:
+                    comp_err = ddGs_error.value()
+                else:
+                    comp_err = sem(ddGs)
+                    # comp_err = sem([ddG.value() for ddG in ddGs])
+        
+            # if unable to calculate one of the perturbations, this is a None value.
+            except:
+                comp_ddG = None
+                comp_err = None
+            
+            # TODO some way to incl units - attributes?
+
+            #update the dictionary for plotting later
+            comp_diff_dict.update({pert:(comp_ddG, comp_err)})
         
 
         return comp_diff_dict

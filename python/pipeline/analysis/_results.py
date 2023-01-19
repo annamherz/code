@@ -90,7 +90,7 @@ class analysis_engines():
         self._is_computed = False
 
         # set all the dicts for analysis
-        # per engine dicts
+        # per engine dicts (also used for other results)
         self.calc_pert_dict = {} # diff from the results repeat files, average
         self.cinnabar_calc_val_dict = {}  # from the cinnabar network analysis
         self.cinnabar_exper_val_dict = {} # normalised from the cinnabar network analysis
@@ -108,6 +108,9 @@ class analysis_engines():
         self.network_graph = None
         # cycles
         self.cycle_dict = {}
+
+        # for other results
+        self.other_results_names = []
 
         # for checking against free energy workflows
         self._fwf_experimental_DDGs = None
@@ -167,9 +170,9 @@ class analysis_engines():
 
         # get results files from dict into a list, flatten the list
         results_lists = list(self._results_files.values()) + list(self._results_repeat_files.values())
-        results_files = [res_file for sublist in results_lists for res_file in sublist]
+        file_name = [res_file for sublist in results_lists for res_file in sublist]
 
-        values = get_info_network(results_files=results_files,
+        values = get_info_network(results_files=file_name,
                                 net_file=self._net_file,
                                 extra_options = {"engines":self.engines}
                                 )
@@ -245,7 +248,6 @@ class analysis_engines():
 
         return pert_dict
 
-
     def compute(self):
 
         # get all the dictionaries needed for plotting
@@ -273,11 +275,12 @@ class analysis_engines():
 
         # get the files into cinnabar format for analysis
         for eng in self.engines:
-            results_files = self._results_repeat_files[eng]
-            convert.cinnabar_file(results_files, self.exper_val_dict, f"{self.results_folder}/cinnabar_{eng}_{self.file_ext}_{self.net_ext}", perturbations=self.perturbations)
+            file_name = self._results_repeat_files[eng]
+            cinnabar_file_name = f"{self.results_folder}/cinnabar_{eng}_{self.file_ext}_{self.net_ext}"
+            convert.cinnabar_file(file_name, self.exper_val_dict, cinnabar_file_name, perturbations=self.perturbations)
         
             # compute the per ligand for the network
-            network = wrangle.FEMap(f"{self.results_folder}/cinnabar_{eng}_{self.file_ext}_{self.net_ext}.csv")
+            network = wrangle.FEMap(f"{cinnabar_file_name}.csv")
             self._cinnabar_networks.update({eng:network})
 
             # for self plotting of per ligand
@@ -291,6 +294,30 @@ class analysis_engines():
             # from cinnabar graph
             self.cinnabar_calc_pert_dict.update({eng: make_dict.from_cinnabar_network_edges(network, "calc", self.perturbations)})
             self.cinnabar_exper_pert_dict.update({eng: make_dict.from_cinnabar_network_edges(network, "exp", self.perturbations)})
+
+
+    def compute_other_results(self, file_name=None, name=None):
+        
+        if not isinstance(file_name, list):
+            file_name = [file_name]
+        name = validate.string(name)
+        self.other_results_names.append(name)
+        new_file_path = f"{file_name[0].replace(file_name[0].split('/')[-1], '')[:-1]}/{name}_results_file"
+        # TODO write list of results files if multiple are passed in
+
+        results_dict = make_dict.comp_results(file_name, perturbations=None, engine=None, output_file=new_file_path)
+        perturbations,ligands = get_info_network_from_dict(results_dict)
+
+        # first convert the other results into a value dict, do this using cinnabar but no experimental
+        cinnabar_file_name = f"{self.results_folder}/cinnabar_{name}_{self.file_ext}_{self.net_ext}"
+        convert.cinnabar_file([f"{new_file_path}.csv"], self.exper_val_dict, cinnabar_file_name, perturbations=self.perturbations)
+    
+        # compute the per ligand for the network
+        network = wrangle.FEMap(f"{cinnabar_file_name}.csv")
+        self._cinnabar_networks.update({name:network})
+
+        self.cinnabar_calc_val_dict.update({name: make_dict.from_cinnabar_network_node(network, "calc")})
+        self.cinnabar_calc_pert_dict.update({name: make_dict.from_cinnabar_network_edges(network, "calc", perturbations)})
 
 
     def _make_graph(self):
@@ -417,6 +444,25 @@ class analysis_engines():
             plot_obj.scatter(pert_val="val", engines=engine)
 
 
+    def plot_other_results(self, name=None, engine=None, pert_val=None, outliers=None):
+
+        name = validate.string(name)
+        
+        # first, check if name exists in other dict
+        if self.cinnabar_calc_val_dict[name]:
+            pass
+        else:
+            raise NameError(f"{name} does not exist as a key that has been added as other results.")
+
+        self._initalise_plotting_object(check=True)
+        plot_obj = self._plotting_object
+
+        if outliers:
+            plot_obj.outlier(pert_val=pert_val, engines=engine, outliers=outliers, name=name)  
+        else:
+            plot_obj.scatter(pert_val=pert_val, engines=engine, name=name)
+
+
     def plot_outliers(self, engine=None, outliers=5, pert_val="pert"):
 
         self._initalise_plotting_object(check=True)
@@ -437,7 +483,6 @@ class analysis_engines():
         plot_obj.histogram(engines=engine, pert_val="val")
     
     # TODO histogram plot for each repeat
-
 
     # def plot_convergence(self):
 

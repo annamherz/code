@@ -58,6 +58,9 @@ class plotting_engines():
         self.engines = sorted(ana_obj.engines)
         self.ligands = ana_obj.ligands
         self.perturbations = ana_obj.perturbations
+
+        # for other results
+        self.other_results_names = ana_obj.other_results_names
         
         # file extension
         self._file_ext()
@@ -100,8 +103,8 @@ class plotting_engines():
 
     def _analysis_dicts_to_df(self):
 
-        values_dict = self._overall_dict()
-        freenrg_df_dict = self._dict_to_df()
+        self._overall_dict()
+        self._dict_to_df()
 
 
     def _overall_dict(self):
@@ -110,6 +113,8 @@ class plotting_engines():
         for eng in self.engines:
             values_dict.update({eng:{}})
         values_dict.update({"experimental":{}})
+        for name in self.other_results_names:
+            values_dict.update({name:{}})
 
         # run for all engines with selected network and populate the dictionary for plotting
         for eng in self.engines:
@@ -127,6 +132,16 @@ class plotting_engines():
         values_dict["experimental"]["pert_results"] = self.all_exper_pert_dict
         values_dict["experimental"]["val_results"] = self.all_exper_val_dict #normalised data
 
+        # add other values to dict 
+        for name in self.other_results_names:
+            # get perts and ligands for each engine
+            pert_lig = get_info_network_from_dict(self.calc_pert_dict[name])
+            values_dict[name]["perts"] = pert_lig[0]
+            values_dict[name]["ligs"] = pert_lig[1]
+            # put results into values dict
+            values_dict[name]["pert_results"] = self.calc_pert_dict[name]
+            values_dict[name]["val_results"] = self.calc_val_dict[name]
+
         self.values_dict = values_dict
 
         return values_dict
@@ -134,11 +149,16 @@ class plotting_engines():
     def _dict_to_df(self):
 
         freenrg_df_dict = {}
+        to_convert_list = []
         for eng in self.engines:
             freenrg_df_dict.update({eng:{}})
+            to_convert_list.append(eng)
+        for name in self.other_results_names:
+            freenrg_df_dict.update({name:{}})
+            to_convert_list.append(name)
 
         # construct dict with experimental freenrg and error and computed
-        for eng in self.engines:
+        for eng in to_convert_list: # will do this for engines and other results
 
             for pv in ["pert","val"]:
 
@@ -165,6 +185,38 @@ class plotting_engines():
         self.freenrg_df_dict = freenrg_df_dict
 
         return freenrg_df_dict
+    
+    def _match_engine_and_other_results(self, name, pv=None):
+
+        if pv == "pert":
+            which_list = "perts"
+        elif pv == "val":
+            which_list = "ligs"
+
+        if name in self.other_results_names:
+            
+            plotting_df_dict = {}
+
+            for eng in self.engines:
+                plotting_df_dict.update({eng:{}})
+
+                plotting_dict = {}
+
+                for value in self.values_dict[eng][which_list]:
+                    try:
+                        exp_ddG = self.values_dict[f"{name}"][f"{pv}_results"][value][0]
+                        exp_err = self.values_dict[f"{name}"][f"{pv}_results"][value][1]
+                        comp_ddG = self.values_dict[eng][f"{pv}_results"][value][0]
+                        comp_err = self.values_dict[eng][f"{pv}_results"][value][1]
+                        plotting_dict[value] = [exp_ddG, exp_err, comp_ddG, comp_err]
+                    except:
+                        warnings.warn(f"{value} is not available in {name}.")
+
+                plotting_df = pd.DataFrame(plotting_dict, index=[f"freenrg_{name}", f"err_{name}", "freenrg_fep", "err_fep"]).transpose()
+                plotting_df_dict[eng][pv] = plotting_df
+
+            return plotting_df_dict
+
 
     def _set_style(self):
 
@@ -322,7 +374,7 @@ class plotting_engines():
         plt.show()
 
 
-    def scatter(self, pert_val=None, engines=None):
+    def scatter(self, pert_val=None, engines=None, name=None):
 
         pert_val = validate.string(pert_val)
         if pert_val not in ["pert","val"]:
@@ -334,6 +386,11 @@ class plotting_engines():
         else:
             engines = self.engines
 
+        if name:
+            exp_name = name
+        else:
+            exp_name = "exp"
+
         # plot a scatter plot
         plt.rc('font', size=12)
         fig, ax = plt.subplots(figsize=(10,10))
@@ -344,11 +401,16 @@ class plotting_engines():
 
             col = self.colours[eng]
 
-            freenrg_df_plotting = self.freenrg_df_dict[eng][pert_val].dropna()
-            x = freenrg_df_plotting["freenrg_exp"]
+            if name:
+                plotting_df = self._match_engine_and_other_results(name, pv=pert_val)
+                freenrg_df_plotting = plotting_df[eng][pert_val].dropna()
+            else:
+                freenrg_df_plotting = self.freenrg_df_dict[eng][pert_val].dropna()
+
+            x = freenrg_df_plotting[f"freenrg_{name}"]
             y = freenrg_df_plotting["freenrg_fep"]
-            x_er = freenrg_df_plotting["err_exp"]
-            y_er = freenrg_df_plotting["err_fep"]  
+            x_er = freenrg_df_plotting[f"err_{name}"]
+            y_er = freenrg_df_plotting["err_fep"]               
 
             scatterplot = [plt.scatter(x, y, zorder=10, c=col)]    
 
@@ -430,20 +492,29 @@ class plotting_engines():
 
         #plt.xlabel('ΔΔG for experimental (kcal/mol)')
         #plt.ylabel('ΔΔG for calculated (kcal/mol)')
-        plt.title(f"Computed vs Experimental for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}")
+        if name:
+            plt.title(f"Computed vs {name} for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}")
+        else:
+            plt.title(f"Computed vs Experimental for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}")
         if pert_val == "pert":
             plt.ylabel("$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
-            plt.xlabel("Experimental $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+            if name:
+                plt.xlabel(f"{name} " + "$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+            else:
+                plt.xlabel("Experimental $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
         elif pert_val == "val":
             plt.ylabel("$\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
-            plt.xlabel("Experimental $\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+            if name:
+                plt.xlabel(f"{name} " + "$\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+            else:
+                plt.xlabel("Experimental $\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
 
         eng_name = self._get_eng_name(engines)
-        plt.savefig(f"{self.results_folder}/fep_vs_exp_scatterplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(f"{self.results_folder}/fep_vs_{exp_name}_scatterplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
         plt.show()
 
 
-    def outlier(self, pert_val="pert", engines=None, outliers=3):
+    def outlier(self, pert_val="pert", engines=None, outliers=3, name=None):
 
         pert_val = validate.string(pert_val)
         if pert_val not in ["pert","val"]:
@@ -457,6 +528,11 @@ class plotting_engines():
 
         number_outliers_to_annotate = validate.integer(outliers)
 
+        if name:
+            exp_name = name
+        else:
+            exp_name = "exp"
+
         # plot a scatter plot
         plt.rc('font', size=12)
         fig, ax = plt.subplots(figsize=(10,10))
@@ -467,11 +543,16 @@ class plotting_engines():
 
             col = self.colours[eng]
 
-            freenrg_df_plotting = self.freenrg_df_dict[eng][pert_val].dropna()
-            x = freenrg_df_plotting["freenrg_exp"]
+            if name:
+                plotting_df = self._match_engine_and_other_results(name, pv=pert_val)
+                freenrg_df_plotting = plotting_df[eng][pert_val].dropna()
+            else:
+                freenrg_df_plotting = self.freenrg_df_dict[eng][pert_val].dropna()
+
+            x = freenrg_df_plotting[f"freenrg_{name}"]
             y = freenrg_df_plotting["freenrg_fep"]
-            x_er = freenrg_df_plotting["err_exp"]
-            y_er = freenrg_df_plotting["err_fep"]  
+            x_er = freenrg_df_plotting[f"err_{name}"]
+            y_er = freenrg_df_plotting["err_fep"] 
 
             # get an array of the MUE values comparing experimental and FEP values. Take the absolute values.
             mue_values = abs(x - y)
@@ -512,7 +593,7 @@ class plotting_engines():
             # then, after generating the figure, we can annotate:
             for i, txt in enumerate(annot_labels):
                 plt.annotate(txt, 
-                            (freenrg_df_plotting["freenrg_exp"].values.tolist()[i]+0.1,     # x coords
+                            (freenrg_df_plotting[f"freenrg_{exp_name}"].values.tolist()[i]+0.1,     # x coords
                             freenrg_df_plotting["freenrg_fep"].values.tolist()[i]+0.1),    # y coords
                             size=15, color=self.colours["experimental"])
 
@@ -558,16 +639,25 @@ class plotting_engines():
         plt.axhline(color="black", zorder=1)
         plt.axvline(color="black", zorder=1)
 
-        plt.title(f"Computed vs Experimental outliers for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}")
+        if name:
+            plt.title(f"Computed vs {name} outliers for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}")
+        else:
+            plt.title(f"Computed vs Experimental outliers for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}")
         if pert_val == "pert":
             plt.ylabel("$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
-            plt.xlabel("Experimental $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+            if name:
+                plt.xlabel(f"{name} " + "$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+            else:
+                plt.xlabel("Experimental $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
         elif pert_val == "val":
             plt.ylabel("$\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
-            plt.xlabel("Experimental $\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+            if name:
+                plt.xlabel(f"{name} " + "$\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+            else:
+                plt.xlabel("Experimental $\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
 
         eng_name = self._get_eng_name(engines)
-        plt.savefig(f"{self.results_folder}/fep_vs_exp_outlierplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(f"{self.results_folder}/fep_vs_{exp_name}_outlierplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
         plt.show()    
 
     # some functions so cleaner in plotting functions

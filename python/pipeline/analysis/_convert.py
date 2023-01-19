@@ -107,33 +107,38 @@ class convert:
     @staticmethod
     def cinnabar_file(results_files, exper_val, output_file, perturbations=None):
         # files is a list of files
+        results_files = validate.is_list(results_files)
         # output file
 
-        # first check if the experimental values are a dict or a file
-        try:
-            exper_val_dict = validate.dictionary(exper_val)
-            is_file = False
-        except:
-            validate.file_path(exper_val)
-            is_file = True
-        
-        if is_file:
-            print("input is a file, will convert this into a dict...")
-            print("please check that the conversion of values is okay.")
-            exper_val_dict = convert.yml_into_exper_dict(exper_val)
+        if exper_val:
 
+            # first check if the experimental values are a dict or a file
+            try:
+                exper_val_dict = validate.dictionary(exper_val)
+            except:
+                validate.file_path(exper_val)
+                print("input is a file, will convert this into a dict...")
+                print("please check that the conversion of values is okay.")
+                exper_val_dict = convert.yml_into_exper_dict(exper_val) 
+            
+            add_exper_values = True       
+
+        else:
+            add_exper_values = False
+        
         # write to a csv file
         with open(f"{output_file}.csv", "w") as cinnabar_data_file:
             writer = csv.writer(cinnabar_data_file, delimiter=",")
 
-            # first, write the experimental data
-            writer.writerow(["# Experimental block"])
-            writer.writerow(["# Ligand","expt_DDG","expt_dDDG"])
+            if add_exper_values:
+                # first, write the experimental data
+                writer.writerow(["# Experimental block"])
+                writer.writerow(["# Ligand","expt_DDG","expt_dDDG"])
 
 
-            # TODO calc exp from yml, follwed by conversion into dict
-            for lig in exper_val_dict.keys():
-                writer.writerow([lig,f"{exper_val[lig][0]}",f"{exper_val[lig][1]}"])
+                # TODO calc exp from yml, follwed by conversion into dict
+                for lig in exper_val_dict.keys():
+                    writer.writerow([lig,f"{exper_val[lig][0]}",f"{exper_val[lig][1]}"])
 
 
             # second write the perturbation data
