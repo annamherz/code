@@ -499,6 +499,26 @@ class validate():
 
         return trajectories
 
+    @staticmethod
+    def pert_val(pert_val):
+        """validates if pert or val
+
+        Args:
+            pert_val (str): whether pert for perturbations or val for values, ie per ligand
+
+        Raises:
+            TypeError: must be of type 'str'
+            ValueError: must be either 'pert' or 'val' so can be recognised by future scripts
+
+        Returns:
+           str: either 'pert' or 'val'
+        """
+
+        pert_val = validate.string(pert_val).lower()
+        if pert_val not in ["pert","val"]:
+            raise ValueError("pert_val must be either 'pert' or 'val'")
+        
+        return pert_val
 
     @staticmethod
     def num_lambda(num_lambda):

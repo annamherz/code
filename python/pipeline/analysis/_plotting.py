@@ -10,7 +10,7 @@ import networkx as nx
 import yaml
 import pickle
 import tempfile
-import itertools
+import itertools as it
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 import csv
@@ -27,7 +27,7 @@ from ._network import *
 
 class plotting_engines():
 
-    def __init__(self, analysis_object=None, res_folder=None):
+    def __init__(self, analysis_object=None, output_folder=None):
 
         if analysis_object:
             self._analysis_object = analysis_object
@@ -37,11 +37,13 @@ class plotting_engines():
             raise ValueError("please provide an analysis object to be plotted for.")
 
         # place to write results to
-        if not res_folder:
+        if not output_folder:
             # want to write to the graph directory
-            self.results_folder = self._analysis_object.graph_dir
+            self.output_folder = self._analysis_object.output_folder
+            self.graph_folder = self._analysis_object.graph_dir
         else:
-            self.results_folder = validate.folder_path(res_folder, create=True)
+            self.output_folder = validate.folder_path(output_folder, create=True)
+            self.graph_folder = validate.folder_path(f"{output_folder}/graphs", create=True)
 
         # set the colours and bar spacing
         self._set_style()
@@ -180,13 +182,15 @@ class plotting_engines():
                 freenrg_df_dict[eng][pv] = freenrg_df
 
                 # save our results to a file that can be opened in e.g. Excel.
-                freenrg_df.to_csv(f"{self.results_folder}/fep_{pv}_results_table_{self.file_ext}_{self.net_ext}_{eng}.csv")
+                freenrg_df.to_csv(f"{self.output_folder}/fep_{pv}_results_table_{self.file_ext}_{self.net_ext}_{eng}.csv")
         
         self.freenrg_df_dict = freenrg_df_dict
 
         return freenrg_df_dict
     
     def _match_engine_and_other_results(self, name, pv=None):
+
+        pv = validate.pert_val(pv)
 
         if pv == "pert":
             which_list = "perts"
@@ -321,9 +325,7 @@ class plotting_engines():
 
     def bar(self, pert_val=None, engines=None):
 
-        pert_val = validate.string(pert_val)
-        if pert_val not in ["pert","val"]:
-            raise ValueError("pert_val must be either 'pert' or 'val'")
+        pert_val = validate.pert_val(pert_val)
 
         if engines:
             engines = self._plotting_engines(engines)
@@ -370,15 +372,13 @@ class plotting_engines():
         plt.legend()
 
         eng_name = self._get_eng_name(engines)
-        plt.savefig(f"{self.results_folder}/fep_vs_exp_barplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(f"{self.graph_folder}/fep_vs_exp_barplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
         plt.show()
 
 
     def scatter(self, pert_val=None, engines=None, name=None):
 
-        pert_val = validate.string(pert_val)
-        if pert_val not in ["pert","val"]:
-            raise ValueError("pert_val must be either 'pert' or 'val'")
+        pert_val = validate.pert_val(pert_val)
 
         if engines:
             engines = self._plotting_engines(engines)
@@ -510,15 +510,13 @@ class plotting_engines():
                 plt.xlabel("Experimental $\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
 
         eng_name = self._get_eng_name(engines)
-        plt.savefig(f"{self.results_folder}/fep_vs_{exp_name}_scatterplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(f"{self.graph_folder}/fep_vs_{exp_name}_scatterplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
         plt.show()
 
 
     def outlier(self, pert_val="pert", engines=None, outliers=3, name=None):
 
-        pert_val = validate.string(pert_val)
-        if pert_val not in ["pert","val"]:
-            raise ValueError("pert_val must be either 'pert' or 'val'")
+        pert_val = validate.pert_val(pert_val)
 
         if engines:
             engines = self._plotting_engines(engines)
@@ -657,7 +655,7 @@ class plotting_engines():
                 plt.xlabel("Experimental $\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
 
         eng_name = self._get_eng_name(engines)
-        plt.savefig(f"{self.results_folder}/fep_vs_{exp_name}_outlierplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(f"{self.graph_folder}/fep_vs_{exp_name}_outlierplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
         plt.show()    
 
     # some functions so cleaner in plotting functions
@@ -695,27 +693,12 @@ class plotting_engines():
 
         return min_lim, max_lim
 
-    def mae_df_make():
-        # TODO funcion for this in dictionaries?
-
-        mae_pert_df, mae_pert_df_err = calc_mae(values_dict, "perts")
-
-        print(mae_pert_df)
-        print(mae_pert_df_err)
-
-        mae_pert_df.to_csv(f"{res_folder}/mae_pert_{self.file_ext}_{self.net_ext}.csv", sep=" ")
-        mae_pert_df_err.to_csv(f"{res_folder}/mae_pert_err_{self.file_ext}_{self.net_ext}.csv", sep=" ")
-
-
-    # can plot diff data series cinnabar?
-    # plot cycle closure things?
+    # TODO plot cycle closure things?
 
     def histogram(self, engines=None, pert_val="pert", data_dict=None):
         # TODO this is currently plotting the standard error of the 
 
-        pert_val = validate.string(pert_val)
-        if pert_val not in ["pert","val"]:
-            raise ValueError("pert_val must be either 'pert' or 'val'")
+        pert_val = validate.pert_val(pert_val)
 
         if engines:
             engines = self._plotting_engines(engines)
@@ -763,7 +746,7 @@ class plotting_engines():
             plt.xlabel('Error')
             plt.ylabel('Frequency')
             plt.title(f"Distribution of error for {eng}, {self.net_ext.replace('_',',')} \n mu = {mu:.3f} , std = {std:.3f}")
-            plt.savefig(f"{self.results_folder}/fep_vs_exp_histogram_{pert_val}_{self.file_ext}_{self.net_ext}_{eng}.png", dpi=300, bbox_inches='tight')
+            plt.savefig(f"{self.graph_folder}/fep_vs_exp_histogram_{pert_val}_{self.file_ext}_{self.net_ext}_{eng}.png", dpi=300, bbox_inches='tight')
             plt.show()
 
             # add to histogram dict for shared plotting
@@ -787,9 +770,75 @@ class plotting_engines():
         plt.ylabel('Frequency')  
         eng_name = self._get_eng_name(engines)
         plt.title(f"Distribution of error for {eng_name} , {self.net_ext.replace('_',',')}, {pert_val}")
-        plt.savefig(f"{self.results_folder}/fep_vs_exp_normal_dist_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(f"{self.graph_folder}/fep_vs_exp_normal_dist_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
         plt.show()
 
         histogram_dict.update({"dist": fig})
 
         return histogram_dict
+
+
+    def mae_df_make():
+        # TODO funcion for this in dictionaries?
+
+        mae_pert_df, mae_pert_df_err = calc_mae(values_dict, "perts")
+
+        print(mae_pert_df)
+        print(mae_pert_df_err)
+
+        mae_pert_df.to_csv(f"{res_folder}/mae_pert_{self.file_ext}_{self.net_ext}.csv", sep=" ")
+        mae_pert_df_err.to_csv(f"{res_folder}/mae_pert_err_{self.file_ext}_{self.net_ext}.csv", sep=" ")
+
+    def calc_mae(self, pert_val=None):
+        # calc mae for a provided dictionary in the format wanted
+
+        pv = validate.pert_val(pert_val)
+
+        values_dict = self.values_dict
+        engines = self.engines
+
+        mae_pert_df = pd.DataFrame(columns=engines,index=engines)
+        mae_pert_df_err = pd.DataFrame(columns=engines,index=engines)
+
+        # iterate over all possible combinations
+        for combo in it.product(engines, engines):
+            eng1 = combo[0]
+            eng2 = combo[1]
+
+            eng1_vals = []
+            eng2_vals = []
+
+            # first create df of values
+            # make sure the values exist!
+            for pert in values_dict[eng1][f"{pv}_results"]:
+                if pert in values_dict[eng2][f"{pv}_results"]:
+                    if values_dict[eng1][f"{pv}_results"][pert][0] != None:
+                        if values_dict[eng2][f"{pv}_results"][pert][0] != None:
+                            eng1_vals.append(values_dict[eng1][f"{pv}_results"][pert][0])
+                            eng2_vals.append(values_dict[eng2][f"{pv}_results"][pert][0])
+
+            # double check only values w corresponding values were used
+            if len(eng1_vals) == len(eng2_vals):
+                mean_absolute_error = mae(eng1_vals,eng2_vals)  
+                data_for_df = {"eng1":eng1_vals,"eng2":eng2_vals}
+                data_df= pd.DataFrame(data_for_df)
+            else:
+                print("cant calc")
+
+            boots = []
+            n_boots = 10000
+
+            for n in range(n_boots):
+                sample_df = data_df.sample(n=len(eng1_vals), replace=True)
+                mae_sample = (abs(sample_df['eng1'] - sample_df['eng2']).sum())/len(eng1_vals)
+                boots.append(mae_sample)
+            
+            mae_err = (np.std(boots))
+
+            mae_pert_df.loc[eng1,eng2]=mean_absolute_error
+            mae_pert_df_err.loc[eng1,eng2]=mae_err
+
+        mae_pert_df.to_csv(f"{self.output_folder}/mae_pert_{self.file_ext}.csv", sep=" ")
+        mae_pert_df_err.to_csv(f"{self.output_folder}/mae_pert_err_{self.file_ext}.csv", sep=" ")
+
+        return mae_pert_df, mae_pert_df_err

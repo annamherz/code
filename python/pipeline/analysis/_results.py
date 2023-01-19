@@ -511,6 +511,13 @@ class analysis_network():
 
 
 
+    def calc_mae(self, pert_val=None):
+
+        self._initalise_plotting_object(check=True)
+        plot_obj = self._plotting_object
+        mae_pert_df, mae_pert_df_err = plot_obj.calc_mae(pert_val=pert_val)
+
+        return mae_pert_df, mae_pert_df_err
 
 
 # TODO make a static method?
