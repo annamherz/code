@@ -101,3 +101,26 @@ class merge():
         system_final = merged_trans + system_0
 
         return system_final
+
+
+    @staticmethod
+    def atom_mappings(system0, system1, engine_query):
+
+        engine = validate.engine(engine_query)
+        system_0 = validate.system(system0)
+        system_1 = validate.system(system1)
+
+        ligand_0 = merge.extract_ligand(system_0)
+        ligand_1 = merge.extract_ligand(system_1)
+
+        if ligand_0 and ligand_1:
+            pass
+        else:
+            raise _Exceptions.AlignmentError(
+                "Could not extract ligands from input systems. Check that your ligands/proteins are properly prepared!")
+
+        # Align ligand2 on ligand1
+        mapping = BSS.Align.matchAtoms(
+            ligand_0, ligand_1, engine=engine, complete_rings_only=True)
+
+        return (ligand_0.getAtoms(), ligand_1.getAtoms(), mapping)

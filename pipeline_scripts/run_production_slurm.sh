@@ -1,11 +1,14 @@
 #!/bin/bash
 #SBATCH -n 1
 #SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=5
+#SBATCH --cpus-per-task=8
 #SBATCH --job-name=prod
 #SBATCH --time=24:00:00
 #SBATCH -o ../slurm_logs/prod_%A_%a.out
 #SBATCH -e ../slurm_logs/prod_%A_%a.err
+
+# specifying the number of threads (needed for gromacs)
+export OMP_NUM_THREADS=8
 
 # sourcing
 source $BSS
@@ -72,16 +75,16 @@ fi
 if [ $2 = "GROMACS" ]; then
 echo "min"
 gmx grompp -f min/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p min/lambda_$lam/gromacs.top -o min/lambda_$lam/gromacs.tpr
-gmx mdrun -deffnm min/lambda_$lam/gromacs ;
+gmx mdrun -ntmpi 1 -deffnm min/lambda_$lam/gromacs ;
 echo "heat"
 gmx grompp -f heat/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p heat/lambda_$lam/gromacs.top -o heat/lambda_$lam/gromacs.tpr
-gmx mdrun -deffnm heat/lambda_$lam/gromacs ;
+gmx mdrun -ntmpi 1 -deffnm heat/lambda_$lam/gromacs ;
 echo "eq"
 gmx grompp -f eq/lambda_$lam/gromacs.mdp -c heat/lambda_$lam/gromacs.gro -p eq/lambda_$lam/gromacs.top -t heat/lambda_$lam/gromacs.cpt  -o eq/lambda_$lam/gromacs.tpr
-gmx mdrun -deffnm eq/lambda_$lam/gromacs ;
+gmx mdrun -ntmpi 1 -deffnm eq/lambda_$lam/gromacs ;
 echo "prod"
 gmx grompp -f lambda_$lam/gromacs.mdp -c eq/lambda_$lam/gromacs.gro -p lambda_$lam/gromacs.top -t eq/lambda_$lam/gromacs.cpt -o lambda_$lam/gromacs.tpr
-gmx mdrun -deffnm lambda_$lam/gromacs ;
+gmx mdrun -ntmpi 1 -deffnm lambda_$lam/gromacs ;
 
 # delete simulation data 
 if [[ $keep_traj == "None" ]]; then

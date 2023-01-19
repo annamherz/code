@@ -91,6 +91,41 @@ def write_analysis_file(analysis, results_dir):
                 writer.writerow(data_point)
 
 
+def write_atom_mappings(lig_0, lig_1, ligand_0, ligand_1, mapping, output_file):
+
+    # data point for average
+    data_point = [lig_0, lig_1, ligand_0, ligand_1, mapping]
+
+    # use csv to open the results file.
+    with open(output_file, "a") as writefile:
+        writer = csv.writer(writefile, delimiter=";")
+
+        # first, write a header if the file is created for the first time.
+        if os.path.getsize(output_file) == 0:
+            print(f"Starting {output_file} file.")
+            writer.writerow(["lig_0", "lig_1", "lig_0_atoms", "lig_1_atoms", "mapping"])
+
+
+    with open(output_file, "r") as readfile:
+        # then, grab all of the data that is already in the file.
+        reader = csv.reader(readfile)
+        data_entries = [row for row in reader]
+
+    # check if our data entry is not already in the results file. Raise an error if is.
+    if data_point in data_entries:
+        warnings.warn(
+            f"this atom mapping ahs already been written.")
+
+    else:
+        # at this point we know that we are writing a new entry in the results file. Append the line to the file.
+        # use csv to open the results file.
+        with open(output_file, "a") as writefile:
+            writer = csv.writer(writefile, delimiter=";")
+            print(
+                f"Writing results.")
+            writer.writerow(data_point)
+
+
 def write_modified_results_files(results_files, perturbations, output_folder=None, extra_options=None):
 
     len_results_files = 0
