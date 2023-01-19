@@ -77,7 +77,7 @@ class analyse():
         self.file_ext = file_ext
 
         return file_ext
-
+    
     def _pickle_ext(self):
 
         if not self.file_ext:

@@ -12,11 +12,11 @@ from ._dictionaries import *
 import cinnabar
 from cinnabar import wrangle,plotting,stats
 
-class analysis_engines():
+class analysis_network():
     """class to analyse results files and plot
     """
 
-    def __init__(self, results_directory, exp_file=None, engines=None, net_file=None, res_folder=None, file_ext=None, extra_options=None):
+    def __init__(self, results_directory, exp_file=None, engines=None, net_file=None, output_folder=None, file_ext=None, extra_options=None):
         
         self._results_directory = validate.folder_path(results_directory)
 
@@ -55,13 +55,13 @@ class analysis_engines():
             self._net_file = validate.file_path(net_file)
             self.net_ext = validate.string(f"{net_file.split('/')[-1].split('.')[0]}")
         
-        if not res_folder:
-            print("no results output folder provided, writing all output to the 'results_directory'.")
-            self.results_folder = validate.folder_path(f"{results_directory}")
+        if not output_folder:
+            print("no output folder provided, writing all output to the 'results_directory'.")
+            self.output_folder = validate.folder_path(f"{results_directory}")
             self.graph_dir = validate.folder_path(f"{results_directory}/graphs", create=True)
         else:
-            self.results_folder = validate.folder_path(res_folder, create=True)
-            self.graph_dir = validate.folder_path(f"{res_folder}/graphs", create=True)
+            self.output_folder = validate.folder_path(output_folder, create=True)
+            self.graph_dir = validate.folder_path(f"{output_folder}/graphs", create=True)
 
         if not file_ext:
             self.file_ext = ".+" # wildcard, all files in the folder included
@@ -214,7 +214,10 @@ class analysis_engines():
     def get_experimental(self, exp_file=None):
 
         if not exp_file:
-            exp_file = self.exp_file
+            if not self.exp_file:
+                warnings.warn("need an experimental file to proceed with most of the calculations. please set using self.get_experimental(file)")
+            else:
+                exp_file = self.exp_file
         else:
             self.exp_file = validate.file_path(exp_file)
 
@@ -257,7 +260,7 @@ class analysis_engines():
         self._make_graph()
         self._compute_cycle_closures()
 
-        # get statistics
+        # TODO get statistics
         self.pert_statistics = {}
         self.val_statistics = {}
         # for eng in self.engines:
@@ -276,7 +279,7 @@ class analysis_engines():
         # get the files into cinnabar format for analysis
         for eng in self.engines:
             file_name = self._results_repeat_files[eng]
-            cinnabar_file_name = f"{self.results_folder}/cinnabar_{eng}_{self.file_ext}_{self.net_ext}"
+            cinnabar_file_name = f"{self.output_folder}/cinnabar_{eng}_{self.file_ext}_{self.net_ext}"
             convert.cinnabar_file(file_name, self.exper_val_dict, cinnabar_file_name, perturbations=self.perturbations)
         
             # compute the per ligand for the network
@@ -309,7 +312,7 @@ class analysis_engines():
         perturbations,ligands = get_info_network_from_dict(results_dict)
 
         # first convert the other results into a value dict, do this using cinnabar but no experimental
-        cinnabar_file_name = f"{self.results_folder}/cinnabar_{name}_{self.file_ext}_{self.net_ext}"
+        cinnabar_file_name = f"{self.output_folder}/cinnabar_{name}_{self.file_ext}_{self.net_ext}"
         convert.cinnabar_file([f"{new_file_path}.csv"], self.exper_val_dict, cinnabar_file_name, perturbations=self.perturbations)
     
         # compute the per ligand for the network
@@ -363,7 +366,7 @@ class analysis_engines():
 
         for eng in self.engines:
 
-            pert_dict = self.calc_pert_dict[eng] # TODO can also use pert dict from cinnabar?
+            pert_dict = self.cinnabar_calc_pert_dict[eng]
 
             cycle_closures = network_graph.cycle_closures()
 
@@ -375,6 +378,11 @@ class analysis_engines():
 
             self.cycle_dict.update({eng:(cycles[0], cycles[1], cycles[2], cycles[3])}) # the cycles dict
 
+    def cycle_closures(self):
+        # TODO 
+        # if is computed
+        # take data from cycle closure dict and plot
+        pass
 
     def _initalise_plotting_object(self, check=False):
 
@@ -386,13 +394,6 @@ class analysis_engines():
         elif check:
             if not self._plotting_object:
                 self._plotting_object = plotting_engines(analysis_object=self)
-
-
-    def plot_all(self):
-
-        self._initalise_plotting_object(check=True)
-        plot_obj = self._plotting_object
-
 
     def plot_bar_pert(self, engine=None):
 
@@ -410,15 +411,22 @@ class analysis_engines():
     def plot_scatter_pert(self, engine=None, use_cinnabar=False):
         
         if use_cinnabar:
-            try:
-                engine = validate.engine(engine)
-            except:
-                print("for cinnabar plotting, can only have one engine. Please use the engine keyword to define.")
-                return
+            if engine:
+                try:
+                    engine = validate.engine(engine)
+                    engines = [engine]
+                except:
+                    print("for cinnabar plotting, can only have one engine. Please use the engine keyword to define, or leave blank to autoidentify available engines.")
+                    return
             
-            plotting.plot_DDGs(self._cinnabar_networks[engine].graph,
-                              filename=f"{self.graph_dir}/DDGs_{engine}_{self.file_ext}_{self.net_ext}.png",
-                              title=f"DDGs for {engine} with {self.file_ext}, {self.net_ext}")
+            else:
+                print("no engine specified for plotting, will plot seperate graphs for each self.engines ")
+                engines = self.engines
+            
+            for eng in engines:
+                plotting.plot_DDGs(self._cinnabar_networks[eng].graph,
+                                filename=f"{self.graph_dir}/DDGs_{eng}_{self.file_ext}_{self.net_ext}.png",
+                                title=f"DDGs for {eng} with {self.file_ext}, {self.net_ext}")
 
         else:
             self._initalise_plotting_object(check=True)
@@ -428,15 +436,22 @@ class analysis_engines():
     def plot_scatter_lig(self, engine=None, use_cinnabar=False):
         
         if use_cinnabar:
-            try:
-                engine = validate.engine(engine)
-            except:
-                print("for cinnabar plotting, can only have one engine. Please use the engine keyword to define.")
-                return
+            if engine:
+                try:
+                    engine = validate.engine(engine)
+                    engines = [engine]
+                except:
+                    print("for cinnabar plotting, can only have one engine. Please use the engine keyword to define, or leave blank to autoidentify available engines.")
+                    return
             
-            plotting.plot_DGs(self._cinnabar_networks[engine].graph,
-                              filename=f"{self.graph_dir}/DGs_{engine}_{self.file_ext}_{self.net_ext}.png",
-                              title=f"DGs for {engine} with {self.file_ext}, {self.net_ext}")
+            else:
+                print("no engine specified for plotting, will plot seperate graphs for each self.engines ")
+                engines = self.engines
+            
+            for eng in engines:
+                plotting.plot_DGs(self._cinnabar_networks[eng].graph,
+                                filename=f"{self.graph_dir}/DGs_{eng}_{self.file_ext}_{self.net_ext}.png",
+                                title=f"DGs for {eng} with {self.file_ext}, {self.net_ext}")
 
         else:
             self._initalise_plotting_object(check=True)
@@ -489,7 +504,7 @@ class analysis_engines():
     #     self._initalise_plotting_object(check=True)
     #     plot_obj = self._plotting_object
         
-    #     output_dir = f"{self.results_folder}/convergence_plots/{self.file_ext}"
+    #     output_dir = f"{self.output_folder}/convergence_plots/{self.file_ext}"
         
     #     for pert in self.perturbations:
     #         plot_obj.outlier(perturbation=pert, engines=self.engines, output_dir=output_dir)  

@@ -6,9 +6,6 @@ from BioSimSpace.Units.Length import angstrom as _angstrom
 import sys
 import os
 
-from pipeline.utils import *
-from pipeline.prep import *
-
 BSS.setVerbose(True)
 
 try:
@@ -20,6 +17,7 @@ except:
         sys.path.insert(1, code)
     import pipeline
 
+from pipeline.utils import *
 from pipeline.prep import *
 
 # decide engine used for equilibration runs ("AMBER" or "GROMACS")

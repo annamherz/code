@@ -74,3 +74,5 @@ echo "Extraction jobid for ${trans_array[i]}, ${eng_array[i]} is $jidextract"
 jidana=$(sbatch --dependency=afterany:${jidextract} --parsable $scripts_dir/run_analysis_slurm.sh ${trans_array[i]} ${eng_array[i]})
 echo "Analysis jobid for ${trans_array[i]}, ${eng_array[i]} is $jidana"
 done
+
+# python $scripts_dir/analysis_network.py
