@@ -695,10 +695,14 @@ class plotting_engines():
 
     # TODO plot cycle closure things?
 
-    def histogram(self, engines=None, pert_val="pert", data_dict=None):
+    def histogram(self, engines=None, pert_val=None, error_dict=None):
         # TODO this is currently plotting the standard error of the 
 
-        pert_val = validate.pert_val(pert_val)
+        if error_dict:
+            pv_error = "error"
+        else:
+            pert_val = validate.pert_val(pert_val)
+            pv_error = pert_val
 
         if engines:
             engines = self._plotting_engines(engines)
@@ -707,6 +711,7 @@ class plotting_engines():
             engines = self.engines
         
         # TODO use data_dict to take in other info?
+        # error dict is format {engine: error_list}
         # have this as a list of values from the pickles from the analysis?
         # #wanna take in data from repeat results files, this data is in results function ???
 
@@ -720,8 +725,11 @@ class plotting_engines():
             fig, ax = plt.subplots(figsize=(8,8))
             col = self.colours[eng]
      
-            freenrg_df_plotting = self.freenrg_df_dict[eng][pert_val].dropna()
-            x = freenrg_df_plotting["err_fep"]    
+            if error_dict:
+                x = error_dict[eng] 
+            else:
+                freenrg_df_plotting = self.freenrg_df_dict[eng][pert_val].dropna()
+                x = freenrg_df_plotting["err_fep"]   
 
             # no_bins = int(len(freenrg_df_plotting["err_exp"])/8)
             no_bins = 6 # TODO calculate no of bins so min and max per bin
@@ -745,8 +753,8 @@ class plotting_engines():
             #plot
             plt.xlabel('Error')
             plt.ylabel('Frequency')
-            plt.title(f"Distribution of error for {eng}, {self.net_ext.replace('_',',')} \n mu = {mu:.3f} , std = {std:.3f}")
-            plt.savefig(f"{self.graph_folder}/fep_vs_exp_histogram_{pert_val}_{self.file_ext}_{self.net_ext}_{eng}.png", dpi=300, bbox_inches='tight')
+            plt.title(f"Distribution of error for {eng}, {self.net_ext.replace('_',', ')} \n mu = {mu:.3f} , std = {std:.3f}")
+            plt.savefig(f"{self.graph_folder}/fep_vs_exp_histogram_{pv_error}_{self.file_ext}_{self.net_ext}_{eng}.png", dpi=300, bbox_inches='tight')
             plt.show()
 
             # add to histogram dict for shared plotting
@@ -769,7 +777,7 @@ class plotting_engines():
         plt.xlabel('Error')
         plt.ylabel('Frequency')  
         eng_name = self._get_eng_name(engines)
-        plt.title(f"Distribution of error for {eng_name} , {self.net_ext.replace('_',',')}, {pert_val}")
+        plt.title(f"Distribution of error for {eng_name} , {self.net_ext.replace('_',', ')}, {pert_val}")
         plt.savefig(f"{self.graph_folder}/fep_vs_exp_normal_dist_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
         plt.show()
 
@@ -777,17 +785,6 @@ class plotting_engines():
 
         return histogram_dict
 
-
-    def mae_df_make():
-        # TODO funcion for this in dictionaries?
-
-        mae_pert_df, mae_pert_df_err = calc_mae(values_dict, "perts")
-
-        print(mae_pert_df)
-        print(mae_pert_df_err)
-
-        mae_pert_df.to_csv(f"{res_folder}/mae_pert_{self.file_ext}_{self.net_ext}.csv", sep=" ")
-        mae_pert_df_err.to_csv(f"{res_folder}/mae_pert_err_{self.file_ext}_{self.net_ext}.csv", sep=" ")
 
     def calc_mae(self, pert_val=None):
         # calc mae for a provided dictionary in the format wanted

@@ -485,19 +485,27 @@ class analysis_network():
         plot_obj.outlier(pert_val=pert_val, engines=engine, outliers=outliers)  
 
     
-    def plot_histogram_pert(self, engine=None):
+    def plot_histogram_all(self, engine=None):
+        
+        self._initalise_plotting_object(check=True)
+        plot_obj = self._plotting_object
+
+        # get list of the errors from the repeat files
+        error_dict = {}
+
+        for eng in self.engines:
+            error_list = make_dict.error_list_from_files(self._results_repeat_files[eng])
+            error_dict.update({eng:error_list})
+
+        plot_obj.histogram(engines=engine, error_dict=error_dict)
+
+    def plot_histogram_sem(self, engine=None, pert_val="val"):
 
         self._initalise_plotting_object(check=True)
         plot_obj = self._plotting_object
-        plot_obj.histogram(engines=engine, pert_val="pert")
-
-    def plot_histogram_lig(self, engine=None):
-
-        self._initalise_plotting_object(check=True)
-        plot_obj = self._plotting_object
-        plot_obj.histogram(engines=engine, pert_val="val")
-    
-    # TODO histogram plot for each repeat
+        plot_obj.histogram(engines=engine, pert_val=pert_val)
+        
+    # TODO histogram plot for the error in the free and the error in the bound legs
 
     # def plot_convergence(self):
 

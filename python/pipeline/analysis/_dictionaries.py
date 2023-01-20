@@ -168,6 +168,29 @@ class make_dict():
 
         return comp_diff_dict
 
+    @staticmethod
+    def error_list_from_files(results_files):
+
+        results_files = validate.is_list(results_files)
+        for file in results_files:
+            validate.file_path(file)
+
+        error_list  = []
+
+        # append for results file
+        for res_file in results_files:
+            res_df = pd.read_csv(res_file)
+            for index,row in res_df.iterrows():
+                
+                # assume here as this is normal format of files
+                if not isinstance(row[3], float):
+                    ddG_err = BSS.Types.Energy(float(row[3].split()[0]),row[3].split()[-1])
+                else:
+                    ddG_err = row[3]
+                
+                error_list.append(ddG_err)
+        
+        return error_list
 
     @staticmethod
     def experimental_from_freenrgworkflows(experimental_DDGs, ligands, perturbations):
