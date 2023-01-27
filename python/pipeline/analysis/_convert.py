@@ -157,6 +157,17 @@ class convert:
                             comp_ddG = line.split(",")[2]
                             comp_err = line.split(",")[3]
 
+                            # assume here as this is normal format of files
+                            if not isinstance(comp_ddG, float):
+                                comp_ddG = BSS.Types.Energy(float(comp_ddG.split()[0]),comp_ddG.split()[-1]).value()
+                            else:
+                                comp_ddG = comp_ddG
+
+                            if not isinstance(comp_err, float):
+                                comp_err = BSS.Types.Energy(float(comp_err.split()[0]),comp_err.split()[-1]).value()
+                            else:
+                                comp_err = comp_err
+
                             if perturbations:
                                 pert = f"{lig_0}~{lig_1}"
                                 if pert in perturbations:

@@ -24,7 +24,7 @@ dos2unix "$prot_file"
 # make sure engines etc are sourced correctly
 export PYTHONPATH="/home/anna/BioSimSpace/python" # if using a cloned git branch of BSS - otherwise comment out
 export BSS="/home/anna/anaconda3/bin/activate biosimspace-dev" # to use the conda env to make sure sire works correctly - sourced in each sh script
-export amber="/home/anna/amber22" # sourced in each script
+export amber="/home/anna/amber22/amber.sh" # sourced in each script
 export gromacs="/usr/local/gromacs/bin/GMXRC" # sourced in each script
 
 # make sure using the correct BSS branch

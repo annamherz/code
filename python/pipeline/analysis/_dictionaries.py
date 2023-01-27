@@ -64,12 +64,14 @@ class make_dict():
                         perturbations.append(pert)
 
                 if not isinstance(row[2], float):
-                    # to convert ?
-                    ddG = BSS.Types.Energy(float(row[2].split()[0]),row[2].split()[-1])
+                    # to convert as it will be a string
+                    ddG = BSS.Types.Energy(float(row[2].split()[0]),row[2].split()[-1]).value()
+                    ddG_unit = row[2].split()[-1]
                 else:
                     ddG = row[2]
                 if not isinstance(row[3], float):
-                    ddG_err = BSS.Types.Energy(float(row[3].split()[0]),row[3].split()[-1])
+                    ddG_err = BSS.Types.Energy(float(row[3].split()[0]),row[3].split()[-1]).value()
+                    ddG_err_unit = row[3].split()[-1]
                 else:
                     ddG_err = row[3]
                     
@@ -159,8 +161,6 @@ class make_dict():
             except:
                 comp_ddG = None
                 comp_err = None
-            
-            # TODO some way to incl units - attributes?
 
             #update the dictionary for plotting later
             comp_diff_dict.update({pert:(comp_ddG, comp_err)})
@@ -184,7 +184,7 @@ class make_dict():
                 
                 # assume here as this is normal format of files
                 if not isinstance(row[3], float):
-                    ddG_err = BSS.Types.Energy(float(row[3].split()[0]),row[3].split()[-1])
+                    ddG_err = BSS.Types.Energy(float(row[3].split()[0]),row[3].split()[-1]).value()
                 else:
                     ddG_err = row[3]
                 

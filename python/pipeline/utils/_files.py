@@ -58,7 +58,7 @@ def write_analysis_file(analysis, results_dir):
                       analysis.engine,
                       analysis.file_ext
                       ]
-        results_file_path = f"{results_dir}/repeat_{no_repeats.index(r)}_{analysis.engine.upper()}_{analysis.file_ext}.csv"
+        results_file_path = f"{results_dir}/freenrg_repeat_{no_repeats.index(r)}_{analysis.engine.upper()}_{analysis.file_ext}.csv"
         with open(results_file_path, "a") as freenrg_writefile:
             writer = csv.writer(freenrg_writefile)
 
@@ -89,6 +89,60 @@ def write_analysis_file(analysis, results_dir):
                     f"{analysis.repeats_tuple_list[r][1]} and the error is {analysis.repeats_tuple_list[r][2]} "+
                     f"for {analysis.perturbation}, {analysis.engine}.")
                 writer.writerow(data_point)
+    
+    # write results for each the bound and the free too
+    for bf in ["bound", "free"]:
+
+        if bf == "free":
+            val_dict = analysis._free_val_dict
+            err_dict = analysis._free_err_dict
+            name = bf
+        elif bf == "bound":
+            val_dict = analysis._bound_val_dict
+            err_dict = analysis._bound_err_dict
+            name = bf
+
+        no_repeats = list(range(len(analysis.repeats_tuple_list)))
+        # use csv to open the results file.
+        for r in no_repeats:
+            data_point = [analysis.ligand_0,
+                        analysis.ligand_1,
+                        val_dict[f"{r}_{name}"],
+                        err_dict[f"{r}_{name}"],
+                        analysis.engine,
+                        analysis.file_ext
+                        ]
+            results_file_path = f"{results_dir}/{name}_repeat_{no_repeats.index(r)}_{analysis.engine.upper()}_{analysis.file_ext}.csv"
+            with open(results_file_path, "a") as freenrg_writefile:
+                writer = csv.writer(freenrg_writefile)
+
+                # first, write a header if the file is created for the first time.
+                if os.path.getsize(results_file_path) == 0:
+                    print(f"Starting {results_file_path} file.")
+                    writer.writerow(["lig_0", "lig_1", "freenrg",
+                                    "error", "engine", "estimator", "method"])
+
+
+            with open(results_file_path, "r") as freenrg_readfile:
+                # then, grab all of the data that is already in the file.
+                reader = csv.reader(freenrg_readfile)
+                data_entries = [row for row in reader]
+
+            # check if our data entry is not already in the results file. Raise an error if is.
+            if data_point in data_entries:
+                warnings.warn(
+                    f"Results for {name} in {analysis.perturbation}, {analysis.engine} are already in {results_file_path}.")
+
+            else:
+                # at this point we know that we are writing a new entry in the results file. Append the line to the file.
+                # use csv to open the results file.
+                with open(results_file_path, "a") as freenrg_writefile:
+                    writer = csv.writer(freenrg_writefile)
+                    print(
+                        f"Writing results. For repeat {name} {r}, free energy of binding is "+
+                        f"{val_dict[f'{r}_{name}']} and the error is {err_dict[f'{r}_{name}']} "+
+                        f"for {analysis.perturbation}, {analysis.engine}.")
+                    writer.writerow(data_point)
 
 
 def write_atom_mappings(lig_0, lig_1, ligand_0, ligand_1, mapping, output_file):

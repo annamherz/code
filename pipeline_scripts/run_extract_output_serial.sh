@@ -3,13 +3,13 @@
 
 # export important file locations
 export CURRENTDIR="$(pwd)"
-export MAINDIRECTORY="/backup/anna/benchmark/p38" # Set file path for protein
+export MAINDIRECTORY="/home/anna/Documents/benchmark/tyk2_benchmark" # Set file path for protein
 export scripts_dir="/home/anna/Documents/code/pipeline_scripts" # choose location of scripts
 
 # export all execution model files for later scripts
-export lig_file="/home/anna/Documents/benchmark/p38_benchmark/execution_model/ligands.dat"
-export net_file="/home/anna/Documents/benchmark/p38_benchmark/execution_model/network_combined.dat"
-export prot_file="/home/anna/Documents/benchmark/p38_benchmark/execution_model/protocol.dat"
+export lig_file="/home/anna/Documents/benchmark/tyk2_benchmark/execution_model/ligands.dat"
+export net_file="/home/anna/Documents/benchmark/tyk2_benchmark/execution_model/network_combined_reruns.dat"
+export prot_file="/home/anna/Documents/benchmark/tyk2_benchmark/execution_model/protocol.dat"
 
 # make sure engines etc are sourced correctly
 export PYTHONPATH=export PYTHONPATH="/home/anna/BioSimSpace/python:$PYTHONPATH" # if using a cloned git branch of BSS - otherwise comment out

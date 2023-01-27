@@ -403,8 +403,8 @@ class analyse():
             for r in repeats:
                 freenrg_rel = BSS.FreeEnergy.Relative.difference(
                     self._bound_pmf_dict[bound_calculated[r]], self._free_pmf_dict[free_calculated[r]])
-                freenrg_val = freenrg_rel[0].value()
-                freenrg_err = freenrg_rel[1].value()
+                freenrg_val = freenrg_rel[0]
+                freenrg_err = freenrg_rel[1]
                 repeats_tuple_list.append(
                     (f"{str(r)}_repeat", freenrg_val, freenrg_err))
 
@@ -423,8 +423,8 @@ class analyse():
                 print(f"calculating repeat {r} as {b} and {f}.")
                 freenrg_rel = BSS.FreeEnergy.Relative.difference(
                     self._bound_pmf_dict[b], self._free_pmf_dict[f])
-                freenrg_val = freenrg_rel[0].value()
-                freenrg_err = freenrg_rel[1].value()
+                freenrg_val = freenrg_rel[0]
+                freenrg_err = freenrg_rel[1]
                 repeats_tuple_list.append(
                     (f"{str(r)}_repeat", freenrg_val, freenrg_err))
                 r += 1

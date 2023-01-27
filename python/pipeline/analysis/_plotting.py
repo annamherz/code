@@ -407,9 +407,9 @@ class plotting_engines():
             else:
                 freenrg_df_plotting = self.freenrg_df_dict[eng][pert_val].dropna()
 
-            x = freenrg_df_plotting[f"freenrg_{name}"]
+            x = freenrg_df_plotting[f"freenrg_{exp_name}"]
             y = freenrg_df_plotting["freenrg_fep"]
-            x_er = freenrg_df_plotting[f"err_{name}"]
+            x_er = freenrg_df_plotting[f"err_{exp_name}"]
             y_er = freenrg_df_plotting["err_fep"]               
 
             scatterplot = [plt.scatter(x, y, zorder=10, c=col)]    
@@ -547,9 +547,9 @@ class plotting_engines():
             else:
                 freenrg_df_plotting = self.freenrg_df_dict[eng][pert_val].dropna()
 
-            x = freenrg_df_plotting[f"freenrg_{name}"]
+            x = freenrg_df_plotting[f"freenrg_{exp_name}"]
             y = freenrg_df_plotting["freenrg_fep"]
-            x_er = freenrg_df_plotting[f"err_{name}"]
+            x_er = freenrg_df_plotting[f"err_{exp_name}"]
             y_er = freenrg_df_plotting["err_fep"] 
 
             # get an array of the MUE values comparing experimental and FEP values. Take the absolute values.
@@ -695,26 +695,28 @@ class plotting_engines():
 
     # TODO plot cycle closure things?
 
-    def histogram(self, engines=None, pert_val=None, error_dict=None):
+    def histogram(self, engines=None, pert_val=None, error_dict=None, file_ext=None):
+        """default plots histogram of SEM, if error dict supplied in format {engine: error_list}, will plot these
+        """
         # TODO this is currently plotting the standard error of the 
 
         if error_dict:
-            pv_error = "error"
+            type_error = "error"
+            if file_ext:
+                type_error = validate.string(file_ext)
         else:
             pert_val = validate.pert_val(pert_val)
-            pv_error = pert_val
-
+            if pert_val == "pert":
+                type_error = "perturbations"
+            if pert_val == "val":
+                type_error = "value"
+                
         if engines:
             engines = self._plotting_engines(engines)
         # if no engines provided, use the defaults that were set based on the analysis object
         else:
             engines = self.engines
-        
-        # TODO use data_dict to take in other info?
-        # error dict is format {engine: error_list}
-        # have this as a list of values from the pickles from the analysis?
-        # #wanna take in data from repeat results files, this data is in results function ???
-
+   
         best_fit_dict = {}
         histogram_dict = {}
 
@@ -753,8 +755,8 @@ class plotting_engines():
             #plot
             plt.xlabel('Error')
             plt.ylabel('Frequency')
-            plt.title(f"Distribution of error for {eng}, {self.net_ext.replace('_',', ')} \n mu = {mu:.3f} , std = {std:.3f}")
-            plt.savefig(f"{self.graph_folder}/fep_vs_exp_histogram_{pv_error}_{self.file_ext}_{self.net_ext}_{eng}.png", dpi=300, bbox_inches='tight')
+            plt.title(f"Distribution of error for {type_error}, {eng}, {self.net_ext.replace('_',', ')}\n mu = {mu:.3f} , std = {std:.3f}")
+            plt.savefig(f"{self.graph_folder}/fep_vs_exp_histogram_{type_error}_{self.file_ext}_{self.net_ext}_{eng}.png", dpi=300, bbox_inches='tight')
             plt.show()
 
             # add to histogram dict for shared plotting
@@ -777,8 +779,8 @@ class plotting_engines():
         plt.xlabel('Error')
         plt.ylabel('Frequency')  
         eng_name = self._get_eng_name(engines)
-        plt.title(f"Distribution of error for {eng_name} , {self.net_ext.replace('_',', ')}, {pert_val}")
-        plt.savefig(f"{self.graph_folder}/fep_vs_exp_normal_dist_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
+        plt.title(f"Distribution of error for {type_error}, {eng}, {self.net_ext.replace('_',', ')}")
+        plt.savefig(f"{self.graph_folder}/fep_vs_exp_normal_dist_{type_error}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
         plt.show()
 
         histogram_dict.update({"dist": fig})

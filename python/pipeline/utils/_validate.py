@@ -133,7 +133,7 @@ class validate():
 
         if create:
             if not os.path.exists(folder_path):
-                warnings.warn(f"{folder_path} does not exist!")
+                print(f"creating {folder_path} as it could not be found...")
                 os.makedirs(folder_path)
             else:
                 pass   

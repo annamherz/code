@@ -74,7 +74,10 @@ class analysis_network():
 
         # get files from results directory
         self._results_repeat_files = self._get_results_repeat_files()  
+        self._results_free_repeat_files = self._get_results_repeat_files(leg="free")  
+        self._results_bound_repeat_files = self._get_results_repeat_files(leg="bound")  
         self._results_files = self._get_results_files()
+        
 
         # get info from the network
         self.perturbations = None
@@ -119,20 +122,28 @@ class analysis_network():
         # for plotting
         self._plotting_object = None
 
-    def _get_results_repeat_files(self):
+    def _get_results_repeat_files(self, leg=None):
         res_dir = self._results_directory
         all_files = os.listdir(res_dir)
-        rep_files = []
-        for file in all_files:
-            if "repeat" in file:
-                if re.search(self.file_ext, file):
-                    rep_files.append(f"{res_dir}/{file}")
-        
+
+        files_for_dict = []
+
+        if leg: # leg should be free or bound
+            for file in all_files:
+                if f"{leg}_" in file:
+                    if re.search(self.file_ext, file):
+                        files_for_dict.append(f"{res_dir}/{file}")
+
+        else: # search for the freenrg
+            for file in all_files:
+                if "freenrg" in file:
+                    files_for_dict.append(f"{res_dir}/{file}")
+
         files_dict = {}
         
         for eng in self.engines:
             eng_files = []
-            for file in rep_files:
+            for file in files_for_dict:
                 if eng in file:
                     if re.search(self.file_ext, file):
                         eng_files.append(file)
@@ -250,6 +261,10 @@ class analysis_network():
         self.exper_pert_dict = pert_dict
 
         return pert_dict
+
+    def remove_perturbations(self, pert):
+        
+        self.perturbations.remove(pert)
 
     def compute(self):
 
@@ -426,7 +441,7 @@ class analysis_network():
             for eng in engines:
                 plotting.plot_DDGs(self._cinnabar_networks[eng].graph,
                                 filename=f"{self.graph_dir}/DDGs_{eng}_{self.file_ext}_{self.net_ext}.png",
-                                title=f"DDGs for {eng} with {self.file_ext}, {self.net_ext}")
+                                title=f"DDGs for {eng}, {self.net_ext}") #with {self.file_ext}
 
         else:
             self._initalise_plotting_object(check=True)
@@ -451,7 +466,7 @@ class analysis_network():
             for eng in engines:
                 plotting.plot_DGs(self._cinnabar_networks[eng].graph,
                                 filename=f"{self.graph_dir}/DGs_{eng}_{self.file_ext}_{self.net_ext}.png",
-                                title=f"DGs for {eng} with {self.file_ext}, {self.net_ext}")
+                                title=f"DGs for {eng}, {self.net_ext}") #with {self.file_ext}
 
         else:
             self._initalise_plotting_object(check=True)
@@ -485,7 +500,7 @@ class analysis_network():
         plot_obj.outlier(pert_val=pert_val, engines=engine, outliers=outliers)  
 
     
-    def plot_histogram_all(self, engine=None):
+    def plot_histogram_runs(self, engine=None):
         
         self._initalise_plotting_object(check=True)
         plot_obj = self._plotting_object
@@ -506,6 +521,28 @@ class analysis_network():
         plot_obj.histogram(engines=engine, pert_val=pert_val)
         
     # TODO histogram plot for the error in the free and the error in the bound legs
+
+    def plot_histogram_legs(self, engine=None, free_bound=None):
+
+        free_bound = validate.string(free_bound)
+        if free_bound.lower() not in ["free","bound"]:
+            raise ValueError("free_bound must be either 'free' or 'bound' to denote one of the legs of the run.")
+        
+        self._initalise_plotting_object(check=True)
+        plot_obj = self._plotting_object
+
+        error_dict = {}
+        
+        for eng in self.engines:
+            
+            if free_bound == "free":
+                error_list = make_dict.error_list_from_files(self._results_free_repeat_files[eng])
+            if free_bound == "bound":
+                error_list = make_dict.error_list_from_files(self._results_bound_repeat_files[eng])
+
+            error_dict.update({eng:error_list})
+
+        plot_obj.histogram(engines=engine, error_dict=error_dict, file_ext=free_bound)
 
     # def plot_convergence(self):
 

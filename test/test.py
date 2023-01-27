@@ -1,6 +1,11 @@
+# analysis script for a single pert
+# anna
+
 import BioSimSpace as BSS
 import sys
-import numpy as np
+import os as _os
+
+BSS.setVerbose = True
 
 try:
     import pipeline
@@ -11,47 +16,30 @@ except:
         sys.path.insert(1, code)
     import pipeline
 
-from pipeline import *
-
-
 from pipeline.analysis import *
-from pipeline.utils import *
+from pipeline.utils import write_analysis_file
 
-from cinnabar import wrangle,plotting
+# options
+analysis_options = {'estimator': "MBAR", "method":"alchemlyb",
+                    "check_overlap":True,
+                    "try_pickle":False, 'save_pickle':False,
+                    "auto_equilibration": False,
+                    "truncate_percentage": 0,
+                    "truncate_keep":"start"}
 
-# folders
-protein = "tyk2"
-file_ext = "MBAR_alchemlyb_benchmark" # for results files
+path_to_dir = "/backup/anna/benchmark/tyk2/outputs_extracted/SOMD/lig_ejm31~lig_ejm42"
 
-# define all the folder locations
-bench_folder = f"/home/anna/Documents/benchmark"
-main_folder = f"{bench_folder}/{protein}_benchmark"
-out_folder = f"{main_folder}/outputs"
-res_folder = f"/home/anna/Documents/code/test/results"
-temp_folder = f"{main_folder}/outputs/results/temp"
-exp_folder = f"{bench_folder}/inputs/experimental"
+# using the pipeline module for analysis
+analysed_pert = analyse(path_to_dir)
+analysed_pert.set_options(analysis_options)
+avg, error, repeats_tuple_list = analysed_pert.analyse_all_repeats()
+analysed_pert.plot_graphs()
 
-# make folders that may not exist
-folder_list = [res_folder, temp_folder]
-for fold in folder_list:
-    validate.folder_path(fold, create=True)
-
-# files
-net_file = f"{main_folder}/execution_model/network_lomap.dat"
-exp_file = f"{exp_folder}/{protein}.yml"
-exp_file_dat = f"{res_folder}/exp_data_{protein}.dat"
-
-# OUTPUT
-file_ext_out = "test" # for how files will be written
-
-# files that will get written
-comp_pert_file_name = f"computed_perturbations_average_{file_ext_out}"
-cinnabar_file = f"cinnabar_format_{file_ext_out}"
-# TODO add file names for saving graphs
-
-res_dir = "/home/anna/Documents/benchmark/tyk2_benchmark/outputs"
-res_obj = analysis_engines(res_dir, net_file=net_file, exp_file=exp_file, engines="SOMD")
-res_obj.compute()
+print(avg)
+print(error)
+# write the final result
+# write_analysis_file(analysed_pert, path_to_dir)
+# TODO change so also class method
 
 # # fwf exp data
 # print("fwf")

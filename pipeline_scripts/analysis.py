@@ -5,6 +5,8 @@ import BioSimSpace as BSS
 import sys
 import os as _os
 
+BSS.setVerbose = True
+
 try:
     import pipeline
 except:
