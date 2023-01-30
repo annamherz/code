@@ -66,10 +66,8 @@ analysis_options = {'estimator': "MBAR", "method":"alchemlyb",
                     "truncate_keep":"start",
                     "mbar_method": None}
 
-file_ext = str(f"{analysis_options['estimator']}_{analysis_options['method']}_{analysis_options['mbar_method']}_"+
-            f"eq{str(analysis_options['auto_equilibration']).lower()}_"+
-            f"stats{str(analysis_options['statistical_inefficiency']).lower()}_"+
-            f"truncate{str(analysis_options['truncate_percentage'])}{analysis_options['truncate_keep']}")
+analysis_options = analyse._set_options(analysis_options)
+file_ext = analyse.file_ext(analysis_options)
 
 all_analysis_object = analysis_network(results_folder,
                                        exp_file=None,

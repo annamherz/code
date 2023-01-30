@@ -47,36 +47,47 @@ class analyse():
 
         # intialise other things
         self._get_repeat_folders()
-        self._set_default_options()
-        self._file_ext()
-        self._pickle_ext()
+        self._set_default_options() # will set default options and file extension
         self.is_analysed = False
 
+    @staticmethod
+    def _default_analysis_options_dict():
+
+        options_dict = {'estimator': "MBAR",
+                    "method":"alchemlyb",
+                    "check_overlap":True,
+                    "try_pickle":True,
+                    'save_pickle':True,
+                    "auto_equilibration": False,
+                    "statistical_inefficiency": False,
+                    "truncate_percentage": 0,
+                    "truncate_keep":"end",
+                    "mbar_method": None # robust or default
+                    }
+        
+        return options_dict
 
     def _set_default_options(self):
 
-        self.estimator = "MBAR"
-        self.method = "alchemlyb"
-        self._mbar_method = None
-        self._check_overlap = True
-        self._save_pickle = True
-        self._try_pickle = True
+        default_options = analyse._default_analysis_options_dict()
+        self.set_options(default_options)
 
-        # for the preprocessing
-        self._auto_equilibration = False
-        self._statistical_inefficiency = False
-        self._truncate_percentage = 0  # no truncation
-        self._truncate_keep = "end"
 
     def _file_ext(self):
         
-        file_ext = (f"{self.estimator}_{self.method}_{self._mbar_method}_"+
-                    f"eq{str(self._auto_equilibration).lower()}_"+
-                    f"stats{str(self._statistical_inefficiency).lower()}_"+
-                    f"truncate{str(self._truncate_percentage)}{self._truncate_keep}")
-
+        file_ext = analyse.file_ext(self.options_dict)
         self.file_ext = file_ext
 
+        return file_ext
+    
+    @staticmethod
+    def file_ext(options_dict):
+
+        file_ext = str(f"{options_dict['estimator']}_{options_dict['method']}_{options_dict['mbar_method']}_"+
+                    f"eq{str(options_dict['auto_equilibration']).lower()}_"+
+                    f"stats{str(options_dict['statistical_inefficiency']).lower()}_"+
+                    f"truncate{str(options_dict['truncate_percentage'])}{options_dict['truncate_keep']}")
+    
         return file_ext
     
     def _pickle_ext(self):
@@ -91,53 +102,111 @@ class analyse():
 
         return pickle_ext
 
-
-    def set_options(self, options_dict):
+    @staticmethod
+    def _set_options(options_dict):
 
         options_dict = validate.dictionary(options_dict)
 
+        default_options = analyse._default_analysis_options_dict()
+
+        new_options_dict = {}
+
+        # replace any default values by those passed
+        for key, value in default_options.items():
+            if key in options_dict:
+                new_options_dict[key] = options_dict[key]
+            else:
+                new_options_dict[key] = value
+        
+        # validate to make sure all inputs are acceptable format
+        val_options_dict = analyse._validate_options_dict(new_options_dict)
+                
+        return val_options_dict
+
+    @staticmethod
+    def _validate_options_dict(options_dict):
+        # validate all the new inputs
+        # replace as needed in the options dict
+
         if "estimator" in options_dict:
-            self.estimator = validate.string(options_dict["estimator"])
-            if self.estimator not in ['MBAR', 'TI']:
+            estimator = validate.string(options_dict["estimator"])
+            if estimator not in ['MBAR', 'TI']:
                 raise ValueError("'estimator' must be either 'MBAR' or 'TI'.")
+            options_dict["estimator"] = estimator
+
         if "mbar_method" in options_dict:
-            self._mbar_method = validate.string(
-                options_dict["mbar_method"])
-            if self._mbar_method not in ['robust', 'default', None]:
+            if options_dict["mbar_method"] is None:
+                mbar_method = options_dict["mbar_method"]
+            else:
+                mbar_method = validate.string(options_dict["mbar_method"])
+            if mbar_method not in ['robust', 'default', None]:
                 raise ValueError("'mbar_method' must be either 'robust' or 'default' or 'None'.")
+            options_dict["mbar_method"] = mbar_method
+
         if "check_overlap" in options_dict:
-            self._check_overlap = validate.boolean(
-                options_dict["check_overlap"])
-        if self._check_overlap == "True" and self.estimator != "MBAR":
-            self._check_overlap = False
+            check_overlap = validate.boolean(options_dict["check_overlap"])
+            if check_overlap == "True" and estimator != "MBAR":
+                check_overlap = False
+            options_dict["check_overlap"] = check_overlap
 
         if "method" in options_dict:
-            self.method = validate.string(options_dict["method"])
-            if self.method not in ['alchemlyb', 'native']:
+            method = validate.string(options_dict["method"])
+            if method not in ['alchemlyb', 'native']:
                 raise ValueError(
                     "'estimator' must be either 'alchemlyb' or 'native'.")
+            options_dict["method"] = method
+
         if "save_pickle" in options_dict:
-            self._save_pickle = validate.boolean(options_dict["save_pickle"])
+            save_pickle = validate.boolean(options_dict["save_pickle"])
+            options_dict["save_pickle"] = save_pickle
+
         if "try_pickle" in options_dict:
-            self._try_pickle = validate.boolean(options_dict["try_pickle"])
+            try_pickle = validate.boolean(options_dict["try_pickle"])
+            options_dict["try_pickle"] = try_pickle
 
         if "auto_equilibration" in options_dict:
-            self._auto_equilibration = validate.boolean(
-                options_dict["auto_equilibration"])
+            auto_equilibration = validate.boolean(options_dict["auto_equilibration"])
+            options_dict["auto_equilibration"] = auto_equilibration
+
         if "statistical_inefficiency" in options_dict:
-            self._statistical_inefficiency = validate.boolean(
-                options_dict["statistical_inefficiency"])
+            statistical_inefficiency = validate.boolean(options_dict["statistical_inefficiency"])
+            options_dict["statistical_inefficiency"] = statistical_inefficiency
+
         if "truncate_percentage" in options_dict:
-            self._truncate_percentage = validate.integer(
-                options_dict["truncate_percentage"])
+            truncate_percentage = validate.integer(options_dict["truncate_percentage"])
+            options_dict["truncate_percentage"] = truncate_percentage
+
         if "truncate_keep" in options_dict:
-            self._truncate_keep = validate.string(
-                options_dict["truncate_keep"])
-            if self._truncate_keep not in ['start', 'end']:
+            truncate_keep = validate.string(options_dict["truncate_keep"])
+            if truncate_keep not in ['start', 'end']:
                 raise ValueError(
                     "'truncate_keep' must be either 'start' or 'end'.")
+            options_dict["truncate_percentage"] = truncate_percentage
+        
+        return options_dict
 
-        # reset the file extensions
+
+    def set_options(self, options_dict):
+
+        # first use staticmethod to get a new options dict
+        options_dict = analyse._set_options(options_dict)
+
+        # set self.options_dict for use w the file extension
+        self.options_dict = options_dict
+        # then set all of these to self options
+
+        self.estimator = options_dict["estimator"]
+        self._mbar_method = options_dict["mbar_method"]
+        self._check_overlap = options_dict["check_overlap"]
+        self.method = options_dict["method"]
+        self._save_pickle = options_dict["save_pickle"]
+        self._try_pickle = options_dict["try_pickle"]
+        self._auto_equilibration = options_dict["auto_equilibration"]
+        self._statistical_inefficiency = options_dict["statistical_inefficiency"]
+        self._truncate_percentage = options_dict["truncate_percentage"]
+        self._truncate_keep = options_dict["truncate_keep"]
+
+        # set the file extensions
         self._file_ext()
         self._pickle_ext()
 
