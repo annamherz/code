@@ -57,6 +57,7 @@ class analyse():
 
         self.estimator = "MBAR"
         self.method = "alchemlyb"
+        self._mbar_method = None
         self._check_overlap = True
         self._save_pickle = True
         self._try_pickle = True
@@ -68,8 +69,8 @@ class analyse():
         self._truncate_keep = "end"
 
     def _file_ext(self):
-
-        file_ext = (f"{self.estimator}_{self.method}_"+
+        
+        file_ext = (f"{self.estimator}_{self.method}_{self._mbar_method}_"+
                     f"eq{str(self._auto_equilibration).lower()}_"+
                     f"stats{str(self._statistical_inefficiency).lower()}_"+
                     f"truncate{str(self._truncate_percentage)}{self._truncate_keep}")
@@ -99,6 +100,11 @@ class analyse():
             self.estimator = validate.string(options_dict["estimator"])
             if self.estimator not in ['MBAR', 'TI']:
                 raise ValueError("'estimator' must be either 'MBAR' or 'TI'.")
+        if "mbar_method" in options_dict:
+            self._mbar_method = validate.string(
+                options_dict["mbar_method"])
+            if self._mbar_method not in ['robust', 'default', None]:
+                raise ValueError("'mbar_method' must be either 'robust' or 'default' or 'None'.")
         if "check_overlap" in options_dict:
             self._check_overlap = validate.boolean(
                 options_dict["check_overlap"])
@@ -262,7 +268,9 @@ class analyse():
         process_dict = {"auto_equilibration": self._auto_equilibration,
                         "statistical_inefficiency": self._statistical_inefficiency,
                         "truncate_percentage": self._truncate_percentage,
-                        "truncate_keep": self._truncate_keep}
+                        "truncate_keep": self._truncate_keep,
+                        "mbar_method": self._mbar_method
+                        }
 
         # Analyse the results for each leg of the transformation.
         for b in self._b_repeats:

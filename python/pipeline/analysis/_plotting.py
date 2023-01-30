@@ -229,6 +229,14 @@ class plotting_engines():
 
 
     def set_colours(self, colour_dict=None):
+        
+        set_colour_dict = self._set_colours(colour_dict)
+        self.colours = set_colour_dict
+
+        return set_colour_dict
+
+    @staticmethod
+    def _set_colours(colour_dict=None):
 
         default_colour_dict = {"AMBER":"orange",
                     "SOMD":"darkturquoise",
@@ -248,8 +256,6 @@ class plotting_engines():
                 # replace in the default dict and have this as new colour dict
                 default_colour_dict[key] = colour_dict[key]
                 colour_dict = default_colour_dict
-
-        self.colours = colour_dict
         
         return colour_dict
 

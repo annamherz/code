@@ -7,6 +7,7 @@ import re
 from ..utils import *
 from ._network import *
 from ._plotting import *
+from ._convergence import *
 from ._dictionaries import *
 
 import cinnabar
@@ -21,25 +22,7 @@ class analysis_network():
         self._results_directory = validate.folder_path(results_directory)
 
         # get engines for analysis
-        if not engines:
-            self.engines = BSS.FreeEnergy.engines()
-        else:
-            try:
-                try:
-                    engines = validate.is_list(engines)
-                    val_engines = []
-                    for engine in engines:
-                        engine_val = validate.engine(engine)
-                        val_engines.append(engine_val)
-                    self.engines = val_engines
-                # if single engine string, put into list
-                except:
-                    engines = validate.string(engines)
-                    engines = validate.engine(engines)
-                    self.engines = [engines]
-            except:
-                print("engine input not recognised. Will use all engines.")
-                self.engines = BSS.FreeEnergy.engines()
+        self.engines = validate.engines(engines)
         
         if not exp_file:
             print("please set an experimental yml file so this can be used, eg using .get_experimental(exp_file). ")
@@ -543,17 +526,6 @@ class analysis_network():
             error_dict.update({eng:error_list})
 
         plot_obj.histogram(engines=engine, error_dict=error_dict, file_ext=free_bound)
-
-    # def plot_convergence(self):
-
-    #     self._initalise_plotting_object(check=True)
-    #     plot_obj = self._plotting_object
-        
-    #     output_dir = f"{self.output_folder}/convergence_plots/{self.file_ext}"
-        
-    #     for pert in self.perturbations:
-    #         plot_obj.outlier(perturbation=pert, engines=self.engines, output_dir=output_dir)  
-
 
 
     def calc_mae(self, pert_val=None):

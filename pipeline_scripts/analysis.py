@@ -31,8 +31,11 @@ analysis_options = {'estimator': "MBAR", "method":"alchemlyb",
                     "check_overlap":True,
                     "try_pickle":True, 'save_pickle':True,
                     "auto_equilibration": False,
+                    "statistical_inefficiency": False,
                     "truncate_percentage": 0,
-                    "truncate_keep":"start"}
+                    "truncate_keep":"end",
+                    "mbar_method": "default" # robust or default
+                    }
 
 main_dir = _os.environ["MAINDIRECTORY"]
 

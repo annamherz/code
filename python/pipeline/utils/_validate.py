@@ -166,6 +166,39 @@ class validate():
         
         return engine.upper()
     
+    @staticmethod
+    def engines(engines=None):
+        """_summary_
+
+        Args:
+            engines (list or string, optional): engines to use. Defaults to None.
+
+        Returns:
+            list: a list of engines
+        """
+
+        # get engines for analysis
+        if not engines:
+            engines = BSS.FreeEnergy.engines()
+        else:
+            try:
+                try:
+                    engines = validate.is_list(engines)
+                    val_engines = []
+                    for engine in engines:
+                        engine_val = validate.engine(engine)
+                        val_engines.append(engine_val)
+                    engines = val_engines
+                # if single engine string, put into list
+                except:
+                    engines = validate.string(engines)
+                    engines = validate.engine(engines)
+                    engines = [engines]
+            except:
+                print("engine input not recognised. Will use all engines.")
+                engines = BSS.FreeEnergy.engines()
+        
+        return engines
 
     @staticmethod
     def lig_ff(lig_ff):

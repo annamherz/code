@@ -25,7 +25,8 @@ analysis_options = {'estimator': "MBAR", "method":"alchemlyb",
                     "try_pickle":False, 'save_pickle':False,
                     "auto_equilibration": False,
                     "truncate_percentage": 0,
-                    "truncate_keep":"start"}
+                    "truncate_keep":"start"
+                    }
 
 path_to_dir = "/backup/anna/benchmark/tyk2/outputs_extracted/SOMD/lig_ejm31~lig_ejm42"
 

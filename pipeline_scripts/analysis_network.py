@@ -39,6 +39,8 @@ elif os.path.exists(f"{main_dir}/outputs/results"):
 else:
     raise ValueError(f"results directory not found in the {main_dir}. please make sure results were written using the analysis script previously in the pipeline")
 
+ex_outputs_folder = f"{main_dir}/outputs_extracted"
+
 output_folder = f"{main_dir}/analysis"
 # TODO format options for final analysis
 # options that should be done in dict form
@@ -61,9 +63,10 @@ analysis_options = {'estimator': "MBAR", "method":"alchemlyb",
                     "auto_equilibration": False,
                     "statistical_inefficiency": False,
                     "truncate_percentage": 0,
-                    "truncate_keep":"start"}
+                    "truncate_keep":"start",
+                    "mbar_method": None}
 
-file_ext = str(f"{analysis_options['estimator']}_{analysis_options['method']}_"+
+file_ext = str(f"{analysis_options['estimator']}_{analysis_options['method']}_{analysis_options['mbar_method']}_"+
             f"eq{str(analysis_options['auto_equilibration']).lower()}_"+
             f"stats{str(analysis_options['statistical_inefficiency']).lower()}_"+
             f"truncate{str(analysis_options['truncate_percentage'])}{analysis_options['truncate_keep']}")
@@ -82,6 +85,17 @@ all_analysis_object.compute()
 
 # can add any other results files
 # all_analysis_object.compute_other_results(file_name=None, name=None)
+
+
+# plot convergence for all perturbations
+converg_obj = plot_convergence(ex_outputs_folder,
+                               perturbations=all_analysis_object.perturbations,
+                               engines=all_analysis_object.engines,
+                               file_ext=file_ext
+                               )
+
+converg_obj.plot_convergence_all()
+
 
 # plotting
 print("plotting results...")
