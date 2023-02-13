@@ -21,6 +21,7 @@ export ana_file="$MAINDIRECTORY/execution_model/analysis_protocol.dat"
 dos2unix "$lig_file"
 dos2unix "$net_file"
 dos2unix "$prot_file"
+dos2unix "$ana_file"
 
 # make sure using the correct BSS branch
 # cd /home/anna/BioSimSpace

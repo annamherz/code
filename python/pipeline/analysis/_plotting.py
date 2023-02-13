@@ -197,7 +197,7 @@ class plotting_engines():
         elif pv == "val":
             which_list = "ligs"
 
-        if name in self.other_results_names:
+        if name in self.other_results_names or name in self.engines:
             
             plotting_df_dict = {}
 

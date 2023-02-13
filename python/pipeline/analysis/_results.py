@@ -456,6 +456,11 @@ class analysis_network():
             plot_obj = self._plotting_object
             plot_obj.scatter(pert_val="val", engines=engine)
 
+    def plot_eng_vs_eng_pert(self, engine_a=None, engine_b=None, pert_val="pert"):
+        
+        self._initalise_plotting_object(check=True)
+        plot_obj = self._plotting_object
+        plot_obj.scatter(pert_val=pert_val, engines=engine_a, name=engine_b)
 
     def plot_other_results(self, name=None, engine=None, pert_val=None, outliers=None):
 

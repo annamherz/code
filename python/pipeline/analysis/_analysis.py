@@ -11,6 +11,7 @@ import pickle
 import csv
 
 from ..utils import *
+from ..prep import analysis_protocol
 
 
 class analyse():
@@ -57,7 +58,7 @@ class analyse():
                     "method":"alchemlyb",
                     "check overlap":True,
                     "try pickle":True,
-                    'save_pickle':True,
+                    'save pickle':True,
                     "auto equilibration": False,
                     "statistical inefficiency": False,
                     "truncate percentage": 0,
@@ -82,11 +83,14 @@ class analyse():
     
     @staticmethod
     def file_ext(options_dict):
+        
+        # validate any inputs in the dictionary
+        options_dict = analyse._set_options(options_dict)
 
-        file_ext = str(f"{options_dict['estimator']}_{options_dict['method']}_{options_dict['mbar_method']}_"+
-                    f"eq{str(options_dict['auto_equilibration']).lower()}_"+
-                    f"stats{str(options_dict['statistical_inefficiency']).lower()}_"+
-                    f"truncate{str(options_dict['truncate_percentage'])}{options_dict['truncate_keep']}")
+        file_ext = str(f"{options_dict['estimator']}_{options_dict['method']}_{options_dict['mbar method']}_"+
+                    f"eq{str(options_dict['auto equilibration']).lower()}_"+
+                    f"stats{str(options_dict['statistical inefficiency']).lower()}_"+
+                    f"truncate{str(options_dict['truncate percentage'])}{options_dict['truncate keep']}")
     
         return file_ext
     
@@ -104,6 +108,10 @@ class analyse():
 
     @staticmethod
     def _set_options(options_dict):
+        
+        # if analysis protocol is supplied, make sure to get the dictionary form
+        if isinstance(options_dict, analysis_protocol):
+            options_dict = options_dict.dictionary()
 
         options_dict = validate.dictionary(options_dict)
 
@@ -133,7 +141,7 @@ class analyse():
             options_dict["estimator"] = estimator
 
         if "mbar method" in options_dict:
-            method = validate.mbar_method(options_dict["mbar method"])
+            mbar_method = validate.mbar_method(options_dict["mbar method"])
             options_dict["mbar method"] = mbar_method
 
         if "check overlap" in options_dict:
