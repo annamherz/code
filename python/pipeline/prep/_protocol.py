@@ -56,6 +56,9 @@ class pipeline_protocol():
                     'sampling': '2',
                     'sampling unit': 'ns',
                     'hmr': 'False',
+                    'timestep overwrite': 'True',
+                    'timestep' : "2",
+                    "timestep unit" : "fs",
                     'repeats': '1',
                     'trajectories': "None",
                     'protein forcefield': 'ff14SB',
@@ -181,15 +184,17 @@ class pipeline_protocol():
             # choose timestep based on whether HMR is applied or not
             # this is important as BSS hmr mixin considers the timestep for the default auto
             self.hmr = validate.boolean(query_dict['hmr'])
-            self.timestep_unit = validate.time_unit("fs")
+            self.timestep_overwrite = validate.boolean(query_dict['timestep overwrite'])
+            self.timestep_unit = validate.time_unit(query_dict['timestep unit'])
+            self.timestep = validate.integer(query_dict["timestep"])
 
-            if self.hmr:
-                self.timestep = validate.integer(4)
-            else:
-                self.timestep = validate.integer(2)
-            
-            self._query_dict['timestep'] = self.timestep
-            self._query_dict['timestep unit'] = "fs"
+            # will overwrite the provided timestep based on default values
+            if self.timestep_overwrite:
+                self.timestep_unit = validate.time_unit("fs")
+                if self.hmr:
+                    self.timestep = validate.integer(4)
+                else:
+                    self.timestep = validate.integer(2)
 
             # is now validated
             self._is_validated = True

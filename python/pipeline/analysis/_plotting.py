@@ -382,7 +382,7 @@ class plotting_engines():
         plt.show()
 
 
-    def scatter(self, pert_val=None, engines=None, name=None):
+    def scatter(self, pert_val=None, engines=None, name=None, **kwargs):
 
         pert_val = validate.pert_val(pert_val)
 
@@ -495,25 +495,50 @@ class plotting_engines():
 
         plt.axhline(color="black", zorder=1)
         plt.axvline(color="black", zorder=1)
+        
+        # default
+        y_label = None
+        x_label = None
+        title = None
 
-        #plt.xlabel('ΔΔG for experimental (kcal/mol)')
-        #plt.ylabel('ΔΔG for calculated (kcal/mol)')
-        if name:
-            plt.title(f"Computed vs {name} for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}")
+        # check kwargs incase there is plotting info
+        for key,value in kwargs.items():
+            if key == "y label":
+                y_label = value
+            if key == "x label":
+                x_label = value
+            if key == "title":
+                title = value
+
+        if title:
+            plt.title(f"{title}")
         else:
-            plt.title(f"Computed vs Experimental for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}")
-        if pert_val == "pert":
-            plt.ylabel("$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
             if name:
-                plt.xlabel(f"{name} " + "$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+                plt.title(f"Computed vs {name}\nfor {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}")
             else:
-                plt.xlabel("Experimental $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
-        elif pert_val == "val":
-            plt.ylabel("$\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
-            if name:
-                plt.xlabel(f"{name} " + "$\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
-            else:
-                plt.xlabel("Experimental $\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+                plt.title(f"Computed vs Experimental\nfor {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}")
+        
+        if y_label:
+            plt.ylabel(f"{y_label}")
+        else:
+            if pert_val == "pert":
+                plt.ylabel("Computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+            elif pert_val == "val":
+                plt.ylabel("Computed $\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+
+        if x_label:
+            plt.xlabel(f"{x_label}")
+        else:
+            if pert_val == "pert":
+                if name:
+                    plt.xlabel(f"{name} " + "$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+                else:
+                    plt.xlabel("Experimental $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+            elif pert_val == "val":
+                if name:
+                    plt.xlabel(f"{name} " + "$\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+                else:
+                    plt.xlabel("Experimental $\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
 
         eng_name = self._get_eng_name(engines)
         plt.savefig(f"{self.graph_folder}/fep_vs_{exp_name}_scatterplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
@@ -644,9 +669,9 @@ class plotting_engines():
         plt.axvline(color="black", zorder=1)
 
         if name:
-            plt.title(f"Computed vs {name} outliers for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}")
+            plt.title(f"Computed vs {name} outliers\nfor {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}")
         else:
-            plt.title(f"Computed vs Experimental outliers for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}")
+            plt.title(f"Computed vs Experimental outliers\nfor {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}")
         if pert_val == "pert":
             plt.ylabel("$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
             if name:
