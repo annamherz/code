@@ -55,14 +55,14 @@ class analyse():
 
         options_dict = {'estimator': "MBAR",
                     "method":"alchemlyb",
-                    "check_overlap":True,
-                    "try_pickle":True,
+                    "check overlap":True,
+                    "try pickle":True,
                     'save_pickle':True,
-                    "auto_equilibration": False,
-                    "statistical_inefficiency": False,
-                    "truncate_percentage": 0,
-                    "truncate_keep":"end",
-                    "mbar_method": None # robust or default
+                    "auto equilibration": False,
+                    "statistical inefficiency": False,
+                    "truncate percentage": 0,
+                    "truncate keep":"end",
+                    "mbar method": None # robust or default
                     }
         
         return options_dict
@@ -129,59 +129,46 @@ class analyse():
         # replace as needed in the options dict
 
         if "estimator" in options_dict:
-            estimator = validate.string(options_dict["estimator"])
-            if estimator not in ['MBAR', 'TI']:
-                raise ValueError("'estimator' must be either 'MBAR' or 'TI'.")
+            estimator = validate.estimator(options_dict["estimator"])
             options_dict["estimator"] = estimator
 
-        if "mbar_method" in options_dict:
-            if options_dict["mbar_method"] is None:
-                mbar_method = options_dict["mbar_method"]
-            else:
-                mbar_method = validate.string(options_dict["mbar_method"])
-            if mbar_method not in ['robust', 'default', None]:
-                raise ValueError("'mbar_method' must be either 'robust' or 'default' or 'None'.")
-            options_dict["mbar_method"] = mbar_method
+        if "mbar method" in options_dict:
+            method = validate.mbar_method(options_dict["mbar method"])
+            options_dict["mbar method"] = mbar_method
 
-        if "check_overlap" in options_dict:
-            check_overlap = validate.boolean(options_dict["check_overlap"])
+        if "check overlap" in options_dict:
+            check_overlap = validate.boolean(options_dict["check overlap"])
             if check_overlap == "True" and estimator != "MBAR":
                 check_overlap = False
-            options_dict["check_overlap"] = check_overlap
+            options_dict["check overlap"] = check_overlap
 
         if "method" in options_dict:
-            method = validate.string(options_dict["method"])
-            if method not in ['alchemlyb', 'native']:
-                raise ValueError(
-                    "'estimator' must be either 'alchemlyb' or 'native'.")
+            method = validate.analysis_method(options_dict["method"])
             options_dict["method"] = method
 
-        if "save_pickle" in options_dict:
-            save_pickle = validate.boolean(options_dict["save_pickle"])
-            options_dict["save_pickle"] = save_pickle
+        if "save pickle" in options_dict:
+            save_pickle = validate.boolean(options_dict["save pickle"])
+            options_dict["save pickle"] = save_pickle
 
-        if "try_pickle" in options_dict:
-            try_pickle = validate.boolean(options_dict["try_pickle"])
-            options_dict["try_pickle"] = try_pickle
+        if "try pickle" in options_dict:
+            try_pickle = validate.boolean(options_dict["try pickle"])
+            options_dict["try pickle"] = try_pickle
 
-        if "auto_equilibration" in options_dict:
-            auto_equilibration = validate.boolean(options_dict["auto_equilibration"])
-            options_dict["auto_equilibration"] = auto_equilibration
+        if "auto equilibration" in options_dict:
+            auto_equilibration = validate.boolean(options_dict["auto equilibration"])
+            options_dict["auto equilibration"] = auto_equilibration
 
-        if "statistical_inefficiency" in options_dict:
-            statistical_inefficiency = validate.boolean(options_dict["statistical_inefficiency"])
-            options_dict["statistical_inefficiency"] = statistical_inefficiency
+        if "statistical inefficiency" in options_dict:
+            statistical_inefficiency = validate.boolean(options_dict["statistical inefficiency"])
+            options_dict["statistical inefficiency"] = statistical_inefficiency
 
-        if "truncate_percentage" in options_dict:
-            truncate_percentage = validate.integer(options_dict["truncate_percentage"])
-            options_dict["truncate_percentage"] = truncate_percentage
+        if "truncate percentage" in options_dict:
+            truncate_percentage = validate.integer(options_dict["truncate percentage"])
+            options_dict["truncate percentage"] = truncate_percentage
 
-        if "truncate_keep" in options_dict:
-            truncate_keep = validate.string(options_dict["truncate_keep"])
-            if truncate_keep not in ['start', 'end']:
-                raise ValueError(
-                    "'truncate_keep' must be either 'start' or 'end'.")
-            options_dict["truncate_percentage"] = truncate_percentage
+        if "truncate keep" in options_dict:
+            truncate_keep = validate.truncate_keep(options_dict["truncate keep"])
+            options_dict["truncate percentage"] = truncate_percentage
         
         return options_dict
 
@@ -196,15 +183,15 @@ class analyse():
         # then set all of these to self options
 
         self.estimator = options_dict["estimator"]
-        self._mbar_method = options_dict["mbar_method"]
-        self._check_overlap = options_dict["check_overlap"]
+        self._mbar_method = options_dict["mbar method"]
+        self._check_overlap = options_dict["check overlap"]
         self.method = options_dict["method"]
-        self._save_pickle = options_dict["save_pickle"]
-        self._try_pickle = options_dict["try_pickle"]
-        self._auto_equilibration = options_dict["auto_equilibration"]
-        self._statistical_inefficiency = options_dict["statistical_inefficiency"]
-        self._truncate_percentage = options_dict["truncate_percentage"]
-        self._truncate_keep = options_dict["truncate_keep"]
+        self._save_pickle = options_dict["save pickle"]
+        self._try_pickle = options_dict["try pickle"]
+        self._auto_equilibration = options_dict["auto equilibration"]
+        self._statistical_inefficiency = options_dict["statistical inefficiency"]
+        self._truncate_percentage = options_dict["truncate percentage"]
+        self._truncate_keep = options_dict["truncate keep"]
 
         # set the file extensions
         self._file_ext()
@@ -334,11 +321,11 @@ class analyse():
         bound_calculated = []
         free_calculated = []
 
-        process_dict = {"auto_equilibration": self._auto_equilibration,
-                        "statistical_inefficiency": self._statistical_inefficiency,
-                        "truncate_percentage": self._truncate_percentage,
-                        "truncate_keep": self._truncate_keep,
-                        "mbar_method": self._mbar_method
+        process_dict = {"auto equilibration": self._auto_equilibration,
+                        "statistical inefficiency": self._statistical_inefficiency,
+                        "truncate percentage": self._truncate_percentage,
+                        "truncate keep": self._truncate_keep,
+                        "mbar method": self._mbar_method
                         }
 
         # Analyse the results for each leg of the transformation.

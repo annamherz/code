@@ -9,19 +9,76 @@ from ..utils._validate import *
 class pipeline_protocol():
 
     def __init__(self, file, auto_validate=False):
-        # instantiate the class with the protocol file
-        self._prot_file = validate.file_path(file)
-        # print(self._prot_file)
-        self._query_dict = self._read_protocol()
-        # update query dict if anything is missing
-        self._query_dict = self._check_query()
+        """class for storing and validating protocol options from files or dictionary.
 
+        Args:
+            file (file path (or dictionary)): file with the options for the protocol. Alternatively a dictionary.
+            auto_validate (bool, optional): Whether to automatically validate the given input. Defaults to False.
+        """
+
+        try:
+            # instantiate the class with the protocol file
+            self._prot_file = validate.file_path(file)
+            # turn into a query dict as needed
+            self._query_dict = self._read_protocol()
+            is_file = True        
+        except Exception as e:
+            print(e)
+            print("file was not recognised, trying to read as dictionary...")
+            is_file = False
+        
+        if not is_file:
+            try:
+                self._query_dict = validate.dictionary(file)
+                self._prot_file = None
+            except Exception as e:
+                print(e)
+                raise TypeError("dictionary wasn't recognised either.")
+        
+        # update query dict if anything is missing
+        self._query_dict = self._check_query(self.default_dict())
+
+        # validated if needed
         auto_validate = validate.boolean(auto_validate)
         if auto_validate:
             self.validate()
             self._is_validated = True
         else:
             self._is_validated = False
+
+    def default_dict(self):
+
+        default_dict = {'ligand forcefield': 'gaff2',
+                    'solvent': 'TIP3P',
+                    'box edges': '30',
+                    'box edges unit': 'angstrom',
+                    'box type': 'cubic',
+                    'sampling': '2',
+                    'sampling unit': 'ns',
+                    'hmr': 'False',
+                    'repeats': '1',
+                    'trajectories': "None",
+                    'protein forcefield': 'ff14SB',
+                    'start temperature': '0',
+                    'end temperature': '300',
+                    'temperature': '300',
+                    'temperature unit': 'kelvin',
+                    'pressure': '1',
+                    'pressure unit': 'bar',
+                    'minimisation steps': '10000',
+                    'equilibrium runtime': '100',
+                    'equilibrium runtime unit': 'ps'
+                    }
+        
+        return default_dict
+
+    def dictionary(self):
+        """calls the dictionary made from the file, validated or not.
+
+        Returns:
+            dict: key value pairs for the given protocol
+        """
+        return self._query_dict
 
 
     def _read_protocol(self):
@@ -52,33 +109,11 @@ class pipeline_protocol():
         return query_dict
 
 
-    def _check_query(self):
+    def _check_query(self, default_dict):
         """fills in any gaps of the dict from the protocol file
         """
         
         query_dict = self._query_dict
-
-        default_dict = {'ligand forcefield': 'gaff2',
-                    'solvent': 'TIP3P',
-                    'box edges': '30',
-                    'box edges unit': 'angstrom',
-                    'box type': 'cubic',
-                    'sampling': '2',
-                    'sampling unit': 'ns',
-                    'hmr': 'False',
-                    'repeats': '1',
-                    'trajectories': "None",
-                    'protein forcefield': 'ff14SB',
-                    'start temperature': '0',
-                    'end temperature': '300',
-                    'temperature': '300',
-                    'temperature unit': 'kelvin',
-                    'pressure': '1',
-                    'pressure unit': 'bar',
-                    'minimisation steps': '10000',
-                    'equilibrium runtime': '100',
-                    'equilibrium runtime unit': 'ps'
-                    }
 
         # remove any unrecognised dictionary entries
         for query in list(query_dict):
@@ -96,10 +131,17 @@ class pipeline_protocol():
         return query_dict
 
     
-    def rewrite_protocol(self):
+    def rewrite_protocol(self, file_path=None):
         """ rewrite the protocol to the same file after validation
         """
-        new_file = self._prot_file
+        if file_path:
+            new_file = validate.string(file_path)
+        else:
+            if self._prot_file:
+                new_file = self._prot_file
+            else:
+                raise ValueError("there is no file to overwrite, please provide a 'file_path'")
+
         query_dict = self._query_dict
 
         with open(new_file, "w") as protocol_file:
@@ -115,7 +157,7 @@ class pipeline_protocol():
         query_dict = self._query_dict
 
         try:
-            # validate all the input dict
+            # validate all the input dict and replace in the query dict
             self.ligand_forcefield = validate.lig_ff(query_dict['ligand forcefield'])
             self.protein_forcefield = validate.prot_ff(query_dict['protein forcefield'])
             self.solvent = validate.solvent_ff(query_dict['solvent'])
@@ -140,6 +182,7 @@ class pipeline_protocol():
             # this is important as BSS hmr mixin considers the timestep for the default auto
             self.hmr = validate.boolean(query_dict['hmr'])
             self.timestep_unit = validate.time_unit("fs")
+
             if self.hmr:
                 self.timestep = validate.integer(4)
             else:
@@ -147,6 +190,8 @@ class pipeline_protocol():
             
             self._query_dict['timestep'] = self.timestep
             self._query_dict['timestep unit'] = "fs"
+
+            # is now validated
             self._is_validated = True
 
         except ValueError as e:
@@ -156,10 +201,64 @@ class pipeline_protocol():
     def print_protocol(self):
 
         if not self._is_validated:
-            print("please validate the pipeline protocol first.")
+            print("please validate the protocol first.")
         
         else:
             query_dict = self._query_dict
 
             for query in query_dict.keys():
                 print(f"{query} : {query_dict[query]}")
+
+
+class analysis_protocol(pipeline_protocol):
+
+    def __init__(self, file, auto_validate=False):
+        # inherit the init from other protocol too
+        super().__init__(file, auto_validate)
+
+    # read protocol inherited
+    # rewrite protocol also inherited
+    # print protocol also inherited
+    # check query also inherited but with new default dict
+
+    def default_dict(self):
+
+        default_dict = {'estimator': "MBAR",
+                        "method":"alchemlyb",
+                        "check overlap":True,
+                        "try pickle":True,
+                        'save pickle':True,
+                        "auto equilibration": False,
+                        "statistical inefficiency": False,
+                        "truncate percentage": 0,
+                        "truncate keep":"end",
+                        "mbar method": None # robust or default
+                        }
+        
+        return default_dict
+
+    def validate(self):
+        """validates all the input from the dict from the protocol file.
+        """
+        
+        query_dict = self._query_dict
+
+        try:
+            # validate all the input dict
+            self.estimator = validate.estimator(query_dict['estimator'])
+            self.method = validate.analysis_method(query_dict['method'])
+            self.check_overlap = validate.boolean(query_dict['check overlap'])
+            self.try_pickle = validate.boolean(query_dict['try pickle'])
+            self.save_pickle = validate.boolean(query_dict['save pickle'])
+            # self.auto_equililbration = validate.boolean(query_dict['auto equililbration'])
+            self.statistical_inefficiency = validate.boolean(query_dict['statistical inefficiency'])
+            self.truncate_percentage = validate.integer(query_dict["truncate percentage"])
+            self.truncate_keep = validate.truncate_keep(query_dict["truncate keep"])
+            self.mbar_method = validate.mbar_method(query_dict["mbar method"])
+            
+            # is now validated
+            self._is_validated = True
+
+        except ValueError as e:
+            print(f"There is a problem with the input provided in {self._prot_file}.\n Error is:\n {e}")
+

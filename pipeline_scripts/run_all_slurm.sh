@@ -15,6 +15,7 @@ export ligands_folder="/home/anna/Documents/benchmark/inputs/XXX"
 export lig_file="$MAINDIRECTORY/execution_model/ligands.dat"
 export net_file="$MAINDIRECTORY/execution_model/network.dat"
 export prot_file="$MAINDIRECTORY/execution_model/protocol.dat"
+export ana_file="$MAINDIRECTORY/execution_model/analysis_protocol.dat"
 
 # remove any ^M from end of file lines
 dos2unix "$lig_file"

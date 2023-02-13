@@ -554,6 +554,109 @@ class validate():
         return pert_val
 
     @staticmethod
+    def estimator(estimator):
+        """validates the estimator provided
+
+        Args:
+            estimator (str): whether MBAR or TI. If None, will use MBAR.
+
+        Raises:
+            TypeError: must be of type 'str'.
+            ValueError: must be either 'MBAR' or 'TI' so can be recognised by future scripts
+
+        Returns:
+           str: either 'MBAR' or 'TI'
+        """
+
+        if estimator:
+            estimator = validate.string(estimator).upper()
+        estimator_list = ["MBAR","TI",None]
+        if estimator not in estimator_list:
+            raise ValueError(f"estimator must be in {estimator_list}")
+        if not estimator:
+            estimator =  "MBAR"
+
+        return estimator
+
+    @staticmethod
+    def analysis_method(analysis_method):
+        """validates method to be used for analysis
+
+        Args:
+            analysis_method (str): whether alchemlyb or native
+
+        Raises:
+            TypeError: must be of type 'str'
+            ValueError: must be either 'alchemlyb' or 'native' so can be recognised by future scripts
+
+        Returns:
+           str: either 'alchemlyb' or 'native'
+        """
+
+        if analysis_method:
+            analysis_method = validate.string(analysis_method).lower()
+        method_list = ["alchemlyb","native",None]
+        if analysis_method not in method_list:
+            raise ValueError(f"analysis_method must be in {method_list}")
+        
+        if not analysis_method:
+            analysis_method = "alchemlyb"
+        
+        return analysis_method
+
+    @staticmethod
+    def mbar_method(mbar_method):
+        """validates if the mbar method is accepted
+
+        Args:
+            mbar_method (str): None or robust or default
+
+        Raises:
+            TypeError: must be of type 'str'
+            ValueError: must be either 'robust' or 'default' or None so can be recognised by future scripts
+
+        Returns:
+           str: either 'robust' or 'default' or 'None'
+        """
+
+        if mbar_method:
+            mbar_method = validate.string(mbar_method).lower()
+        method_list = ["robust","default",None]
+        if mbar_method not in method_list:
+            raise ValueError(f"mbar_method must be in {method_list}")
+        
+        if not mbar_method:
+            mbar_method = None
+        
+        return mbar_method
+
+    @staticmethod
+    def truncate_keep(truncate_keep):
+        """validates if the kept truncated string is accepted
+
+        Args:
+            truncate_keep (str): None or start or end
+
+        Raises:
+            TypeError: must be of type 'str'
+            ValueError: must be either 'start' or 'end' or None so can be recognised by future scripts
+
+        Returns:
+           str: either 'start' or 'end' or 'None'
+        """
+
+        if truncate_keep:
+            truncate_keep = validate.string(truncate_keep).lower()
+        method_list = ["start","end",None]
+        if truncate_keep not in method_list:
+            raise ValueError(f"truncate_keep must be in {method_list}")
+        
+        if not truncate_keep:
+            truncate_keep = "end"
+        
+        return truncate_keep
+    
+    @staticmethod
     def num_lambda(num_lambda):
         """validate number of lambdas to be run
 
@@ -585,7 +688,7 @@ class validate():
             protocol (pipeline.prep.pipeline_protocol): a previously
             read and validated pipeline protocol
 
-            fepprep (bool) : 
+            fepprep (bool) : whether it is needed for fep prep stage or not
 
         Returns:
             pipeline.prep.pipeline_protocol: the protocol if it is okay

@@ -18,24 +18,17 @@ except:
 
 from pipeline.analysis import *
 from pipeline.utils import write_analysis_file
+from pipeline.prep import *
 
 # someway that this is for the transformations listed in the csv file made at the start for the setup
 # or alternatively do this in bash
 trans = sys.argv[1].rstrip()
 engine = sys.argv[2].rstrip()
 
-# TODO add the different analysis options
+ana_file = os.environ["ana_file"]
 
 # options
-analysis_options = {'estimator': "MBAR", "method":"alchemlyb",
-                    "check_overlap":True,
-                    "try_pickle":True, 'save_pickle':True,
-                    "auto_equilibration": False,
-                    "statistical_inefficiency": False,
-                    "truncate_percentage": 0,
-                    "truncate_keep":"end",
-                    "mbar_method": "default" # robust or default
-                    }
+analysis_options = analysis_protocol(ana_file, auto_validate=True)
 
 main_dir = _os.environ["MAINDIRECTORY"]
 
