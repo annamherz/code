@@ -3,13 +3,14 @@
 
 # export important file locations
 export CURRENTDIR="$(pwd)"
-export MAINDIRECTORY="/home/anna/Documents/benchmark/tyk2_benchmark" # Set file path for protein
+export MAINDIRECTORY="/home/anna/Documents/benchmark/tyk2" # Set file path for protein
 export scripts_dir="/home/anna/Documents/code/pipeline_scripts" # choose location of scripts
 
 # export all execution model files for later scripts
-export lig_file="/home/anna/Documents/benchmark/tyk2_benchmark/execution_model/ligands.dat"
-export net_file="/home/anna/Documents/benchmark/tyk2_benchmark/execution_model/network_combined_reruns.dat"
-export prot_file="/home/anna/Documents/benchmark/tyk2_benchmark/execution_model/protocol.dat"
+export lig_file="$MAINDIRECTORY/execution_model/ligands.dat"
+export net_file="$MAINDIRECTORY/execution_model/network_combined.dat"
+export prot_file="$MAINDIRECTORY/execution_model/protocol.dat"
+export ana_file="$MAINDIRECTORY/execution_model/analysis_protocol.dat"
 
 # make sure engines etc are sourced correctly
 export PYTHONPATH=export PYTHONPATH="/home/anna/BioSimSpace/python:$PYTHONPATH" # if using a cloned git branch of BSS - otherwise comment out
@@ -33,8 +34,8 @@ echo ${win_array[@]}
 
 # extraction and analysis
 for i in "${!trans_array[@]}"; do
-echo "running extraction for $i"
-/bin/bash $scripts_dir/run_extract_output_slurm.sh ${trans_array[i]} ${eng_array[i]}
+# echo "running extraction for $i"
+# /bin/bash $scripts_dir/run_extract_output_slurm.sh ${trans_array[i]} ${eng_array[i]}
 echo "analysing $i"
 /bin/bash $scripts_dir/run_analysis_slurm.sh ${trans_array[i]} ${eng_array[i]}
 done

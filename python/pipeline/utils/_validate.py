@@ -621,11 +621,13 @@ class validate():
 
         if mbar_method:
             mbar_method = validate.string(mbar_method).lower()
-        method_list = ["robust","default",None]
+        method_list = ["robust","default",None, "none"]
         if mbar_method not in method_list:
             raise ValueError(f"mbar_method must be in {method_list}")
         
         if not mbar_method:
+            mbar_method = None
+        if mbar_method == "none":
             mbar_method = None
         
         return mbar_method

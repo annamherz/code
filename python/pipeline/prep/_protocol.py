@@ -255,7 +255,7 @@ class analysis_protocol(pipeline_protocol):
             self.check_overlap = validate.boolean(query_dict['check overlap'])
             self.try_pickle = validate.boolean(query_dict['try pickle'])
             self.save_pickle = validate.boolean(query_dict['save pickle'])
-            self.auto_equililbration = validate.boolean(query_dict['auto equililbration'])
+            self.auto_equililbration = validate.boolean(query_dict['auto equilibration']) 
             self.statistical_inefficiency = validate.boolean(query_dict['statistical inefficiency'])
             self.truncate_percentage = validate.integer(query_dict["truncate percentage"])
             self.truncate_keep = validate.truncate_keep(query_dict["truncate keep"])

@@ -143,6 +143,8 @@ class analyse():
         if "mbar method" in options_dict:
             mbar_method = validate.mbar_method(options_dict["mbar method"])
             options_dict["mbar method"] = mbar_method
+            if options_dict["estimator"] == "TI":
+                options_dict["mbar method"] = None
 
         if "check overlap" in options_dict:
             check_overlap = validate.boolean(options_dict["check overlap"])
@@ -473,10 +475,10 @@ class analyse():
             no_of_repeats = len(bound_calculated)
             repeats = list(range(no_of_repeats))
             for r in repeats:
-                freenrg_rel = BSS.FreeEnergy.Relative.difference(
+                freenrg_rel_rep = BSS.FreeEnergy.Relative.difference(
                     self._bound_pmf_dict[bound_calculated[r]], self._free_pmf_dict[free_calculated[r]])
-                freenrg_val = freenrg_rel[0]
-                freenrg_err = freenrg_rel[1]
+                freenrg_val = freenrg_rel_rep[0]
+                freenrg_err = freenrg_rel_rep[1]
                 repeats_tuple_list.append(
                     (f"{str(r)}_repeat", freenrg_val, freenrg_err))
 
@@ -493,10 +495,10 @@ class analyse():
             r = 0
             for b, f in zip(bound_calculated, free_calculated):
                 print(f"calculating repeat {r} as {b} and {f}.")
-                freenrg_rel = BSS.FreeEnergy.Relative.difference(
+                freenrg_rel_rep = BSS.FreeEnergy.Relative.difference(
                     self._bound_pmf_dict[b], self._free_pmf_dict[f])
-                freenrg_val = freenrg_rel[0]
-                freenrg_err = freenrg_rel[1]
+                freenrg_val = freenrg_rel_rep[0]
+                freenrg_err = freenrg_rel_rep[1]
                 repeats_tuple_list.append(
                     (f"{str(r)}_repeat", freenrg_val, freenrg_err))
                 r += 1

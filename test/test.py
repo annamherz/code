@@ -19,28 +19,14 @@ except:
 from pipeline.analysis import *
 from pipeline.utils import write_analysis_file
 
-# options
-analysis_options = {'estimator': "MBAR", "method":"alchemlyb",
-                    "check_overlap":True,
-                    "try_pickle":False, 'save_pickle':False,
-                    "auto_equilibration": False,
-                    "truncate_percentage": 0,
-                    "truncate_keep":"start"
-                    }
-
-path_to_dir = "/backup/anna/benchmark/tyk2/outputs_extracted/SOMD/lig_ejm31~lig_ejm42"
-
+main_dir = "/home/anna/Documents/benchmark/tyk2"
+path_to_dir = f"{main_dir}/outputs_extracted/AMBER/lig_ejm31~lig_ejm42"
 # using the pipeline module for analysis
 analysed_pert = analyse(path_to_dir)
+analysis_options = analysis_protocol(f"{main_dir}/execution_model/analysis_protocol.dat", auto_validate=True)
 analysed_pert.set_options(analysis_options)
 avg, error, repeats_tuple_list = analysed_pert.analyse_all_repeats()
-analysed_pert.plot_graphs()
-
-print(avg)
-print(error)
-# write the final result
-# write_analysis_file(analysed_pert, path_to_dir)
-# TODO change so also class method
+write_analysis_file(analysed_pert, f"{main_dir}/outputs_extracted/results")
 
 # # fwf exp data
 # print("fwf")
