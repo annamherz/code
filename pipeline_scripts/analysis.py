@@ -29,6 +29,7 @@ ana_file = os.environ["ana_file"]
 
 # options
 analysis_options = analysis_protocol(ana_file, auto_validate=True)
+analysis_options.rewrite_protocol()
 
 main_dir = _os.environ["MAINDIRECTORY"]
 

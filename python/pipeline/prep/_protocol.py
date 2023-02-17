@@ -56,6 +56,7 @@ class pipeline_protocol():
                     'sampling': '2',
                     'sampling unit': 'ns',
                     'hmr': 'False',
+                    'hmr factor': 'auto',
                     'timestep overwrite': 'True',
                     'timestep' : "2",
                     "timestep unit" : "fs",
@@ -184,6 +185,11 @@ class pipeline_protocol():
             # choose timestep based on whether HMR is applied or not
             # this is important as BSS hmr mixin considers the timestep for the default auto
             self.hmr = validate.boolean(query_dict['hmr'])
+            if self.hmr:
+                if query_dict['hmr factor'].lower() == "auto":
+                    self.hmr_factor = "auto"
+                else:
+                    self.hmr_factor = validate.is_float(query_dict['hmr factor'])
             self.timestep_overwrite = validate.boolean(query_dict['timestep overwrite'])
             self.timestep_unit = validate.time_unit(query_dict['timestep unit'])
             self.timestep = validate.integer(query_dict["timestep"])

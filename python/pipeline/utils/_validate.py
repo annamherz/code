@@ -316,6 +316,32 @@ class validate():
 
         return integer
 
+    @staticmethod
+    def is_float(value):
+        """validates the provided value so that it is a float
+
+        Args:
+            number (str or int or float): an integer / number to be converted into a float
+
+        Raises:
+            TypeError: must be of type 'str' or 'int' or 'float'
+            ValueError: 'str' could not be converted into a float
+
+        Returns:
+            float: float in float format
+        """
+
+        if not isinstance(value, float):
+            if not isinstance(value, int):
+                if not isinstance(value, str):
+                    raise TypeError(f"{value} must be of type 'int', 'float' or 'str'")
+
+        try:
+            value = float(value)
+        except:
+            raise ValueError(f"{value} could not be converted into an float")
+
+        return value
 
     @staticmethod
     def time_unit(time_unit):

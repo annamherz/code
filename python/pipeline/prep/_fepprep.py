@@ -31,21 +31,24 @@ class fepprep():
                                                                 runtime=protocol.eq_runtime*protocol.eq_runtime_unit,
                                                                 pressure=None,
                                                                 temperature_start=protocol.start_temperature*protocol.temperature_unit,
-                                                                temperature_end=protocol.end_temperature*protocol.temperature_unit
+                                                                temperature_end=protocol.end_temperature*protocol.temperature_unit,
+                                                                hmr_factor=protocol.hmr_factor
                                                                 )
             eq_protocol = BSS.Protocol.FreeEnergyEquilibration(timestep=protocol.timestep*protocol.timestep_unit,
                                                             num_lam=protocol.num_lambda,
                                                             runtime=protocol.eq_runtime*protocol.eq_runtime_unit,
                                                             temperature=protocol.temperature*protocol.temperature_unit,
                                                             pressure=protocol.pressure*protocol.pressure_unit,
-                                                            restart=True
+                                                            restart=True,
+                                                            hmr_factor=protocol.hmr_factor
                                                             )
             freenrg_protocol = BSS.Protocol.FreeEnergy(timestep=protocol.timestep*protocol.timestep_unit,
                                                         num_lam=protocol.num_lambda,
                                                         runtime=protocol.sampling*protocol.sampling_unit,
                                                         temperature=protocol.temperature*protocol.temperature_unit,
                                                         pressure=protocol.pressure*protocol.pressure_unit,
-                                                        restart=True
+                                                        restart=True,
+                                                        hmr_factor=protocol.hmr_factor
                                                     )
 
         elif protocol.engine == 'SOMD':
@@ -54,12 +57,14 @@ class fepprep():
                                                 temperature=protocol.temperature*protocol.temperature_unit,
                                                 runtime=(protocol.eq_runtime*2)*protocol.eq_runtime_unit,
                                                 pressure=protocol.pressure*protocol.pressure_unit,
+                                                hmr_factor=protocol.hmr_factor
                                                 )
             freenrg_protocol = BSS.Protocol.FreeEnergy(timestep=protocol.timestep*protocol.timestep_unit,
                                                         num_lam=protocol.num_lambda,
                                                         runtime=protocol.sampling*protocol.sampling_unit,
                                                         temperature=protocol.temperature*protocol.temperature_unit,
                                                         pressure=protocol.pressure*protocol.pressure_unit,
+                                                        hmr_factor=protocol.hmr_factor
                                                        )
 
         # set the new protocols to self as well
@@ -89,13 +94,18 @@ class fepprep():
             # set up for each the bound and the free leg
             for leg, system in zip(["bound", "free"], [system_bound, system_free]):
 
-                # repartition the hydrogen masses
+                # repartition the hydrogen masses, so only needs to be done once during the setup
                 if protocol.hmr == True:
                     print(f"repartitioning hydrogen masses for 4fs timestep for {leg}...")
-                    if protocol.engine == "AMBER":
-                        system.repartitionHydrogenMass(factor=3)
-                    elif protocol.engine == "GROMACS":
-                        system.repartitionHydrogenMass(factor=4)
+                    if protocol.hmr_factor == "auto":
+                        print("using default factors...")
+                        if protocol.engine == "AMBER":
+                            system.repartitionHydrogenMass(factor=3)
+                        elif protocol.engine == "GROMACS":
+                            system.repartitionHydrogenMass(factor=4)
+                    else:
+                        print(f"using {protocol.hmr_factor} as a factor...")
+                        system.repartitionHydrogenMass(factor=protocol.hmr_factor)
                 elif protocol.hmr == False:
                     pass
 
