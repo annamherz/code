@@ -3,6 +3,7 @@ import os
 import shutil
 
 import MDAnalysis as mda
+import MDAnalysis.transformations as trans
 
 from ._validate import *
 
@@ -271,12 +272,34 @@ class extract():
                         traj_files = validate.file_path(f"{direc}/gromacs.trr")
 
                     u = mda.Universe(coord_file, traj_files)
+                    if "free" in leg:
+                        u = extract.centre_molecule(u, "resname LIG")
+                    elif "bound" in leg:
+                        u = extract.centre_molecule(u, "protein")
+
+                    # want to write the frames for the 
                     extract._write_traj_frames(u, traj_extract_dir)
                     if rmsd:
                         extract._rmsd_trajectory(u, traj_extract_dir)
             
                 else:
                     pass
+
+    
+    @staticmethod
+    def centre_molecule(universe, selection):
+        
+        u = universe
+
+        # want to centre the protein/ligand
+        molecules = u.select_atoms(f'{selection}')
+        not_molecules = u.select_atoms(f'not {selection}')
+        transforms = [trans.unwrap(molecules),
+                    trans.center_in_box(molecules, wrap=True),
+                    trans.wrap(not_molecules)]
+        u.trajectory.add_transformations(*transforms)
+
+        return u
 
 
     @staticmethod
