@@ -6,6 +6,7 @@ import re
 
 from ..utils import *
 from ._network import *
+from ._analysis import *
 from ._plotting import *
 from ._convergence import *
 from ._dictionaries import *
@@ -17,7 +18,7 @@ class analysis_network():
     """class to analyse results files and plot
     """
 
-    def __init__(self, results_directory, exp_file=None, engines=None, net_file=None, output_folder=None, file_ext=None, extra_options=None):
+    def __init__(self, results_directory, exp_file=None, engines=None, net_file=None, output_folder=None, analysis_ext=None, extra_options=None):
         
         self._results_directory = validate.folder_path(results_directory)
 
@@ -46,11 +47,20 @@ class analysis_network():
             self.output_folder = validate.folder_path(output_folder, create=True)
             self.graph_dir = validate.folder_path(f"{output_folder}/graphs", create=True)
 
-        if not file_ext:
+        if not analysis_ext:
             self.file_ext = ".+" # wildcard, all files in the folder included
         else:
-            self.file_ext = validate.string(file_ext)
-            # TODO add so can also read in dictionary like analysis??
+            try:
+                # see if it is just a file extension name
+                self.file_ext = validate.string(file_ext)
+            except:
+                # read in a dictionary or analysis protocol file
+                try:
+                    analysis_options = analysis_protocol(analysis_ext, auto_validate=True)
+                    self.file_ext = analyse.file_ext(analysis_options)
+                except:
+                    raise TypeError(f"{analysis_ext} analysis ext must be either a string or an analysis protocol file/dictionary")
+
         
         # TODO add a file ext extra option for when writing out the files re naming eg so can incl diff networks
         # Actually add network info

@@ -810,7 +810,7 @@ class plotting_engines():
         plt.xlabel('Error')
         plt.ylabel('Frequency')  
         eng_name = self._get_eng_name(engines)
-        plt.title(f"Distribution of error for {type_error}, {eng}, {self.net_ext.replace('_',', ')}")
+        plt.title(f"Distribution of error for {type_error}, {eng_name}, {self.net_ext.replace('_',', ')}")
         plt.savefig(f"{self.graph_folder}/fep_vs_exp_normal_dist_{type_error}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
         plt.show()
 
