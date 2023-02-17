@@ -24,7 +24,7 @@ class merge():
 
         # Align ligand2 on ligand1
         mapping = BSS.Align.matchAtoms(
-            ligand_0, ligand_1, engine=engine, complete_rings_only=True)
+            ligand_0, ligand_1, complete_rings_only=True)           
         inv_mapping = {v: k for k, v in mapping.items()}
         ligand_2_a = BSS.Align.rmsdAlign(ligand_1, ligand_0, inv_mapping)
 
