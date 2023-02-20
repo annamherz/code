@@ -32,4 +32,4 @@ extraction = extract(folder)
 # get the output from the folder to new folder
 extraction.extract_output()
 # get trajectory, will get rmsd by default
-extraction.extract_frames(traj_lambdas=traj_lambdas)
+extraction.extract_frames(traj_lambdas=traj_lambdas, overwrite=True)

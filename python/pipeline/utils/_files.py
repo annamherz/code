@@ -3,15 +3,18 @@ import os
 
 from ._validate import *
 
-def write_analysis_file(analysis, results_dir):
+def write_analysis_file(analysis, results_dir, method=None):
 
     analysis = validate.analysis(analysis, analysed=True)
     results_dir = validate.folder_path(results_dir, create=True)
 
+    if not method:
+        method = "None"
+
     # data point for average
     data_point_avg = [analysis.ligand_0, analysis.ligand_1,
                       analysis.freenrg, analysis.error,
-                      analysis.engine, analysis.file_ext]
+                      analysis.engine, analysis.file_ext, method]
 
     # use csv to open the results file.
     final_summary_file = f"{results_dir}/final_summary_{analysis.engine.upper()}_{analysis.file_ext}.csv"
@@ -22,7 +25,7 @@ def write_analysis_file(analysis, results_dir):
         if os.path.getsize(final_summary_file) == 0:
             print(f"Starting {final_summary_file} file.")
             writer.writerow(["lig_0", "lig_1", "freenrg",
-                            "error", "engine", "method"])
+                            "error", "engine", "analysis", "method"])
 
 
     with open(final_summary_file, "r") as freenrg_readfile:
@@ -56,7 +59,8 @@ def write_analysis_file(analysis, results_dir):
                       analysis.repeats_tuple_list[r][1],
                       analysis.repeats_tuple_list[r][2],
                       analysis.engine,
-                      analysis.file_ext
+                      analysis.file_ext,
+                      method
                       ]
         results_file_path = f"{results_dir}/freenrg_repeat_{no_repeats.index(r)}_{analysis.engine.upper()}_{analysis.file_ext}.csv"
         with open(results_file_path, "a") as freenrg_writefile:
@@ -66,7 +70,7 @@ def write_analysis_file(analysis, results_dir):
             if os.path.getsize(results_file_path) == 0:
                 print(f"Starting {results_file_path} file.")
                 writer.writerow(["lig_0", "lig_1", "freenrg",
-                                "error", "engine", "estimator", "method"])
+                                "error", "engine", "analysis", "method"])
 
 
         with open(results_file_path, "r") as freenrg_readfile:
@@ -110,7 +114,8 @@ def write_analysis_file(analysis, results_dir):
                         val_dict[f"{r}_{name}"],
                         err_dict[f"{r}_{name}"],
                         analysis.engine,
-                        analysis.file_ext
+                        analysis.file_ext,
+                        method
                         ]
             results_file_path = f"{results_dir}/{name}_repeat_{no_repeats.index(r)}_{analysis.engine.upper()}_{analysis.file_ext}.csv"
             with open(results_file_path, "a") as freenrg_writefile:
@@ -120,7 +125,7 @@ def write_analysis_file(analysis, results_dir):
                 if os.path.getsize(results_file_path) == 0:
                     print(f"Starting {results_file_path} file.")
                     writer.writerow(["lig_0", "lig_1", "freenrg",
-                                    "error", "engine", "estimator", "method"])
+                                    "error", "engine", "analysis", "method"])
 
 
             with open(results_file_path, "r") as freenrg_readfile:

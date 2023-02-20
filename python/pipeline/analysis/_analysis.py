@@ -18,22 +18,45 @@ class analyse():
     """class to analyse a work dir 
     """
 
-    def __init__(self, work_dir):
+    def __init__(self, work_dir, pert=None, engine=None):
         # instantiate the class with the work directory
 
         self._work_dir = validate.folder_path(work_dir)
         self._pickle_dir = validate.folder_path(f"{self._work_dir}/pickle", create=True)
 
-        # get the perturbation name and engine from the folder path
-        try:
-            self.perturbation = self._work_dir.split("/")[-1]
-            self.ligand_0 = self.perturbation.split("~")[0]
-            self.ligand_1 = self.perturbation.split("~")[1]
-            self.engine = validate.engine(
-                self._work_dir.split("/")[-2].replace("_extracted", ""))
-        except:
-            warnings.warn(
-                "was unable to get the perturbation name and engine from the file path.\n please add these to the class using self.perturbation and self.engine")
+        if pert:
+            self.perturbation = validate.string(pert)
+            try:
+                self.ligand_0 = self.perturbation.split("~")[0]
+                self.ligand_1 = self.perturbation.split("~")[1]
+            except:
+                raise ValueError("please seperate the ligands in the pert using '~' so ligand 0 and ligand 1 can be identified.")
+        else:
+            try:
+                self.perturbation = self._work_dir.split("/")[-1]
+                self.ligand_0 = self.perturbation.split("~")[0]
+                self.ligand_1 = self.perturbation.split("~")[1]
+            except Exception as e:
+                print(e)
+                print("was unable to get the perturbation name and ligands from the file path.\n please add these when initialising using pert='lig_0~lig_1'.")            
+        
+        if engine:
+            self.engine = validate.engine(engine)
+        else:
+            try:
+                try:
+                    # first try to find in second position
+                    self.engine = validate.engine(
+                        self._work_dir.split("/")[-2].replace("_extracted", ""))
+                except:
+                    # then try to find anywhere in the folder path
+                    for eng in BSS.FreeEnergy.engines():
+                        if eng.upper() in self._work_dir.upper():
+                            self.engine = validate.engine(eng)
+                            print(f"found {eng.upper()} as engine in work_dir")
+            except Exception as e:
+                print(e)
+                print("was unable to get the engine from the file path.\n please add when initialising using engine='ENGINE'.")
 
         # initialise dictionaries
         self._bound_pmf_dict = {}  # for the intial results
@@ -464,9 +487,9 @@ class analyse():
         # create tuple list of each repeat that was calculated
         # first check the length of the calculated values and check if this is also the length of the folders found
         if len(bound_calculated) != self._no_of_b_repeats:
-            print("the number of calculated values for bound does not match the number of bound folders.\n maybe try reanalysing / check errors?")
+            print("the number of calculated values for bound does not match the number of bound folders.\n maybe try reanalysing/check errors?")
         if len(free_calculated) != self._no_of_f_repeats:
-            print("the number of calculated values for free does not match the number of free folders.\n maybe try reanalysing / check errors?")
+            print("the number of calculated values for free does not match the number of free folders.\n maybe try reanalysing/check errors?")
 
         # if the numebr of calculated values is the same, match these evenly
         if len(bound_calculated) == len(free_calculated):
