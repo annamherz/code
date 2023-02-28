@@ -23,6 +23,7 @@ class fepprep():
         protocol = self._pipeline_protocol
 
         if protocol.engine == 'AMBER' or protocol.engine == 'GROMACS':
+            
             min_protocol = BSS.Protocol.FreeEnergyMinimisation(num_lam=protocol.num_lambda,
                                                             steps=protocol.min_steps
                                                             )
@@ -52,6 +53,10 @@ class fepprep():
                                                     )
 
         elif protocol.engine == 'SOMD':
+
+            min_protocol = None
+            heat_protocol = None
+
             eq_protocol = BSS.Protocol.FreeEnergy(timestep=protocol.timestep*protocol.timestep_unit,
                                                 num_lam=protocol.num_lambda,
                                                 temperature=protocol.temperature*protocol.temperature_unit,
