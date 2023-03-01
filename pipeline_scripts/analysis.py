@@ -7,15 +7,6 @@ import os as _os
 
 BSS.setVerbose = True
 
-try:
-    import pipeline
-except:
-    print("adding code to the pythonpath...")
-    code = '/home/anna/Documents/code/python'
-    if code not in sys.path:
-        sys.path.insert(1, code)
-    import pipeline
-
 from pipeline.analysis import *
 from pipeline.utils import write_analysis_file
 from pipeline.prep import *

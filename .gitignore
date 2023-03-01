@@ -1,0 +1,19 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+.pytest_cache/
+python/pipeline.egg-info
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# build artifacts
+setup.out
+setup.err
+dist/
+build/
+
+# VSCode config
+.vscode/
