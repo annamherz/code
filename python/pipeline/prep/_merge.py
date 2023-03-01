@@ -8,29 +8,44 @@ class merge():
     """
 
     @staticmethod
-    def merge_ligands( ligand_0, ligand_1, engine_query):
+    def merge_ligands( ligand_0, ligand_1, **kwargs):
         """Merges two ligands in preperation for FEP run.
 
         Args:
-            ligand_0 (_type_): BSS molecule
-            ligand_1 (_type_): BSS molecule
-            engine_query (str): must be either AMBER, SOMD, GROMACS
+            ligand_0 (BioSimSpace._SireWrappers._molecule.Molecule): BSS molecule
+            ligand_1 (BioSimSpace._SireWrappers._molecule.Molecule): BSS molecule
+            kwargs (dict): 'allow ring breaking' as True or False
 
         Returns:
             BioSimSpace._SireWrappers._molecule.Molecule: merged ligands as BSS object
         """
 
-        engine = validate.engine(engine_query)
+        # default ring breaking is not allowed
+        allow_ring_breaking = False
+        prune_perturbed_constraints=None
+        prune_crossing_constraints=None
+
+        for key,value in kwargs.items():
+            if key == "allow ring breaking":
+                allow_ring_breaking = validate.boolean(value)
+            if key == "prune perturbed constraints":
+                prune_perturbed_constraints = validate.boolean(value)
+            if key == "prune crossing constraints":
+                prune_crossing_constraints = validate.boolean(value)           
 
         # Align ligand2 on ligand1
         mapping = BSS.Align.matchAtoms(
-            ligand_0, ligand_1, complete_rings_only=True)           
+                                    ligand_0, ligand_1,
+                                    complete_rings_only=True,
+                                    prune_perturbed_constraints=prune_perturbed_constraints,
+                                    prune_crossing_constraints=prune_crossing_constraints
+                                    )           
         inv_mapping = {v: k for k, v in mapping.items()}
         ligand_2_a = BSS.Align.rmsdAlign(ligand_1, ligand_0, inv_mapping)
 
         # Generate merged molecule.
         merged_ligands = BSS.Align.merge(
-            ligand_0, ligand_2_a, mapping, allow_ring_breaking=True)
+            ligand_0, ligand_2_a, mapping, allow_ring_breaking=allow_ring_breaking)
 
         return merged_ligands
     

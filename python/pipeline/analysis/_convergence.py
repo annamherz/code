@@ -121,10 +121,8 @@ class plot_convergence():
         plt.figure()
         lines = []
         for eng in engines:
-            # with open (f'/home/anna/Documents/benchmark/{prot}/outputs/{eng}/{perturbation}/bound_pmf_{perturbation}_{eng}.pickle', 'rb') as handle:
             with open (f'{self.outputs_dir}/{eng}/{perturbation}/pickle/bound_pmf_{perturbation}_{eng}_{self.file_ext}.pickle', 'rb') as handle:
                 bound_pmf_dict = pickle.load(handle)
-            # with open (f'/home/anna/Documents/benchmark/{prot}/outputs/{eng}/{perturbation}/free_pmf_{perturbation}_{eng}.pickle', 'rb') as handle:
             with open (f'{self.outputs_dir}/{eng}/{perturbation}/pickle/free_pmf_{perturbation}_{eng}_{self.file_ext}.pickle', 'rb') as handle:
                 free_pmf_dict = pickle.load(handle)
             lines += plt.plot(0,0,c=self.colours[eng], label=eng)

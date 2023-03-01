@@ -203,6 +203,9 @@ class extract():
 
         if traj_lambdas:
             traj_lambdas = validate.is_list(traj_lambdas)
+        else:
+            print("no traj_lambdas provided, will not extract any frames.")
+            traj_lambdas = []
 
         for item in items_in_folder:
             if not "pickle" in item:
