@@ -1,5 +1,6 @@
 import csv
 import os
+import numpy as np
 
 from ._validate import *
 
@@ -227,3 +228,71 @@ def write_modified_results_files(results_files, perturbations, output_folder=Non
                         writer.writerow([index['lig_1'], index['lig_2'], index['freenrg'], index['error'], index['engine']])    
 
             mod_results_files.append(new_file_name)
+
+
+def write_protocol(query_dict, file_path):
+
+    file = validate.string(file_path)
+
+    query_dict = validate.dictionary(query_dict)
+
+    with open(file, "w") as protocol_file:
+        writer = csv.writer(protocol_file)
+        for query in query_dict.keys():
+            writer.writerow([f"{query} = {query_dict[query]}"])
+
+def write_ligands(ligand_names, file_path):
+
+    ligand_names = validate.is_list(ligand_names)
+    file = validate.string(file_path)
+
+    with open(file, "w") as ligands_file:
+        writer = csv.writer(ligands_file)
+        for lig in ligand_names:
+            writer.writerow([lig])               
+
+def write_lomap_scores(pert_network_dict, file_path):
+
+    file = validate.string(file_path)
+    pert_network_dict = validate.dictionary(pert_network_dict)
+
+    with open(file, "w") as scores_file:
+        writer = csv.writer(scores_file)
+
+        for transf in sorted(pert_network_dict.keys()):
+            score = pert_network_dict[transf]
+            writer.writerow([transf[0], transf[1], score])
+
+def write_network(pert_network_dict, protocol, file_path):
+
+    # validate inputs
+    file = validate.string(file_path)
+    pert_network_dict = validate.dictionary(pert_network_dict)
+    protocol = validate.pipeline_protocol(protocol)
+
+    # write perts file. Base the lambda schedule on the file generated in the previous cell.
+    np.set_printoptions(formatter={'float': '{: .4f}'.format})
+
+    with open(file, "w") as network_file:
+
+        writer = csv.writer(network_file, delimiter=" ")
+        
+        for pert, lomap_score in pert_network_dict.items():
+            # # based on the provided (at top of notebook) lambda allocations and LOMAP threshold, decide allocation.
+            # if lomap_score == None or lomap_score < float(node.getInput("LOMAP Threshold")):
+            #     num_lambda = node.getInput("DiffLambdaWindows")
+            # else:
+            #     num_lambda = node.getInput("LambdaWindows")
+            
+            num_lambda = protocol.num_lambda()# same no lamdda windows for all
+        
+            # given the number of allocated lambda windows, generate an array for parsing downstream.
+            lam_array_np = np.around(np.linspace(0, 1, int(num_lambda)), decimals=5)
+
+            # make the array into a format readable by bash.
+            lam_array = str(lam_array_np).replace("[ ", "").replace("]", "").replace("  ", ",").replace('\n', '')
+
+            # write out both directions for this perturbation.
+            for eng in protocol.engine():
+                writer.writerow([pert[0], pert[1], len(lam_array_np), lam_array, eng])
+                # writer.writerow([pert[1], pert[0], len(lam_array_np), lam_array, engine])   

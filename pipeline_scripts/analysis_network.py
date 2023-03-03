@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 # analysis script for plotting and stats for all the diff engines
 # anna
 

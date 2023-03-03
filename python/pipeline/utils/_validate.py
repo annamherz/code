@@ -192,8 +192,11 @@ class validate():
                 # if single engine string, put into list
                 except:
                     engines = validate.string(engines)
-                    engines = validate.engine(engines)
-                    engines = [engines]
+                    if engines.upper() == "ALL":
+                        engines = BSS.FreeEnergy.engines()
+                    else:
+                        engines = validate.engine(engines)
+                        engines = [engines]
             except:
                 print("engine input not recognised. Will use all engines.")
                 engines = BSS.FreeEnergy.engines()
@@ -740,9 +743,29 @@ class validate():
                 raise TypeError("protocol must have an engine to be used for fep.\n please set an engine using protocol.engine = 'ENGINE' ")
             else:
                 protocol.engine = validate.engine(protocol.engine)
+                # TODO someway to check that it is just one engine for the fepprep
 
         return protocol
 
+    @staticmethod
+    def analysis_protocol(protocol):
+        """check if the passed protocol is a correct analysis_protocol
+
+        Args:
+            protocol (pipeline.prep.analysis_protocol): a previously
+            read and validated pipeline protocol
+
+        Returns:
+            pipeline.prep.analysis_protocol: the protocol if it is okay
+        """
+
+        if not isinstance(protocol, pipeline.prep.analysis_protocol):
+            raise TypeError("'protocol' must be of type 'pipeline.prep.analysis_protocol'.")
+
+        # validate incase it wasnt
+        protocol.validate()
+
+        return protocol
 
     @staticmethod
     def system(system):

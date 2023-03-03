@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 # FEP prep
 # get all inputs from the overall pipeline
 # create the free and bound merged systems
@@ -20,7 +22,7 @@ trans = sys.argv[1]
 lig_1 = trans.split('~')[0]
 lig_2 = trans.split('~')[1]
 engine_query = str(sys.argv[2]).upper()
-num_lambda = int(sys.argv[3])
+num_lambda_query = int(sys.argv[3])
 
 # files that were set in the run_all script
 main_dir = os.environ["MAINDIRECTORY"]
@@ -35,13 +37,13 @@ with open(net_file, "r") as lambdas_file:
     reader = csv.reader(lambdas_file, delimiter=" ")
     for row in reader:
         if (row[0] == lig_1 and row[1] == lig_2) or (row[1] == lig_1 and row[0] == lig_2):
-            if int(row[2]) == num_lambda:
+            if int(row[2]) == num_lambda_query:
                 if str(row[-1]).upper() == engine_query:
                     found = True
 
 if not found:
     raise NameError(
-        f"The perturbation {trans} (or the reverse) with {num_lambda} windows using {engine_query} was not found in {net_file}.")
+        f"The perturbation {trans} (or the reverse) with {num_lambda_query} windows using {engine_query} was not found in {net_file}.")
 
 # parse protocol file
 print("reading in the protocol file...")
@@ -53,8 +55,8 @@ protocol.validate() # validate all the input
 # print("the protocol is now:")
 # protocol.print_protocol()
 # add the number of lambdas and engine to the protocol
-protocol.num_lambda = validate.num_lambda(num_lambda)
-protocol.engine = validate.engine(engine_query)
+protocol.num_lambda(num_lambda_query)
+protocol.engine(engine_query)
 
 
 # create the system for each the free and the bound leg.

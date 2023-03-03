@@ -1,4 +1,4 @@
-#! /bin/bash 
+#!/bin/bash 
 # script to turn the execution model files into bash suitable arrays and variables.
 
 # define the number of repeats in an array

@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 # ligand prep
 
 import BioSimSpace as BSS
@@ -52,7 +54,7 @@ except: # mol2 if sdf is not available
 
 # paramaterise the ligand
 print(f"Parameterising {lig_name}...")
-lig_p = ligprep.lig_paramaterise(ligand, protocol.ligand_forcefield)
+lig_p = ligprep.lig_paramaterise(ligand, protocol.ligand_forcefield())
 
 # Combine protein, ligand and crystallographic waters.
 system = lig_p + prot_wat
@@ -66,10 +68,10 @@ for leg, leg_mol in zip(legs, legs_mols):
     # solvate
     print(f"Solvating {leg} for {lig_name}...")
     leg_mol_solvated = ligprep.minimum_solvation(leg_mol,
-                                                protocol.solvent,
-                                                protocol.box_type,
-                                                protocol.box_edges,
-                                                protocol.box_edges_unit)
+                                                protocol.solvent(),
+                                                protocol.box_type(),
+                                                protocol.box_edges(),
+                                                protocol.box_edges_unit())
 
     # saving pre runs
     print(f"Saving solvated for {leg} and {lig_name}")

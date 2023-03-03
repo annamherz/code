@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 # analysis script for a single pert
 # anna
 

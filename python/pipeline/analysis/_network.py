@@ -168,10 +168,10 @@ class net_graph():
             font_color = "white")
 
         if self._save_image:
-            plt.savefig(f"{self.file_dir}/analysis_network.png", dpi=300)
+            plt.savefig(f"{self.file_dir}/network.png", dpi=300)
         if file_dir:
             file_dir = validate.folder_path(file_dir, create = True)
-            plt.savefig(f"{file_dir}/analysis_network.png", dpi=300)
+            plt.savefig(f"{file_dir}/network.png", dpi=300)
 
         plt.show()
 

@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 # import BioSimSpace as BSS
 import sys
 
@@ -11,13 +13,13 @@ prot_file = os.environ["prot_file"] # protocol file
 
 # read in protocol
 protocol = pipeline_protocol(prot_file, auto_validate=True)
-if protocol.trajectories == "None":
+if protocol.trajectories() == "None":
     traj_lambdas = []
-if protocol.trajectories == "0,0.5,1":
+if protocol.trajectories() == "0,0.5,1":
     traj_lambdas = ["0.0000","0.5000","1.0000"]
-if protocol.trajectories == "0,1":
+if protocol.trajectories() == "0,1":
     traj_lambdas = ["0.0000","1.0000"]
-if protocol.trajectories == "All":
+if protocol.trajectories() == "All":
     # TODO get lambda windows from network file
     traj_lambdas = ["0.0000","0.5000","1.0000"]
 
