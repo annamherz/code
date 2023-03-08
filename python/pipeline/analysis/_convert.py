@@ -23,6 +23,12 @@ import pandas as pd
 
 from ..utils import *
 
+# conversion of constants
+from scipy.constants import R, calorie
+kJ2kcal = 1 / calorie
+R_kJmol = R / 1000
+R_kcalmol = R_kJmol * kJ2kcal
+
 class convert:
     """class of static methods for converting data 
     """
@@ -57,20 +63,23 @@ class convert:
                     writer.writerow([key, "{:.4f}".format(data[key]['measurement']['value']/1000), data[key]['measurement']['error']/1000])
 
     @staticmethod
-    def convert_M_kcal(value, magnitude = "uM"):
-        temp = 300
+    def convert_M_kcal(value, magnitude = "uM", temp=300):
         if magnitude == "uM":
             power = 10**-6
+        if magnitude == "nM":
+            power = 10**-9
         # gas constant in kcal per Kelvin per mol, exp val converted into M
-        kcal_val = 0.0019872041*temp*np.log(value*(power))
+        kcal_val = R_kcalmol*temp*np.log(value*(power))
 
         return kcal_val
 
     @staticmethod
-    def yml_into_exper_dict(exp_file, data_format=None):
+    def yml_into_exper_dict(exp_file, data_format=None, temp=300):
         
         exp_file = validate.file_path(exp_file)
+        temp = validate.is_float(temp)
 
+        # TODO different data formats
         with open(exp_file, "r") as file:
             data = yaml.safe_load(file) # loads as dictionary
 
@@ -82,21 +91,22 @@ class convert:
                 exper_raw_dict[key] = ("{:.4f}".format(data[key]['measurement']['value']/1000), data[key]['measurement']['error']/1000)
 
         exper_val_dict = {}
+
         for key in exper_raw_dict.keys():
 
                 lig = str(key)
 
                 exp_val = float(exper_raw_dict[key][0])
                 # convert into kcal mol
-                exp_kcal = convert.convert_M_kcal(exp_val)
+                exp_kcal = convert.convert_M_kcal(exp_val, temp=temp)
 
                 # convert both upper and lower error bounds for this too
                 # get average and keep this as the error
                 err = float(exper_raw_dict[key][1])
                 exp_upper = exp_val + err
                 exp_lower = exp_val - err
-                exp_upper_kcal = convert.convert_M_kcal(exp_upper)
-                exp_lower_kcal = convert.convert_M_kcal(exp_lower)
+                exp_upper_kcal = convert.convert_M_kcal(exp_upper, temp=temp)
+                exp_lower_kcal = convert.convert_M_kcal(exp_lower, temp=temp)
                 err_kcal = abs(exp_upper_kcal - exp_lower_kcal)/2
 
                 # add to dict
@@ -146,18 +156,27 @@ class convert:
             writer.writerow(["# Calculated block"])
             writer.writerow(["# Ligand1","Ligand2","calc_DDG","calc_dDDG(MBAR)", "calc_dDDG(additional)"])
 
+            # write each perturbation and repeat to the file
             for file in results_files:
                 with open(file, "r") as res_file:
                     for line in res_file:
                         if "freenrg" in line: # avoid the header
                             pass
-                        else:                           # write each perturbation and repeat to the file
+                        else:                           
+                            # assume here as this is normal format of files
                             lig_0 = line.split(",")[0]
                             lig_1 = line.split(",")[1]
                             comp_ddG = line.split(",")[2]
                             comp_err = line.split(",")[3]
 
-                            # assume here as this is normal format of files
+                            # try to validate as float
+                            try:
+                                comp_ddG = validate.is_float(comp_ddG)
+                                comp_err = validate.is_float(comp_err)
+                            except:
+                                pass
+                            
+                            # if not float, try to validate as BSS with unit
                             if not isinstance(comp_ddG, float):
                                 comp_ddG = BSS.Types.Energy(float(comp_ddG.split()[0]),comp_ddG.split()[-1]).value()
                             else:

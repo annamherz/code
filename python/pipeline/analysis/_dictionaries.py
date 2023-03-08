@@ -291,7 +291,10 @@ class make_dict():
                 add_dict = False
             
             if add_dict:
-                freenrg_dict.update({pert_name:(edge[2][f"{calc_exp}_DDG"], edge[2][f"{calc_exp}_dDDG"])})
+                try:
+                    freenrg_dict.update({pert_name:(edge[2][f"{calc_exp}_DDG"], edge[2][f"{calc_exp}_dDDG"])})
+                except:
+                    print(f"{pert_name} value not computed. cannot add to dictionary")
         
         return freenrg_dict
 
@@ -304,7 +307,10 @@ class make_dict():
         freenrg_dict = {}
 
         for node in network.graph.nodes(data=True):
-            freenrg_dict.update({node[1]["name"]:(node[1][f"{calc_exp}_DG"], node[1][f"{calc_exp}_dDG"])})
+            try:
+                freenrg_dict.update({node[1]["name"]:(node[1][f"{calc_exp}_DG"], node[1][f"{calc_exp}_dDG"])})
+            except:
+                print(f"{node[1]['name']} value not computed. cannot add to dictionary")
         
         if normalise:
             normalised_freenrg_dict = make_dict._normalise_data(freenrg_dict)
@@ -333,9 +339,12 @@ class make_dict():
         new_exper_val_dict ={}
 
         for lig in ligands:
-            exper_dG = exper_val_dict[lig][0]
-            exper_err = exper_val_dict[lig][1]
-            new_exper_val_dict.update({lig:(exper_dG, exper_err)})
+            if lig not in exper_val_dict.keys():
+                print(f"{lig} not found in experimental values. Please add to the experimental file.")
+            else:
+                exper_dG = exper_val_dict[lig][0]
+                exper_err = exper_val_dict[lig][1]
+                new_exper_val_dict.update({lig:(exper_dG, exper_err)})
         
         if normalise:
             normalised_exper_val_dict = make_dict._normalise_data(new_exper_val_dict)

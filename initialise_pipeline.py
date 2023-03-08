@@ -4,13 +4,6 @@ from argparse import ArgumentParser
 import os
 from pipeline.setup import *
 
-# ligand ff
-# samplign time
-# repeats
-# hmr 
-# trajectories
-# FEP engine
-
 def ask_things():
     lig_ff = str(input("what is the Ligand forcefield? (allowed: GAFF2, Parsely, Sage): ")).strip()
     sampling_time = str(input("what is the sampling time? (in ns): ")).strip()

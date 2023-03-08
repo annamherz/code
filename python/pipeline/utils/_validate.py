@@ -73,11 +73,12 @@ class validate():
 
 
     @staticmethod
-    def is_list(a_list):
+    def is_list(a_list, make_list=False):
         """validates the list
 
         Args:
-            a_list (list): the list
+            a_list (list): the list.
+            make_list (boolean): if to make into a list if a single value.
 
         Raises:
             TypeError: must be of type 'list'
@@ -85,8 +86,13 @@ class validate():
         Returns:
             a_list: the list
         """
+        make_list = validate.boolean(make_list)
+        
         if not isinstance(a_list, list):
-            raise TypeError(f"{a_list} / 'a_list' must be of type 'list'.")
+            if make_list:
+                a_list = [a_list]
+            else:
+                raise TypeError(f"{a_list} / 'a_list' must be of type 'list'.")
         
         return a_list
 

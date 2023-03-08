@@ -120,13 +120,22 @@ class plotting_engines():
 
         # run for all engines with selected network and populate the dictionary for plotting
         for eng in self.engines:
-            # get perts and ligands for each engine
-            pert_lig = get_info_network_from_dict(self.calc_pert_dict[eng])
-            values_dict[eng]["perts"] = pert_lig[0]
-            values_dict[eng]["ligs"] = pert_lig[1]
-            # put results into values dict
-            values_dict[eng]["pert_results"] = self.calc_pert_dict[eng]
-            values_dict[eng]["val_results"] = self.calc_val_dict[eng]
+            try:
+                # get perts and ligands for each engine
+                pert_lig = get_info_network_from_dict(self.calc_pert_dict[eng])
+                values_dict[eng]["perts"] = pert_lig[0]
+                values_dict[eng]["ligs"] = pert_lig[1]
+                # put results into values dict
+                values_dict[eng]["pert_results"] = self.calc_pert_dict[eng]
+                values_dict[eng]["val_results"] = self.calc_val_dict[eng]
+            
+            except Exception as e:
+                values_dict[eng]["perts"] = [None]
+                values_dict[eng]["ligs"] = [None]
+                values_dict[eng]["pert_results"] = [None]
+                values_dict[eng]["val_results"] = [None]
+                print(e)
+                print(f"could not convert {eng} values for plotting. None will be used. Was earlier analysis okay?")
 
 
         values_dict["experimental"]["perts"] = self.perturbations
@@ -172,11 +181,15 @@ class plotting_engines():
                     which_list = "ligs"
 
                 for value in self.values_dict[eng][which_list]:
-                    exp_ddG = self.values_dict["experimental"][f"{pv}_results"][value][0]
-                    exp_err = self.values_dict["experimental"][f"{pv}_results"][value][1]
-                    comp_ddG = self.values_dict[eng][f"{pv}_results"][value][0]
-                    comp_err = self.values_dict[eng][f"{pv}_results"][value][1]
-                    freenrg_pert_dict[value] = [exp_ddG, exp_err, comp_ddG, comp_err]
+                    try:
+                        exp_ddG = self.values_dict["experimental"][f"{pv}_results"][value][0]
+                        exp_err = self.values_dict["experimental"][f"{pv}_results"][value][1]
+                        comp_ddG = self.values_dict[eng][f"{pv}_results"][value][0]
+                        comp_err = self.values_dict[eng][f"{pv}_results"][value][1]
+                        freenrg_pert_dict[value] = [exp_ddG, exp_err, comp_ddG, comp_err]
+                    except Exception as e:
+                        # print(e)
+                        print(f"could not convert analysis object {value}, {eng}, {pv}, into dataframe. Was it able to be computed earlier?")
                 freenrg_df = pd.DataFrame(freenrg_pert_dict, index=["freenrg_exp", "err_exp", "freenrg_fep", "err_fep"]).transpose()
                 
                 freenrg_df_dict[eng][pv] = freenrg_df
@@ -214,12 +227,26 @@ class plotting_engines():
                         comp_err = self.values_dict[eng][f"{pv}_results"][value][1]
                         plotting_dict[value] = [exp_ddG, exp_err, comp_ddG, comp_err]
                     except:
-                        warnings.warn(f"{value} is not available in {name}.")
+                        print(f"{value} is not available in {name}.")
 
                 plotting_df = pd.DataFrame(plotting_dict, index=[f"freenrg_{name}", f"err_{name}", "freenrg_fep", "err_fep"]).transpose()
                 plotting_df_dict[eng][pv] = plotting_df
 
             return plotting_df_dict
+
+    @staticmethod
+    def _prune_perturbations(df, perturbations):
+
+        # keep only specified perturbations in the dataframe
+        to_del = []
+        for pert in df.index:
+            if pert not in perturbations:
+                to_del.append(pert)
+
+        for pert in to_del:
+            df = df.drop(index=[pert])
+
+        return df
 
 
     def _set_style(self):
@@ -329,7 +356,7 @@ class plotting_engines():
         
         return engines
 
-    def bar(self, pert_val=None, engines=None):
+    def bar(self, pert_val=None, engines=None, perturbations=None, extra_options=None):
 
         pert_val = validate.pert_val(pert_val)
 
@@ -342,8 +369,15 @@ class plotting_engines():
             bar_spacing = self._bar_spacing
             width = self._bar_width
 
+        if not perturbations:
+            perturbations = self.perturbations
+        else:
+            perturbations = validate.is_list(perturbations)
+
         plt.rc('font', size=12)
         fig, ax = plt.subplots(figsize=(15,8))
+
+        # df_dict = freenrg_df_plotting
 
         for eng in engines:
 
@@ -352,6 +386,9 @@ class plotting_engines():
             
             freenrg_df_plotting = self.freenrg_df_dict[eng][pert_val].fillna(0)
 
+            # prune df to only have perturbations considered
+            freenrg_df_plotting = self._prune_perturbations(freenrg_df_plotting, perturbations)
+
             # determine positions for X axis labels.
             x_locs = np.arange(len(freenrg_df_plotting))
 
@@ -359,9 +396,10 @@ class plotting_engines():
             ax.bar(x_locs + space, height=freenrg_df_plotting["freenrg_fep"], width=width, yerr=freenrg_df_plotting["err_fep"],
                             label=eng, color=col)
 
-        # plot experimental
-        ax.bar(x_locs + bar_spacing["experimental"], height=freenrg_df_plotting["freenrg_exp"], width=width, yerr=freenrg_df_plotting["err_exp"],
-                        label='Experimental', color=self.colours["experimental"]) 
+            # plot experimental
+            # this will stack the experimental for each engine
+            ax.bar(x_locs + bar_spacing["experimental"], height=freenrg_df_plotting["freenrg_exp"], width=width, yerr=freenrg_df_plotting["err_exp"],
+                            label='Experimental', color=self.colours["experimental"]) 
 
         #plt.xlabel('ΔΔG for experimental (kcal/mol)')
         #plt.ylabel('ΔΔG for calculated (kcal/mol)')
@@ -382,7 +420,7 @@ class plotting_engines():
         plt.show()
 
 
-    def scatter(self, pert_val=None, engines=None, name=None, **kwargs):
+    def scatter(self, pert_val=None, engines=None, name=None, perturbations=None, **kwargs):
 
         pert_val = validate.pert_val(pert_val)
 
@@ -396,6 +434,11 @@ class plotting_engines():
             exp_name = name
         else:
             exp_name = "exp"
+
+        if not perturbations:
+            perturbations = self.perturbations
+        else:
+            perturbations = validate.is_list(perturbations)
 
         # plot a scatter plot
         plt.rc('font', size=12)
@@ -412,6 +455,9 @@ class plotting_engines():
                 freenrg_df_plotting = plotting_df[eng][pert_val].dropna()
             else:
                 freenrg_df_plotting = self.freenrg_df_dict[eng][pert_val].dropna()
+
+            # prune df to only have perturbations considered
+            freenrg_df_plotting = self._prune_perturbations(freenrg_df_plotting, perturbations)
 
             x = freenrg_df_plotting[f"freenrg_{exp_name}"]
             y = freenrg_df_plotting["freenrg_fep"]
@@ -442,10 +488,6 @@ class plotting_engines():
             # x_line = np.linspace(-2,2,20)
             # y_line = (slope)*(x_line) + (intercept)
             # ax.plot(x_line, y_line, label=eng)
-
-        labels = [l.get_label() for l in lines]
-        plt.legend(lines, labels, loc='upper left')
-        # plt.legend(scatterplot, ["TYK2","p38","MCL1"])
 
         #plotting error bars
         plt.errorbar(x , y,
@@ -487,7 +529,7 @@ class plotting_engines():
                         color="grey", 
                         alpha=0.2)
 
-        min_lim, max_lim = self._get_bounds_scatter(engines, self.freenrg_df_dict, pert_val)
+        min_lim, max_lim = self._get_bounds_scatter(engines, self.freenrg_df_dict, pert_val, perturbations)
 
         # for a scatterplot we want the axis ranges to be the same. 
         plt.xlim(min_lim*1.3, max_lim*1.3)
@@ -500,6 +542,7 @@ class plotting_engines():
         y_label = None
         x_label = None
         title = None
+        include_key = True
 
         # check kwargs incase there is plotting info
         for key,value in kwargs.items():
@@ -509,6 +552,13 @@ class plotting_engines():
                 x_label = value
             if key == "title":
                 title = value
+            if key == "key":
+                include_key = validate.boolean(value)
+
+        if include_key:
+            labels = [l.get_label() for l in lines]
+            plt.legend(lines, labels, loc='upper left')
+            # plt.legend(scatterplot, ["TYK2","p38","MCL1"])
 
         if title:
             plt.title(f"{title}")
@@ -545,7 +595,7 @@ class plotting_engines():
         plt.show()
 
 
-    def outlier(self, pert_val="pert", engines=None, outliers=3, name=None):
+    def outlier(self, pert_val="pert", engines=None, outliers=3, perturbations=None, name=None):
 
         pert_val = validate.pert_val(pert_val)
 
@@ -561,6 +611,11 @@ class plotting_engines():
             exp_name = name
         else:
             exp_name = "exp"
+
+        if not perturbations:
+            perturbations = self.perturbations
+        else:
+            perturbations = validate.is_list(perturbations)
 
         # plot a scatter plot
         plt.rc('font', size=12)
@@ -661,7 +716,7 @@ class plotting_engines():
         plt.legend(lines, labels, loc='upper left')
         
         # for a scatterplot we want the axis ranges to be the same.
-        min_lim, max_lim = self._get_bounds_scatter(engines, self.freenrg_df_dict, pert_val)
+        min_lim, max_lim = self._get_bounds_scatter(engines, self.freenrg_df_dict, pert_val, perturbations)
         plt.xlim(min_lim*1.3, max_lim*1.3)
         plt.ylim(min_lim*1.3, max_lim*1.3)
 
@@ -703,12 +758,13 @@ class plotting_engines():
     # TODO method to get the
 
     @staticmethod
-    def _get_bounds_scatter(engines, freenrg_df_dict, pert_val):
+    def _get_bounds_scatter(engines, freenrg_df_dict, pert_val, perturbations):
 
         # get the bounds. This can be done with min/max or simply by hand.
         all_freenrg_values_pre = []
         for eng in engines:
             freenrg_df_plotting = freenrg_df_dict[eng][pert_val].dropna()
+            freenrg_df_plotting = plotting_engines._prune_perturbations(freenrg_df_plotting, perturbations)
             x = np.array(freenrg_df_plotting["freenrg_exp"]).tolist()
             y = np.array(freenrg_df_plotting["freenrg_fep"]).tolist()
             all_freenrg_values_pre.append(x)
@@ -726,7 +782,7 @@ class plotting_engines():
 
     # TODO plot cycle closure things?
 
-    def histogram(self, engines=None, pert_val=None, error_dict=None, file_ext=None):
+    def histogram(self, engines=None, pert_val=None, error_dict=None, file_ext=None, perturbations=None):
         """default plots histogram of SEM, if error dict supplied in format {engine: error_list}, will plot these
         """
         # TODO this is currently plotting the standard error of the 
@@ -747,7 +803,12 @@ class plotting_engines():
         # if no engines provided, use the defaults that were set based on the analysis object
         else:
             engines = self.engines
-   
+
+        if not perturbations:
+            perturbations = self.perturbations
+        else:
+            perturbations = validate.is_list(perturbations)
+
         best_fit_dict = {}
         histogram_dict = {}
 
@@ -762,6 +823,7 @@ class plotting_engines():
                 x = error_dict[eng] 
             else:
                 freenrg_df_plotting = self.freenrg_df_dict[eng][pert_val].dropna()
+                freenrg_df_plotting = self._prune_perturbations(freenrg_df_plotting, perturbations)
                 x = freenrg_df_plotting["err_fep"]   
 
             # no_bins = int(len(freenrg_df_plotting["err_exp"])/8)
@@ -819,13 +881,16 @@ class plotting_engines():
         return histogram_dict
 
 
-    def calc_mae(self, pert_val=None):
+    def calc_mae(self, pert_val=None, engines=None):
         # calc mae for a provided dictionary in the format wanted
 
         pv = validate.pert_val(pert_val)
 
         values_dict = self.values_dict
-        engines = self.engines
+        if engines:
+            engines = validate.engines(engines)
+        else:
+            engines = self.engines
 
         mae_pert_df = pd.DataFrame(columns=engines,index=engines)
         mae_pert_df_err = pd.DataFrame(columns=engines,index=engines)

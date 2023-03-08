@@ -353,7 +353,7 @@ class pipeline_protocol():
             self._query_dict["trajectories"] = value
             self._trajectories = value
         else:
-            value = self._trajectoriesj
+            value = self._trajectories
 
         return value  
 

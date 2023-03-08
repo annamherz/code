@@ -65,6 +65,18 @@ class analysis_network():
         # TODO add a file ext extra option for when writing out the files re naming eg so can incl diff networks
         # Actually add network info
 
+        # set defaults
+        self.temperature = 300
+
+        # overwrite if in extra options
+        if extra_options:
+            extra_options = validate.dictionary(extra_options)
+
+            # temperature for converting experimental values
+            if "temperature" in extra_options.keys():
+                self.temperature = [validate.is_float(extra_options["temperature"])]
+                
+
         # get files from results directory
         self._results_repeat_files = self._get_results_repeat_files()  
         self._results_free_repeat_files = self._get_results_repeat_files(leg="free")  
@@ -230,7 +242,7 @@ class analysis_network():
             raise ValueError("the provided experimental file should be in yml format")
         
         # TODO more checks for type of data
-        exper_val_dict = convert.yml_into_exper_dict(exp_file) # this output is in kcal/mol
+        exper_val_dict = convert.yml_into_exper_dict(exp_file, temp=self.temperature) # this output is in kcal/mol
 
         # experimental value dict
         new_exper_val_dict = make_dict._exper_from_ligands(exper_val_dict, self.ligands)
@@ -257,23 +269,29 @@ class analysis_network():
 
     def remove_perturbations(self, pert):
         
-        self.perturbations.remove(pert)
+        perts = validate.is_list(pert, make_list=True)
+        for pert in perts:
+            self.perturbations.remove(pert)
+        # remove plotting object as needs to be reintialised with new perturbations
+        self._plotting_object = None
 
-    def compute(self):
+    def compute(self, cycle_closure=True, statistics=True):
 
         # get all the dictionaries needed for plotting
         self._compute_dicts()
         
         # compute the cycle closure
-        self._make_graph()
-        self._compute_cycle_closures()
+        if cycle_closure:
+            self._make_graph()
+            self._compute_cycle_closures()
 
-        # TODO get statistics
-        self.pert_statistics = {}
-        self.val_statistics = {}
-        # for eng in self.engines:
-            # self.pert_statistics.update({eng: self.compute_statistics(pert_val="pert", engine=eng)})
-            # self.val_statistics.update({eng: self.compute_statistics(pert_val="val", engine=eng)})
+        if statistics:
+            # TODO get statistics
+            self.pert_statistics = {}
+            self.val_statistics = {}
+            # for eng in self.engines:
+                # self.pert_statistics.update({eng: self.compute_statistics(pert_val="pert", engine=eng)})
+                # self.val_statistics.update({eng: self.compute_statistics(pert_val="val", engine=eng)})
 
         self._is_computed = True
 
@@ -289,28 +307,35 @@ class analysis_network():
             file_name = self._results_repeat_files[eng]
             cinnabar_file_name = f"{self.output_folder}/cinnabar_{eng}_{self.file_ext}_{self.net_ext}"
             convert.cinnabar_file(file_name, self.exper_val_dict, cinnabar_file_name, perturbations=self.perturbations)
-        
-            # compute the per ligand for the network
-            network = wrangle.FEMap(f"{cinnabar_file_name}.csv")
-            self._cinnabar_networks.update({eng:network})
 
-            # for self plotting of per ligand
-            self.cinnabar_calc_val_dict.update({eng: make_dict.from_cinnabar_network_node(network, "calc")})
-            self.cinnabar_exper_val_dict.update({eng: make_dict.from_cinnabar_network_node(network, "exp", normalise=True)})
+            try:
+                # compute the per ligand for the network
+                network = wrangle.FEMap(f"{cinnabar_file_name}.csv")
+                self._cinnabar_networks.update({eng:network})
+                
+                # for self plotting of per ligand
+                self.cinnabar_calc_val_dict.update({eng: make_dict.from_cinnabar_network_node(network, "calc")})
+                self.cinnabar_exper_val_dict.update({eng: make_dict.from_cinnabar_network_node(network, "exp", normalise=True)})
+
+                # from cinnabar graph
+                self.cinnabar_calc_pert_dict.update({eng: make_dict.from_cinnabar_network_edges(network, "calc", self.perturbations)})
+                self.cinnabar_exper_pert_dict.update({eng: make_dict.from_cinnabar_network_edges(network, "exp", self.perturbations)})
+
+            except Exception as e:
+                print(e)
+                print(f"could not create cinnabar network for {eng}")
 
             # for self plotting of per pert
             calc_diff_dict = make_dict.comp_results(self._results_repeat_files[eng], self.perturbations, eng) # older method
             self.calc_pert_dict.update({eng:calc_diff_dict})
-
-            # from cinnabar graph
-            self.cinnabar_calc_pert_dict.update({eng: make_dict.from_cinnabar_network_edges(network, "calc", self.perturbations)})
-            self.cinnabar_exper_pert_dict.update({eng: make_dict.from_cinnabar_network_edges(network, "exp", self.perturbations)})
 
 
     def compute_other_results(self, file_name=None, name=None):
         
         if not isinstance(file_name, list):
             file_name = [file_name]
+        for file in file_name:
+            validate.file_path(file)
         name = validate.string(name)
         self.other_results_names.append(name)
         new_file_path = f"{file_name[0].replace(file_name[0].split('/')[-1], '')[:-1]}/{name}_results_file"
@@ -477,7 +502,8 @@ class analysis_network():
             binding = "$\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
         plotting_dict = {"title":f"{engine_a} vs {engine_b}\n for {self.file_ext}, {self.net_ext}",
                             "y label":f"{engine_a} "+ binding,
-                            "x label":f"{engine_b} " + binding
+                            "x label":f"{engine_b} " + binding,
+                            "key": False
                             }
         
         plot_obj.scatter(pert_val=pert_val, engines=engine_a, name=engine_b, **plotting_dict)
@@ -488,10 +514,10 @@ class analysis_network():
         name = validate.string(name)
         
         # first, check if name exists in other dict
-        if self.cinnabar_calc_val_dict[name]:
+        if name in self.other_results_names:
             pass
         else:
-            raise NameError(f"{name} does not exist as a key that has been added as other results.")
+            raise NameError(f"{name} does not exist as an added other results.")
 
         self._initalise_plotting_object(check=True)
         plot_obj = self._plotting_object
@@ -554,11 +580,11 @@ class analysis_network():
         plot_obj.histogram(engines=engine, error_dict=error_dict, file_ext=free_bound)
 
 
-    def calc_mae(self, pert_val=None):
+    def calc_mae(self, pert_val=None, engines=None):
 
         self._initalise_plotting_object(check=True)
         plot_obj = self._plotting_object
-        mae_pert_df, mae_pert_df_err = plot_obj.calc_mae(pert_val=pert_val)
+        mae_pert_df, mae_pert_df_err = plot_obj.calc_mae(pert_val=pert_val, engines=engines)
 
         return mae_pert_df, mae_pert_df_err
 

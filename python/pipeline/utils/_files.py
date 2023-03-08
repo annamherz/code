@@ -1,6 +1,7 @@
 import csv
 import os
 import numpy as np
+import pandas as pd
 
 from ._validate import *
 
@@ -220,14 +221,16 @@ def write_modified_results_files(results_files, perturbations, output_folder=Non
         with open(new_file_name, "w") as result_file:
 
             writer = csv.writer(result_file, delimiter=",")
-            writer.writerow(["lig_1","lig_2","freenrg","error","engine"])
+            writer.writerow(["lig_0","lig_1","freenrg","error","engine","method"]) # TODO analysis option update
 
             for row, index in pd.read_csv(file).iterrows():
-                pert = f"{index['lig_1']}~{index['lig_2']}"
+                pert = f"{index['lig_0']}~{index['lig_1']}"
                 if pert in perturbations and index['engine'].strip() in engines:
-                        writer.writerow([index['lig_1'], index['lig_2'], index['freenrg'], index['error'], index['engine']])    
+                        writer.writerow([index['lig_0'], index['lig_1'], index['freenrg'], index['error'], index['engine'], index['method']])    
 
             mod_results_files.append(new_file_name)
+    
+    return mod_results_files
 
 
 def write_protocol(query_dict, file_path):
