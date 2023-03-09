@@ -5,3 +5,4 @@ from ._convert import *
 from ._plotting import *
 from ._results import *
 from ._convergence import *
+from ._statistics import *

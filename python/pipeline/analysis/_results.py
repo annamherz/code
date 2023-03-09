@@ -8,6 +8,7 @@ from ..utils import *
 from ._network import *
 from ._analysis import *
 from ._plotting import *
+from ._statistics import *
 from ._convergence import *
 from ._dictionaries import *
 
@@ -126,6 +127,8 @@ class analysis_network():
 
         # for plotting
         self._plotting_object = None
+        # for stats
+        self._stats_object = None
 
     def _get_results_repeat_files(self, leg=None):
         res_dir = self._results_directory
@@ -280,6 +283,7 @@ class analysis_network():
         # get all the dictionaries needed for plotting
         self._compute_dicts()
         
+        # TODO have these entirely seperate?
         # compute the cycle closure
         if cycle_closure:
             self._make_graph()
@@ -292,6 +296,10 @@ class analysis_network():
             # for eng in self.engines:
                 # self.pert_statistics.update({eng: self.compute_statistics(pert_val="pert", engine=eng)})
                 # self.val_statistics.update({eng: self.compute_statistics(pert_val="val", engine=eng)})
+        
+        # initialise plotting and stats objects
+        self._initalise_plotting_object()
+        self._initalise_stats_object()
 
         self._is_computed = True
 
@@ -355,6 +363,9 @@ class analysis_network():
         self.cinnabar_calc_val_dict.update({name: make_dict.from_cinnabar_network_node(network, "calc")})
         self.cinnabar_calc_pert_dict.update({name: make_dict.from_cinnabar_network_edges(network, "calc", perturbations)})
 
+        # initialise plotting and stats objects again so theyre added
+        self._initalise_plotting_object()
+        self._initalise_stats_object()
 
     def _make_graph(self):
         
@@ -427,17 +438,17 @@ class analysis_network():
         elif check:
             if not self._plotting_object:
                 self._plotting_object = plotting_engines(analysis_object=self)
+        
+        return self._plotting_object
 
     def plot_bar_pert(self, engine=None):
 
-        self._initalise_plotting_object(check=True)
-        plot_obj = self._plotting_object
+        plot_obj = self._initalise_plotting_object(check=True)
         plot_obj.bar(pert_val="pert", engines=engine)
 
     def plot_bar_lig(self, engine=None):
 
-        self._initalise_plotting_object(check=True)
-        plot_obj = self._plotting_object
+        plot_obj = self._initalise_plotting_object(check=True)
         plot_obj.bar(pert_val="val", engines=engine)
 
 
@@ -462,8 +473,7 @@ class analysis_network():
                                 title=f"DDGs for {eng}, {self.net_ext}") #with {self.file_ext}
 
         else:
-            self._initalise_plotting_object(check=True)
-            plot_obj = self._plotting_object
+            plot_obj = self._initalise_plotting_object(check=True)
             plot_obj.scatter(pert_val="pert", engines=engine)
 
     def plot_scatter_lig(self, engine=None, use_cinnabar=False):
@@ -487,14 +497,12 @@ class analysis_network():
                                 title=f"DGs for {eng}, {self.net_ext}") #with {self.file_ext}
 
         else:
-            self._initalise_plotting_object(check=True)
-            plot_obj = self._plotting_object
+            plot_obj = self._initalise_plotting_object(check=True)
             plot_obj.scatter(pert_val="val", engines=engine)
 
     def plot_eng_vs_eng(self, engine_a=None, engine_b=None, pert_val="pert"):
         
-        self._initalise_plotting_object(check=True)
-        plot_obj = self._plotting_object
+        plot_obj = self._initalise_plotting_object(check=True)
 
         if pert_val == "pert":
             binding = "$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
@@ -519,8 +527,7 @@ class analysis_network():
         else:
             raise NameError(f"{name} does not exist as an added other results.")
 
-        self._initalise_plotting_object(check=True)
-        plot_obj = self._plotting_object
+        plot_obj = self._initalise_plotting_object(check=True)
 
         if outliers:
             plot_obj.outlier(pert_val=pert_val, engines=engine, outliers=outliers, name=name)  
@@ -530,15 +537,13 @@ class analysis_network():
 
     def plot_outliers(self, engine=None, outliers=5, pert_val="pert"):
 
-        self._initalise_plotting_object(check=True)
-        plot_obj = self._plotting_object
+        plot_obj = self._initalise_plotting_object(check=True)
         plot_obj.outlier(pert_val=pert_val, engines=engine, outliers=outliers)  
 
     
     def plot_histogram_runs(self, engine=None):
         
-        self._initalise_plotting_object(check=True)
-        plot_obj = self._plotting_object
+        plot_obj = self._initalise_plotting_object(check=True)
 
         # get list of the errors from the repeat files
         error_dict = {}
@@ -551,8 +556,7 @@ class analysis_network():
 
     def plot_histogram_sem(self, engine=None, pert_val="val"):
 
-        self._initalise_plotting_object(check=True)
-        plot_obj = self._plotting_object
+        plot_obj = self._initalise_plotting_object(check=True)
         plot_obj.histogram(engines=engine, pert_val=pert_val)
         
     # TODO histogram plot for the error in the free and the error in the bound legs
@@ -563,8 +567,7 @@ class analysis_network():
         if free_bound.lower() not in ["free","bound"]:
             raise ValueError("free_bound must be either 'free' or 'bound' to denote one of the legs of the run.")
         
-        self._initalise_plotting_object(check=True)
-        plot_obj = self._plotting_object
+        plot_obj = self._initalise_plotting_object(check=True)
 
         error_dict = {}
         
@@ -579,57 +582,42 @@ class analysis_network():
 
         plot_obj.histogram(engines=engine, error_dict=error_dict, file_ext=free_bound)
 
+    def _initalise_stats_object(self, check=False):
+
+        # if not checking, always make
+        if not check:
+            self._stats_object = stats_engines(analysis_object=self)
+
+        # if checking, first see if it exists and if not make
+        elif check:
+            if not self._stats_object:
+                self._stats_object = stats_engines(analysis_object=self)
+        
+        return self._stats_object
 
     def calc_mae(self, pert_val=None, engines=None):
 
-        self._initalise_plotting_object(check=True)
-        plot_obj = self._plotting_object
-        mae_pert_df, mae_pert_df_err = plot_obj.calc_mae(pert_val=pert_val, engines=engines)
+        stats_obj = self._initalise_stats_object(check=True)
+        mae_pert_df, mae_pert_df_err = stats_obj.calc_mae(pert_val=pert_val, engines=engines)
 
         return mae_pert_df, mae_pert_df_err
 
-
 # TODO make a static method?
-    def compute_statistics(self, pert_val=None, engine=None, x=None, y=None, xerr=None, yerr=None):
-
-        eng = validate.engine(engine)
+    def compute_mue(self, pert_val=None, engines=None):
+        
+        stats_obj = self._initalise_stats_object(check=True)
         pert_val = validate.pert_val(pert_val)
+        
 
-        if eng:
-            if pert_val == "pert":
-                x = [val[0] for val in self.cinnabar_exper_pert_dict[eng]]
-                y = [val[0] for val in self.cinnabar_calc_pert_dict[eng]]
-                xerr = np.asarray([val[1] for val in self.cinnabar_exper_pert_dict[eng]])
-                yerr = np.asarray([val[1] for val in self.cinnabar_calc_pert_dict[eng]])
-            elif pert_val == "val":
-                x = [val[0] for val in self.cinnabar_exper_val_dict[eng]]
-                y = [val[0] for val in self.cinnabar_calc_val_dict[eng]]
-                xerr = np.asarray([val[1] for val in self.cinnabar_exper_val_dict[eng]])
-                yerr = np.asarray([val[1] for val in self.cinnabar_calc_val_dict[eng]])          
-  
+        if not engines:
+            engines = self.engines
         else:
-            x = x
-            y = y
-            xerr = xerr
-            yerr = yerr
+            engines = validate.engines(engines)
 
-        statistics  = ["RMSE", "MUE"]
-        statistics_string = ""
+        for eng in engines:
+            values = stats_obj.compute_mue(pert_val=pert_val, engines=eng)
 
-        for statistic in statistics:
-            s = stats.bootstrap_statistic(x, y, xerr, yerr, statistic=statistic)
-            string = f"{statistic}:   {s['mle']:.2f} [95%: {s['low']:.2f}, {s['high']:.2f}] " + "\n"
-            statistics_string += string
-            
-        return statistics_string
-
-    # # check if can extract stats from the cinnabar stuff
-
-    def get_stats_cinnabar(self):
-        pass
-
-        # do for all networks in dict ie engines, also save
-
+                
 
     # freenergworkflows stuff for comparison
 
@@ -711,8 +699,6 @@ class analysis_network():
 
 
 # TODO new class that inherits from above, so can compare different methods
-
-
 
 # for analysis between diff engines
 #         # calc mae between

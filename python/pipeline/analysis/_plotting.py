@@ -67,6 +67,7 @@ class plotting_engines():
         # file extension
         self._file_ext()
         self._net_ext()
+        self._eng_other_list()
 
         # dictionaries of engines for plotting from cinnabar
         self.calc_val_dict = ana_obj.cinnabar_calc_val_dict
@@ -103,6 +104,31 @@ class plotting_engines():
 
         self.net_ext = validate.string(net_ext)
 
+    def _eng_other_list(self):
+
+        names_list = []
+
+        # all possible engines
+        for eng in self.engines:
+            names_list.append(eng)
+        # all other results
+        for name in self.other_results_names:
+            names_list.append(name)
+        # the experimental
+        names_list.append("experimental")
+        
+        self.names_list = names_list
+            
+        return names_list
+
+    def _validate_in_names_list(self, name):
+
+        name = validate.string(name)
+        if name not in self.names_list:
+            raise ValueError(f"{name} must be in {self.names_list}")
+
+        return name            
+
     def _analysis_dicts_to_df(self):
 
         self._overall_dict()
@@ -112,10 +138,7 @@ class plotting_engines():
     def _overall_dict(self):
 
         values_dict = {}
-        for eng in self.engines:
-            values_dict.update({eng:{}})
-        values_dict.update({"experimental":{}})
-        for name in self.other_results_names:
+        for name in self.names_list:
             values_dict.update({name:{}})
 
         # run for all engines with selected network and populate the dictionary for plotting
@@ -157,19 +180,20 @@ class plotting_engines():
 
         return values_dict
 
-    def _dict_to_df(self):
+    def _dict_to_df(self, x_name="experimental"):
+
+        x_name = self._validate_in_names_list(x_name)
 
         freenrg_df_dict = {}
-        to_convert_list = []
-        for eng in self.engines:
-            freenrg_df_dict.update({eng:{}})
-            to_convert_list.append(eng)
-        for name in self.other_results_names:
+        for name in self.names_list:
             freenrg_df_dict.update({name:{}})
-            to_convert_list.append(name)
+        
+        # TODO so can pick combo of a and b currently is always vs experimental
+        to_convert_list = self.names_list
+        to_convert_list.remove(x_name)
 
         # construct dict with experimental freenrg and error and computed
-        for eng in to_convert_list: # will do this for engines and other results
+        for name in to_convert_list: # will do this for engines and other results
 
             for pv in ["pert","val"]:
 
@@ -180,24 +204,24 @@ class plotting_engines():
                 elif pv == "val":
                     which_list = "ligs"
 
-                for value in self.values_dict[eng][which_list]:
+                for value in self.values_dict[name][which_list]:
                     try:
-                        exp_ddG = self.values_dict["experimental"][f"{pv}_results"][value][0]
-                        exp_err = self.values_dict["experimental"][f"{pv}_results"][value][1]
-                        comp_ddG = self.values_dict[eng][f"{pv}_results"][value][0]
-                        comp_err = self.values_dict[eng][f"{pv}_results"][value][1]
-                        freenrg_pert_dict[value] = [exp_ddG, exp_err, comp_ddG, comp_err]
+                        x_ddG = self.values_dict[x_name][f"{pv}_results"][value][0]
+                        x_err = self.values_dict[x_name][f"{pv}_results"][value][1]
+                        y_ddG = self.values_dict[name][f"{pv}_results"][value][0]
+                        y_err = self.values_dict[name][f"{pv}_results"][value][1]
+                        freenrg_pert_dict[value] = [x_ddG, x_err, y_ddG, y_err]
                     except Exception as e:
                         # print(e)
-                        print(f"could not convert analysis object {value}, {eng}, {pv}, into dataframe. Was it able to be computed earlier?")
-                freenrg_df = pd.DataFrame(freenrg_pert_dict, index=["freenrg_exp", "err_exp", "freenrg_fep", "err_fep"]).transpose()
+                        print(f"could not convert analysis object {value}, {name}, {pv}, into dataframe. Was it able to be computed earlier?")
+                freenrg_df = pd.DataFrame(freenrg_pert_dict, index=[f"freenrg_{x_name}", f"err_{x_name}", "freenrg_calc", "err_calc"]).transpose()
                 
-                freenrg_df_dict[eng][pv] = freenrg_df
+                freenrg_df_dict[name][pv] = freenrg_df
 
                 # save our results to a file that can be opened in e.g. Excel.
-                freenrg_df.to_csv(f"{self.output_folder}/fep_{pv}_results_table_{self.file_ext}_{self.net_ext}_{eng}.csv")
+                freenrg_df.to_csv(f"{self.output_folder}/{name}_vs_{x_name}_{pv}_results_table_{self.file_ext}_{self.net_ext}.csv")
         
-        self.freenrg_df_dict = freenrg_df_dict
+        self.freenrg_df_dict = freenrg_df_dict # TODO remove, fix later ones so recalculate
 
         return freenrg_df_dict
     
@@ -229,7 +253,7 @@ class plotting_engines():
                     except:
                         print(f"{value} is not available in {name}.")
 
-                plotting_df = pd.DataFrame(plotting_dict, index=[f"freenrg_{name}", f"err_{name}", "freenrg_fep", "err_fep"]).transpose()
+                plotting_df = pd.DataFrame(plotting_dict, index=[f"freenrg_{name}", f"err_{name}", "freenrg_calc", "err_calc"]).transpose()
                 plotting_df_dict[eng][pv] = plotting_df
 
             return plotting_df_dict
@@ -393,12 +417,12 @@ class plotting_engines():
             x_locs = np.arange(len(freenrg_df_plotting))
 
             # plot both our experimental and FEP free energies using an offset on the x position so bars don't overlap.
-            ax.bar(x_locs + space, height=freenrg_df_plotting["freenrg_fep"], width=width, yerr=freenrg_df_plotting["err_fep"],
+            ax.bar(x_locs + space, height=freenrg_df_plotting["freenrg_calc"], width=width, yerr=freenrg_df_plotting["err_calc"],
                             label=eng, color=col)
 
             # plot experimental
             # this will stack the experimental for each engine
-            ax.bar(x_locs + bar_spacing["experimental"], height=freenrg_df_plotting["freenrg_exp"], width=width, yerr=freenrg_df_plotting["err_exp"],
+            ax.bar(x_locs + bar_spacing["experimental"], height=freenrg_df_plotting["freenrg_experimental"], width=width, yerr=freenrg_df_plotting["err_experimental"],
                             label='Experimental', color=self.colours["experimental"]) 
 
         #plt.xlabel('ΔΔG for experimental (kcal/mol)')
@@ -460,9 +484,9 @@ class plotting_engines():
             freenrg_df_plotting = self._prune_perturbations(freenrg_df_plotting, perturbations)
 
             x = freenrg_df_plotting[f"freenrg_{exp_name}"]
-            y = freenrg_df_plotting["freenrg_fep"]
+            y = freenrg_df_plotting["freenrg_calc"]
             x_er = freenrg_df_plotting[f"err_{exp_name}"]
-            y_er = freenrg_df_plotting["err_fep"]               
+            y_er = freenrg_df_plotting["err_calc"]               
 
             scatterplot = [plt.scatter(x, y, zorder=10, c=col)]    
 
@@ -634,9 +658,9 @@ class plotting_engines():
                 freenrg_df_plotting = self.freenrg_df_dict[eng][pert_val].dropna()
 
             x = freenrg_df_plotting[f"freenrg_{exp_name}"]
-            y = freenrg_df_plotting["freenrg_fep"]
+            y = freenrg_df_plotting["freenrg_calc"]
             x_er = freenrg_df_plotting[f"err_{exp_name}"]
-            y_er = freenrg_df_plotting["err_fep"] 
+            y_er = freenrg_df_plotting["err_calc"] 
 
             # get an array of the MUE values comparing experimental and FEP values. Take the absolute values.
             mue_values = abs(x - y)
@@ -678,7 +702,7 @@ class plotting_engines():
             for i, txt in enumerate(annot_labels):
                 plt.annotate(txt, 
                             (freenrg_df_plotting[f"freenrg_{exp_name}"].values.tolist()[i]+0.1,     # x coords
-                            freenrg_df_plotting["freenrg_fep"].values.tolist()[i]+0.1),    # y coords
+                            freenrg_df_plotting["freenrg_calc"].values.tolist()[i]+0.1),    # y coords
                             size=15, color=self.colours["experimental"])
 
         # can plot a line for ideal
@@ -765,8 +789,8 @@ class plotting_engines():
         for eng in engines:
             freenrg_df_plotting = freenrg_df_dict[eng][pert_val].dropna()
             freenrg_df_plotting = plotting_engines._prune_perturbations(freenrg_df_plotting, perturbations)
-            x = np.array(freenrg_df_plotting["freenrg_exp"]).tolist()
-            y = np.array(freenrg_df_plotting["freenrg_fep"]).tolist()
+            x = np.array(freenrg_df_plotting["freenrg_experimental"]).tolist() # TODO also fix so does based on which df is passed
+            y = np.array(freenrg_df_plotting["freenrg_calc"]).tolist()
             all_freenrg_values_pre.append(x)
             all_freenrg_values_pre.append(y)
 
@@ -824,7 +848,7 @@ class plotting_engines():
             else:
                 freenrg_df_plotting = self.freenrg_df_dict[eng][pert_val].dropna()
                 freenrg_df_plotting = self._prune_perturbations(freenrg_df_plotting, perturbations)
-                x = freenrg_df_plotting["err_fep"]   
+                x = freenrg_df_plotting["err_calc"]   
 
             # no_bins = int(len(freenrg_df_plotting["err_exp"])/8)
             no_bins = 6 # TODO calculate no of bins so min and max per bin
@@ -879,61 +903,3 @@ class plotting_engines():
         histogram_dict.update({"dist": fig})
 
         return histogram_dict
-
-
-    def calc_mae(self, pert_val=None, engines=None):
-        # calc mae for a provided dictionary in the format wanted
-
-        pv = validate.pert_val(pert_val)
-
-        values_dict = self.values_dict
-        if engines:
-            engines = validate.engines(engines)
-        else:
-            engines = self.engines
-
-        mae_pert_df = pd.DataFrame(columns=engines,index=engines)
-        mae_pert_df_err = pd.DataFrame(columns=engines,index=engines)
-
-        # iterate over all possible combinations
-        for combo in it.product(engines, engines):
-            eng1 = combo[0]
-            eng2 = combo[1]
-
-            eng1_vals = []
-            eng2_vals = []
-
-            # first create df of values
-            # make sure the values exist!
-            for pert in values_dict[eng1][f"{pv}_results"]:
-                if pert in values_dict[eng2][f"{pv}_results"]:
-                    if values_dict[eng1][f"{pv}_results"][pert][0] != None:
-                        if values_dict[eng2][f"{pv}_results"][pert][0] != None:
-                            eng1_vals.append(values_dict[eng1][f"{pv}_results"][pert][0])
-                            eng2_vals.append(values_dict[eng2][f"{pv}_results"][pert][0])
-
-            # double check only values w corresponding values were used
-            if len(eng1_vals) == len(eng2_vals):
-                mean_absolute_error = mae(eng1_vals,eng2_vals)  
-                data_for_df = {"eng1":eng1_vals,"eng2":eng2_vals}
-                data_df= pd.DataFrame(data_for_df)
-            else:
-                print("cant calc")
-
-            boots = []
-            n_boots = 10000
-
-            for n in range(n_boots):
-                sample_df = data_df.sample(n=len(eng1_vals), replace=True)
-                mae_sample = (abs(sample_df['eng1'] - sample_df['eng2']).sum())/len(eng1_vals)
-                boots.append(mae_sample)
-            
-            mae_err = (np.std(boots))
-
-            mae_pert_df.loc[eng1,eng2]=mean_absolute_error
-            mae_pert_df_err.loc[eng1,eng2]=mae_err
-
-        mae_pert_df.to_csv(f"{self.output_folder}/mae_pert_{self.file_ext}.csv", sep=" ")
-        mae_pert_df_err.to_csv(f"{self.output_folder}/mae_pert_err_{self.file_ext}.csv", sep=" ")
-
-        return mae_pert_df, mae_pert_df_err
