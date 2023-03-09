@@ -593,6 +593,7 @@ class analysis_network():
     def compute_statistics(self, pert_val=None, engine=None, x=None, y=None, xerr=None, yerr=None):
 
         eng = validate.engine(engine)
+        pert_val = validate.pert_val(pert_val)
 
         if eng:
             if pert_val == "pert":
@@ -605,8 +606,7 @@ class analysis_network():
                 y = [val[0] for val in self.cinnabar_calc_val_dict[eng]]
                 xerr = np.asarray([val[1] for val in self.cinnabar_exper_val_dict[eng]])
                 yerr = np.asarray([val[1] for val in self.cinnabar_calc_val_dict[eng]])          
-            else:
-                raise ValueError("pert_val must be 'pert' for perturbations or 'val' for values")      
+  
         else:
             x = x
             y = y

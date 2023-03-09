@@ -14,9 +14,14 @@ def write_analysis_file(analysis, results_dir, method=None):
         method = "None"
 
     # data point for average
-    data_point_avg = [analysis.ligand_0, analysis.ligand_1,
-                      analysis.freenrg, analysis.error,
-                      analysis.engine, analysis.file_ext, method]
+    data_point_avg = [analysis.ligand_0,
+                      analysis.ligand_1,
+                      str(analysis.freenrg), # need as string so can compare to existing entries sometimes
+                      str(analysis.error),
+                      analysis.engine,
+                      analysis.file_ext,
+                      method
+                      ]
 
     # use csv to open the results file.
     final_summary_file = f"{results_dir}/final_summary_{analysis.engine.upper()}_{analysis.file_ext}.csv"
@@ -47,8 +52,8 @@ def write_analysis_file(analysis, results_dir, method=None):
         with open(final_summary_file, "a") as freenrg_writefile:
             writer = csv.writer(freenrg_writefile)
             print(
-                f"Writing results. Average free energy of binding is {analysis.freenrg}"+
-                f"and the error is {analysis.error} for {analysis.perturbation}, {analysis.engine}.")
+                f"Writing results. Average free energy of binding is {str(analysis.freenrg)} "+
+                f"and the error is {str(analysis.error)} for {analysis.perturbation}, {analysis.engine}.")
             writer.writerow(data_point_avg)
 
 
@@ -58,8 +63,8 @@ def write_analysis_file(analysis, results_dir, method=None):
     for r in no_repeats:
         data_point = [analysis.ligand_0,
                       analysis.ligand_1,
-                      analysis.repeats_tuple_list[r][1],
-                      analysis.repeats_tuple_list[r][2],
+                      str(analysis.repeats_tuple_list[r][1]),
+                      str(analysis.repeats_tuple_list[r][2]),
                       analysis.engine,
                       analysis.file_ext,
                       method
@@ -92,7 +97,7 @@ def write_analysis_file(analysis, results_dir, method=None):
                 writer = csv.writer(freenrg_writefile)
                 print(
                     f"Writing results. For repeat {r}, free energy of binding is "+
-                    f"{analysis.repeats_tuple_list[r][1]} and the error is {analysis.repeats_tuple_list[r][2]} "+
+                    f"{str(analysis.repeats_tuple_list[r][1])} and the error is {str(analysis.repeats_tuple_list[r][2])} "+
                     f"for {analysis.perturbation}, {analysis.engine}.")
                 writer.writerow(data_point)
     
@@ -113,8 +118,8 @@ def write_analysis_file(analysis, results_dir, method=None):
         for r in no_repeats:
             data_point = [analysis.ligand_0,
                         analysis.ligand_1,
-                        val_dict[f"{r}_{name}"],
-                        err_dict[f"{r}_{name}"],
+                        str(val_dict[f"{r}_{name}"]),
+                        str(err_dict[f"{r}_{name}"]),
                         analysis.engine,
                         analysis.file_ext,
                         method
@@ -147,7 +152,7 @@ def write_analysis_file(analysis, results_dir, method=None):
                     writer = csv.writer(freenrg_writefile)
                     print(
                         f"Writing results. For repeat {name} {r}, free energy of binding is "+
-                        f"{val_dict[f'{r}_{name}']} and the error is {err_dict[f'{r}_{name}']} "+
+                        f"{str(val_dict[f'{r}_{name}'])} and the error is {str(err_dict[f'{r}_{name}'])} "+
                         f"for {analysis.perturbation}, {analysis.engine}.")
                     writer.writerow(data_point)
 
@@ -226,7 +231,12 @@ def write_modified_results_files(results_files, perturbations, output_folder=Non
             for row, index in pd.read_csv(file).iterrows():
                 pert = f"{index['lig_0']}~{index['lig_1']}"
                 if pert in perturbations and index['engine'].strip() in engines:
-                        writer.writerow([index['lig_0'], index['lig_1'], index['freenrg'], index['error'], index['engine'], index['method']])    
+                        writer.writerow([index['lig_0'],
+                                         index['lig_1'], 
+                                         index['freenrg'],
+                                         index['error'],
+                                         index['engine'],
+                                         index['method']])    
 
             mod_results_files.append(new_file_name)
     

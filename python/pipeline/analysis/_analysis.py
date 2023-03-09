@@ -71,6 +71,7 @@ class analyse():
 
         # intialise other things
         self._get_repeat_folders()
+        self.options_dict = None
         self._set_default_options() # will set default options and file extension
         self.is_analysed = False
 
@@ -108,7 +109,7 @@ class analyse():
     def file_ext(options_dict):
         
         # validate any inputs in the dictionary
-        options_dict = analyse._set_options(options_dict)
+        options_dict = analyse._set_options_dict(options_dict)
 
         file_ext = str(f"{options_dict['estimator']}_{options_dict['method']}_{options_dict['mbar method']}_"+
                     f"eq{str(options_dict['auto equilibration']).lower()}_"+
@@ -130,7 +131,8 @@ class analyse():
         return pickle_ext
 
     @staticmethod
-    def _set_options(options_dict):
+    def _set_options_dict(options_dict, current_options=None):
+        # returns a dict with the considered options, and fills in any not provided with default or previous options.
         
         # if analysis protocol is supplied, make sure to get the dictionary form
         if isinstance(options_dict, analysis_protocol):
@@ -138,12 +140,18 @@ class analyse():
 
         options_dict = validate.dictionary(options_dict)
 
-        default_options = analyse._default_analysis_options_dict()
+        if not current_options:
+            current_options = analyse._default_analysis_options_dict()
+        else:
+            current_options = validate.dictionary(current_options)
 
         new_options_dict = {}
 
+        # when initialising, a default dict is set
+        # replace any values in this by the new options dict
+
         # replace any default values by those passed
-        for key, value in default_options.items():
+        for key, value in current_options.items():
             if key in options_dict:
                 new_options_dict[key] = options_dict[key]
             else:
@@ -209,12 +217,13 @@ class analyse():
     def set_options(self, options_dict):
 
         # first use staticmethod to get a new options dict
-        options_dict = analyse._set_options(options_dict)
+        # if already have an options dict for this object, want to use that
+        options_dict = analyse._set_options_dict(options_dict, current_options=self.options_dict)
 
-        # set self.options_dict for use w the file extension
+        # update self.options_dict for use w the file extension
         self.options_dict = options_dict
-        # then set all of these to self options
 
+        # then set all of these to self options
         self.estimator = options_dict["estimator"]
         self._mbar_method = options_dict["mbar method"]
         self._check_overlap = options_dict["check overlap"]

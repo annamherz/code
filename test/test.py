@@ -16,21 +16,46 @@ except:
         sys.path.insert(1, code)
     import pipeline
 
+print(pipeline.__file__)
+
+from pipeline import *
 from pipeline.analysis import *
+from pipeline.prep import *
 from pipeline.utils import *
 
-traj_lambdas = ["0.0000","0.5000","1.0000"]
+transf = ["lig_ejm31~lig_ejm45", "lig_ejm44~lig_ejm45","lig_ejm44~lig_ejm49"]
+engine = "GROMACS"
+main_dir = "/home/anna/Documents/benchmark/tyk2_benchmark"
+# methods = ["1fs", "2fs_HMR4", "4fs_HMR4", "4fs_HMR3", "2fs_HMR3", "2fs"]
+methods = ["2fs"]
 
-folder = "/backup/anna/benchmark/mcl1/outputs/GROMACS/lig_23~lig_26"
+# options
+ana_file = f"{main_dir}/execution_model/analysis_protocol.dat"
+analysis_options = analysis_protocol(ana_file, auto_validate=True)
+# analysis_options.rewrite_protocol()
 
-# extract to output folder
-# initialise
-extraction = extract(folder)
+for method in methods:
+    for trans in transf:
+        path_to_dir = f"{main_dir}/outputs_extracted/{engine}/{method}/{trans}"
+        print(path_to_dir)
+        final_results_folder = f"{main_dir}/outputs_extracted/results"
 
-# get the output from the folder to new folder
-extraction.extract_output()
-# get trajectory, will get rmsd by default
-extraction.extract_frames(traj_lambdas=traj_lambdas, overwrite=True)
+        # try:
+        # using the pipeline module for analysis
+        analysed_pert = analyse(path_to_dir)
+        analysed_pert.set_options(analysis_options)
+        # analysed_pert.set_options({"try pickle":False})
+        avg, error, repeats_tuple_list = analysed_pert.analyse_all_repeats()
+        # analysed_pert.plot_graphs()
+        data_point_avg = [analysed_pert.ligand_0, analysed_pert.ligand_1,
+                    analysed_pert.freenrg, analysed_pert.error,
+                    analysed_pert.engine, analysed_pert.file_ext, method]
+        print(data_point_avg)
+        # write_analysis_file(analysed_pert, final_results_folder, method=method)
+        # except Exception as e:
+        #     print(e)
+        #     print(f"could not analyse {path_to_dir}")
+
 
 # # fwf exp data
 # print("fwf")
