@@ -50,7 +50,7 @@ all_analysis_object = analysis_network(results_folder,
 # can add any other results files
 # all_analysis_object.compute_other_results(file_name=None, name=None)
 all_analysis_object.compute(cycle_closure=False)
-
+all_analysis_object.calc_mae(pert_val="pert")
 
 # # fwf exp data
 # print("fwf")

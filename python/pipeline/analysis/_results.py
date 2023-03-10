@@ -277,6 +277,7 @@ class analysis_network():
             self.perturbations.remove(pert)
         # remove plotting object as needs to be reintialised with new perturbations
         self._plotting_object = None
+        self._stats_object = None
 
     def compute(self, cycle_closure=True, statistics=True):
 
@@ -595,19 +596,39 @@ class analysis_network():
         
         return self._stats_object
 
-    def calc_mae(self, pert_val=None, engines=None):
+    def calc_mae(self, pert_val=None):
 
         stats_obj = self._initalise_stats_object(check=True)
-        mae_pert_df, mae_pert_df_err = stats_obj.calc_mae(pert_val=pert_val, engines=engines)
+
+        pv = validate.pert_val(pert_val)
+
+        values_dict = stats_obj.values_dict
+        engines = self.engines
+
+        mae_pert_df = pd.DataFrame(columns=engines,index=engines)
+        mae_pert_df_err = pd.DataFrame(columns=engines,index=engines)
+
+        # iterate over all possible combinations
+        for combo in it.product(engines, engines):
+            eng1 = combo[0]
+            eng2 = combo[1]
+
+            values = stats_obj.compute_mue(pv, x=eng1, y=eng2)
+            mean_absolute_error = values[0] # the computed statistic    
+            mae_err = values[1] # the stderr from bootstrapping
+
+            mae_pert_df.loc[eng1,eng2]=mean_absolute_error
+            mae_pert_df_err.loc[eng1,eng2]=mae_err
+
+        mae_pert_df.to_csv(f"{self.output_folder}/mae_pert_{self.file_ext}.csv", sep=" ")
+        mae_pert_df_err.to_csv(f"{self.output_folder}/mae_pert_err_{self.file_ext}.csv", sep=" ")
 
         return mae_pert_df, mae_pert_df_err
 
-# TODO make a static method?
     def compute_mue(self, pert_val=None, engines=None):
         
         stats_obj = self._initalise_stats_object(check=True)
         pert_val = validate.pert_val(pert_val)
-        
 
         if not engines:
             engines = self.engines
@@ -615,9 +636,12 @@ class analysis_network():
             engines = validate.engines(engines)
 
         for eng in engines:
-            values = stats_obj.compute_mue(pert_val=pert_val, engines=eng)
+            values = stats_obj.compute_mue(pert_val=pert_val, y=eng) # TODO fix
 
-                
+        return values
+
+    # TODO compute all stats function
+    # TODO write an output file for the dictionary               
 
     # freenergworkflows stuff for comparison
 

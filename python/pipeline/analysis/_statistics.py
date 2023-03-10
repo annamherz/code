@@ -46,68 +46,8 @@ class stats_engines(plotting_engines):
         # for statistics compared to experimental value
         self.statistics_dict_exper = {}
         for statistic in self.statistics:
-            self.statistics_dict_exper[statistic] = None
-        
-        # TODO also set MAE plain
+            self.statistics_dict_exper[statistic] ={}
 
-
-    def calc_mae(self, pert_val=None, engines=None):
-        # calc mae for a provided dictionary in the format wanted
-
-        pv = validate.pert_val(pert_val)
-
-        values_dict = self.values_dict
-        if engines:
-            engines = validate.engines(engines)
-        else:
-            engines = self.engines
-
-        mae_pert_df = pd.DataFrame(columns=engines,index=engines)
-        mae_pert_df_err = pd.DataFrame(columns=engines,index=engines)
-
-        # iterate over all possible combinations
-        for combo in it.product(engines, engines):
-            eng1 = combo[0]
-            eng2 = combo[1]
-
-            eng1_vals = []
-            eng2_vals = []
-
-            #TODO also need to fix this to contain the correct matched values!!
-            # first create df of values
-            # make sure the values exist!
-            for pert in values_dict[eng1][f"{pv}_results"]:
-                if pert in values_dict[eng2][f"{pv}_results"]:
-                    if values_dict[eng1][f"{pv}_results"][pert][0] != None:
-                        if values_dict[eng2][f"{pv}_results"][pert][0] != None:
-                            eng1_vals.append(values_dict[eng1][f"{pv}_results"][pert][0])
-                            eng2_vals.append(values_dict[eng2][f"{pv}_results"][pert][0])
-
-            # double check only values w corresponding values were used
-            if len(eng1_vals) == len(eng2_vals):
-                mean_absolute_error = mae(eng1_vals,eng2_vals)  
-                data_for_df = {"eng1":eng1_vals,"eng2":eng2_vals}
-                data_df= pd.DataFrame(data_for_df)
-            else:
-                print("cant calc")
-
-            boots = []
-            n_boots = 10000
-
-            for n in range(n_boots):
-                sample_df = data_df.sample(n=len(eng1_vals), replace=True)
-                mae_sample = (abs(sample_df['eng1'] - sample_df['eng2']).sum())/len(eng1_vals)
-                boots.append(mae_sample)
-            
-            mae_err = (np.std(boots))
-
-            mae_pert_df.loc[eng1,eng2]=mean_absolute_error
-            mae_pert_df_err.loc[eng1,eng2]=mae_err
-
-        mae_pert_df.to_csv(f"{self.output_folder}/mae_pert_{self.file_ext}.csv", sep=" ")
-        mae_pert_df_err.to_csv(f"{self.output_folder}/mae_pert_err_{self.file_ext}.csv", sep=" ")
-
-        return mae_pert_df, mae_pert_df_err
 
     def _get_x_y(self, pert_val=None, data_x=None, data_y=None, x=None, y=None, xerr=None, yerr=None):
 
@@ -120,47 +60,14 @@ class stats_engines(plotting_engines):
 
         if data_x and data_y:
 
-            data_x = self.values_dict[data_x][f"{pv}_results"]
-            data_y = self.values_dict[data_x][f"{pv}_results"]
+            data_x = self._validate_in_names_list(data_x)
+            data_y = self._validate_in_names_list(data_y)
+            df = self.freenrg_df_dict[data_x][data_y][pv]
 
-            # need the same length of the data
-            # check that 
-            len_x = len(data_x.values())
-            len_y = len(data_y.values())
-            print(len_x)
-            print(len_y)
-            if len_x != len_y:
-                print("data points missing, discarding some for stats analysis...")
-                if len_x < len_y:
-                    data_used = data_x
-                elif len_y < len_x:
-                    data_used = data_y
-
-                for _data in [data_x, data_y]:
-                    for key in _data.keys():
-                        if key not in data_used.keys():
-                            del _data[key]
-            
-            # make sure all the values are paired together
-            for value in data_x:
-                print(value)
-            #     try:
-            #         exp_ddG = self.values_dict["experimental"][f"{pv}_results"][value][0]
-            #         exp_err = self.values_dict["experimental"][f"{pv}_results"][value][1]
-            #         comp_ddG = self.values_dict[eng][f"{pv}_results"][value][0]
-            #         comp_err = self.values_dict[eng][f"{pv}_results"][value][1]
-            #         freenrg_pert_dict[value] = [exp_ddG, exp_err, comp_ddG, comp_err]
-            #     except Exception as e:
-            #         # print(e)
-            #         print(f"could not convert analysis object {value}, {eng}, {pv}, into dataframe. Was it able to be computed earlier?")
-            # freenrg_df = pd.DataFrame(freenrg_pert_dict, index=["freenrg_exp", "err_exp", "freenrg_calc", "err_calc"]).transpose()
-
-
-
-            x = [val[0] for val in self.values_dict[data_x][f"{pv}_results"].values()]
-            y = [val[0] for val in self.values_dict[data_y][f"{pv}_results"].values()]
-            xerr = np.asarray([val[1] for val in self.values_dict[data_x][f"{pv}_results"].values()])
-            yerr = np.asarray([val[1] for val in self.values_dict[data_y][f"{pv}_results"].values()])
+            x = df[f"freenrg_{data_x}"]
+            y = df[f"freenrg_calc"]
+            xerr = df[f"err_{data_x}"]
+            yerr = df[f"err_calc"]
   
         else:
             try:
@@ -184,8 +91,8 @@ class stats_engines(plotting_engines):
         x,y,xerr,yerr = self._get_x_y(pert_val, data_x, data_y, x, y, xerr, yerr)
 
         # using cinnabar function
-        s = stats.bootstrap_statistic(x, y, xerr, yerr, statistic=statistic)
-        values = (s['mle'], s['low'], s['high'])
+        s = stats.bootstrap_statistic(x, y, xerr, yerr, nbootstrap=10000, statistic=statistic)
+        values = (s['mle'], s['stderr'])
         # string = f"{statistic}:   {s['mle']:.2f} [95%: {s['low']:.2f}, {s['high']:.2f}] " + "\n"
             
         return values
@@ -196,18 +103,43 @@ class stats_engines(plotting_engines):
             self.compute_mue(pv, self.engines)
             # all compute functions
 
-    def compute_mue(self, pert_val=None, engines=None):
+    def _compute_base(self, pert_val=None, y=None, x=None, statistic=None):
 
         # validate from other that it is in names list
-
+        x = self._validate_in_names_list(x)
+        y = self._validate_in_names_list(y)
         pert_val = validate.pert_val(pert_val)
-        if engines:
-            engines = validate.engines(engines)
-        else:
-            engines = self.engines
 
-        for eng in engines:
-            values = self._compute_stats(pert_val, "experimental", eng, statistic="MUE")
-            print(values)
-            self.statistics_dict_exper["MUE"][eng] = values
+        if statistic not in self.statistics:
+            raise ValueError(f"please use one of the statistics in {self.statistics}")
+        
+        values = self._compute_stats(pert_val, data_x=x, data_y=y, statistic=statistic)
+
+        return values
+
+    def compute_mue(self, pert_val=None, y=None, x="experimental"):
+
+        return self._compute_base(pert_val=pert_val, y=y, x=x, statistic="MUE")
+
+    def compute_rmse(self, pert_val=None, y=None, x="experimental"):
+
+        return self._compute_base(pert_val=pert_val, y=y, x=x, statistic="RMSE")
+
+    def compute_r2(self, pert_val=None, y=None, x="experimental"):
+
+        return self._compute_base(pert_val=pert_val, y=y, x=x, statistic="R2")    
+
+    def compute_rho(self, pert_val=None, y=None, x="experimental"):
+
+        return self._compute_base(pert_val=pert_val, y=y, x=x, statistic="rho")
+
+    def compute_rae(self, pert_val=None, y=None, x="experimental"):
+
+        return self._compute_base(pert_val=pert_val, y=y, x=x, statistic="RAE")
+    
+    def compute_ktau(self, pert_val=None, y=None, x="experimental"):
+
+        return self._compute_base(pert_val=pert_val, y=y, x=x, statistic="KTAU")
+
+        # self.statistics_dict_exper["MUE"][y] = values # TODO sort out how all the dicts for stats work
 

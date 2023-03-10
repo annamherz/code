@@ -63,11 +63,13 @@ class plotting_engines():
 
         # for other results
         self.other_results_names = ana_obj.other_results_names
+    
+        # name of all options
+        self._eng_other_list()
         
         # file extension
         self._file_ext()
         self._net_ext()
-        self._eng_other_list()
 
         # dictionaries of engines for plotting from cinnabar
         self.calc_val_dict = ana_obj.cinnabar_calc_val_dict
@@ -132,8 +134,15 @@ class plotting_engines():
     def _analysis_dicts_to_df(self):
 
         self._overall_dict()
-        self._dict_to_df()
+        self.freenrg_df_dict = {}
+        for name in self.names_list:
+            self.freenrg_df_dict.update({name:None})
+        self._calc_all_dict_to_df()
 
+    def _calc_all_dict_to_df(self):
+
+        for name in self.names_list:
+            self._dict_to_df(x_name=name)
 
     def _overall_dict(self):
 
@@ -180,17 +189,19 @@ class plotting_engines():
 
         return values_dict
 
+    # TODO calculate dict to df for all ?
+
     def _dict_to_df(self, x_name="experimental"):
+        # calculate df w respect to each other value
 
         x_name = self._validate_in_names_list(x_name)
 
         freenrg_df_dict = {}
-        for name in self.names_list:
+
+        to_convert_list = [x for x in self.names_list]
+        # to_convert_list.remove(x_name)
+        for name in to_convert_list:
             freenrg_df_dict.update({name:{}})
-        
-        # TODO so can pick combo of a and b currently is always vs experimental
-        to_convert_list = self.names_list
-        to_convert_list.remove(x_name)
 
         # construct dict with experimental freenrg and error and computed
         for name in to_convert_list: # will do this for engines and other results
@@ -213,7 +224,7 @@ class plotting_engines():
                         freenrg_pert_dict[value] = [x_ddG, x_err, y_ddG, y_err]
                     except Exception as e:
                         # print(e)
-                        print(f"could not convert analysis object {value}, {name}, {pv}, into dataframe. Was it able to be computed earlier?")
+                        print(f"could not convert analysis object {value}, {name}, {pv}, into dataframe for {x_name}. Was it able to be computed earlier?")
                 freenrg_df = pd.DataFrame(freenrg_pert_dict, index=[f"freenrg_{x_name}", f"err_{x_name}", "freenrg_calc", "err_calc"]).transpose()
                 
                 freenrg_df_dict[name][pv] = freenrg_df
@@ -221,42 +232,10 @@ class plotting_engines():
                 # save our results to a file that can be opened in e.g. Excel.
                 freenrg_df.to_csv(f"{self.output_folder}/{name}_vs_{x_name}_{pv}_results_table_{self.file_ext}_{self.net_ext}.csv")
         
-        self.freenrg_df_dict = freenrg_df_dict # TODO remove, fix later ones so recalculate
+        self.freenrg_df_dict[x_name] = freenrg_df_dict
 
         return freenrg_df_dict
     
-    def _match_engine_and_other_results(self, name, pv=None):
-
-        pv = validate.pert_val(pv)
-
-        if pv == "pert":
-            which_list = "perts"
-        elif pv == "val":
-            which_list = "ligs"
-
-        if name in self.other_results_names or name in self.engines:
-            
-            plotting_df_dict = {}
-
-            for eng in self.engines:
-                plotting_df_dict.update({eng:{}})
-
-                plotting_dict = {}
-
-                for value in self.values_dict[eng][which_list]:
-                    try:
-                        exp_ddG = self.values_dict[f"{name}"][f"{pv}_results"][value][0]
-                        exp_err = self.values_dict[f"{name}"][f"{pv}_results"][value][1]
-                        comp_ddG = self.values_dict[eng][f"{pv}_results"][value][0]
-                        comp_err = self.values_dict[eng][f"{pv}_results"][value][1]
-                        plotting_dict[value] = [exp_ddG, exp_err, comp_ddG, comp_err]
-                    except:
-                        print(f"{value} is not available in {name}.")
-
-                plotting_df = pd.DataFrame(plotting_dict, index=[f"freenrg_{name}", f"err_{name}", "freenrg_calc", "err_calc"]).transpose()
-                plotting_df_dict[eng][pv] = plotting_df
-
-            return plotting_df_dict
 
     @staticmethod
     def _prune_perturbations(df, perturbations):
@@ -346,6 +325,8 @@ class plotting_engines():
             placement = [0]
         else:
             raise ValueError("length of the engine list + exp cannot exceed 4? must have atleast 1 engine/exp.")
+        
+        # TODO extend so based on no of values and experimetnal is the final one, placement istn a dict but a list and just takes positions?
 
         for eng,place in zip(engines, placement):
             placement_dict.update({eng:place}) # for each engine
@@ -380,9 +361,13 @@ class plotting_engines():
         
         return engines
 
-    def bar(self, pert_val=None, engines=None, perturbations=None, extra_options=None):
+    def bar(self, pert_val=None, engines=None, name="experimental", perturbations=None, extra_options=None):
 
         pert_val = validate.pert_val(pert_val)
+        name = self._validate_in_names_list(name)
+
+        # TODO so can pick which engines also includes other results?
+        # TODO also changes to get eng name?
 
         if engines:
             engines = self._plotting_engines(engines)
@@ -408,7 +393,7 @@ class plotting_engines():
             col = self.colours[eng]
             space = bar_spacing[eng]
             
-            freenrg_df_plotting = self.freenrg_df_dict[eng][pert_val].fillna(0)
+            freenrg_df_plotting = self.freenrg_df_dict[name][eng][pert_val].fillna(0)
 
             # prune df to only have perturbations considered
             freenrg_df_plotting = self._prune_perturbations(freenrg_df_plotting, perturbations)
@@ -420,16 +405,19 @@ class plotting_engines():
             ax.bar(x_locs + space, height=freenrg_df_plotting["freenrg_calc"], width=width, yerr=freenrg_df_plotting["err_calc"],
                             label=eng, color=col)
 
-            # plot experimental
-            # this will stack the experimental for each engine
-            ax.bar(x_locs + bar_spacing["experimental"], height=freenrg_df_plotting["freenrg_experimental"], width=width, yerr=freenrg_df_plotting["err_experimental"],
-                            label='Experimental', color=self.colours["experimental"]) 
+        # plot experimental
+        ax.bar(x_locs + bar_spacing["experimental"],
+                height=freenrg_df_plotting[f"freenrg_{name}"],
+                width=width,
+                yerr=freenrg_df_plotting[f"err_{name}"],
+                label=f"{name}",
+                color=self.colours["experimental"]) # TODO also name, other have a diff colour not used yet (up to three options?)
 
         #plt.xlabel('ΔΔG for experimental (kcal/mol)')
         #plt.ylabel('ΔΔG for calculated (kcal/mol)')
         # format the plot further.
         plt.axhline(color="black")
-        plt.title(f"Computed vs Experimental for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}")
+        plt.title(f"Computed vs {name} for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}")
         if pert_val == "pert":
             plt.ylabel("$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
             plt.xlabel("perturbations")
@@ -440,24 +428,20 @@ class plotting_engines():
         plt.legend()
 
         eng_name = self._get_eng_name(engines)
-        plt.savefig(f"{self.graph_folder}/fep_vs_exp_barplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(f"{self.graph_folder}/calc_vs_{name}_barplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
         plt.show()
 
 
-    def scatter(self, pert_val=None, engines=None, name=None, perturbations=None, **kwargs):
+    def scatter(self, pert_val=None, engines=None, name="experimental", perturbations=None, **kwargs):
 
         pert_val = validate.pert_val(pert_val)
+        name = self._validate_in_names_list(name)
 
         if engines:
             engines = self._plotting_engines(engines)
         # if no engines provided, use the defaults that were set based on the analysis object
         else:
             engines = self.engines
-
-        if name:
-            exp_name = name
-        else:
-            exp_name = "exp"
 
         if not perturbations:
             perturbations = self.perturbations
@@ -474,18 +458,14 @@ class plotting_engines():
 
             col = self.colours[eng]
 
-            if name:
-                plotting_df = self._match_engine_and_other_results(name, pv=pert_val)
-                freenrg_df_plotting = plotting_df[eng][pert_val].dropna()
-            else:
-                freenrg_df_plotting = self.freenrg_df_dict[eng][pert_val].dropna()
+            freenrg_df_plotting = self.freenrg_df_dict[name][eng][pert_val].dropna()
 
             # prune df to only have perturbations considered
             freenrg_df_plotting = self._prune_perturbations(freenrg_df_plotting, perturbations)
 
-            x = freenrg_df_plotting[f"freenrg_{exp_name}"]
+            x = freenrg_df_plotting[f"freenrg_{name}"]
             y = freenrg_df_plotting["freenrg_calc"]
-            x_er = freenrg_df_plotting[f"err_{exp_name}"]
+            x_er = freenrg_df_plotting[f"err_{name}"]
             y_er = freenrg_df_plotting["err_calc"]               
 
             scatterplot = [plt.scatter(x, y, zorder=10, c=col)]    
@@ -553,7 +533,7 @@ class plotting_engines():
                         color="grey", 
                         alpha=0.2)
 
-        min_lim, max_lim = self._get_bounds_scatter(engines, self.freenrg_df_dict, pert_val, perturbations)
+        min_lim, max_lim = self._get_bounds_scatter(engines, self.freenrg_df_dict[name], pert_val, perturbations, name)
 
         # for a scatterplot we want the axis ranges to be the same. 
         plt.xlim(min_lim*1.3, max_lim*1.3)
@@ -615,13 +595,14 @@ class plotting_engines():
                     plt.xlabel("Experimental $\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
 
         eng_name = self._get_eng_name(engines)
-        plt.savefig(f"{self.graph_folder}/fep_vs_{exp_name}_scatterplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(f"{self.graph_folder}/calc_vs_{name}_scatterplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
         plt.show()
 
 
-    def outlier(self, pert_val="pert", engines=None, outliers=3, perturbations=None, name=None):
+    def outlier(self, pert_val="pert", engines=None, outliers=3, perturbations=None, name="experimental"):
 
         pert_val = validate.pert_val(pert_val)
+        name = self._validate_in_names_list(name)
 
         if engines:
             engines = self._plotting_engines(engines)
@@ -630,11 +611,6 @@ class plotting_engines():
             engines = self.engines
 
         number_outliers_to_annotate = validate.integer(outliers)
-
-        if name:
-            exp_name = name
-        else:
-            exp_name = "exp"
 
         if not perturbations:
             perturbations = self.perturbations
@@ -651,15 +627,11 @@ class plotting_engines():
 
             col = self.colours[eng]
 
-            if name:
-                plotting_df = self._match_engine_and_other_results(name, pv=pert_val)
-                freenrg_df_plotting = plotting_df[eng][pert_val].dropna()
-            else:
-                freenrg_df_plotting = self.freenrg_df_dict[eng][pert_val].dropna()
+            freenrg_df_plotting = self.freenrg_df_dict[name][eng][pert_val].dropna()
 
-            x = freenrg_df_plotting[f"freenrg_{exp_name}"]
+            x = freenrg_df_plotting[f"freenrg_{name}"]
             y = freenrg_df_plotting["freenrg_calc"]
-            x_er = freenrg_df_plotting[f"err_{exp_name}"]
+            x_er = freenrg_df_plotting[f"err_{name}"]
             y_er = freenrg_df_plotting["err_calc"] 
 
             # get an array of the MUE values comparing experimental and FEP values. Take the absolute values.
@@ -701,7 +673,7 @@ class plotting_engines():
             # then, after generating the figure, we can annotate:
             for i, txt in enumerate(annot_labels):
                 plt.annotate(txt, 
-                            (freenrg_df_plotting[f"freenrg_{exp_name}"].values.tolist()[i]+0.1,     # x coords
+                            (freenrg_df_plotting[f"freenrg_{name}"].values.tolist()[i]+0.1,     # x coords
                             freenrg_df_plotting["freenrg_calc"].values.tolist()[i]+0.1),    # y coords
                             size=15, color=self.colours["experimental"])
 
@@ -740,7 +712,7 @@ class plotting_engines():
         plt.legend(lines, labels, loc='upper left')
         
         # for a scatterplot we want the axis ranges to be the same.
-        min_lim, max_lim = self._get_bounds_scatter(engines, self.freenrg_df_dict, pert_val, perturbations)
+        min_lim, max_lim = self._get_bounds_scatter(engines, self.freenrg_df_dict[name], pert_val, perturbations, name)
         plt.xlim(min_lim*1.3, max_lim*1.3)
         plt.ylim(min_lim*1.3, max_lim*1.3)
 
@@ -765,7 +737,7 @@ class plotting_engines():
                 plt.xlabel("Experimental $\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
 
         eng_name = self._get_eng_name(engines)
-        plt.savefig(f"{self.graph_folder}/fep_vs_{exp_name}_outlierplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(f"{self.graph_folder}/calc_vs_{name}_outlierplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
         plt.show()    
 
     # some functions so cleaner in plotting functions
@@ -778,18 +750,16 @@ class plotting_engines():
             eng_name = "_".join(str(eng) for eng in engines)
 
         return eng_name
-    
-    # TODO method to get the
 
     @staticmethod
-    def _get_bounds_scatter(engines, freenrg_df_dict, pert_val, perturbations):
+    def _get_bounds_scatter(engines, freenrg_df_dict, pert_val, perturbations, name):
 
         # get the bounds. This can be done with min/max or simply by hand.
         all_freenrg_values_pre = []
         for eng in engines:
             freenrg_df_plotting = freenrg_df_dict[eng][pert_val].dropna()
             freenrg_df_plotting = plotting_engines._prune_perturbations(freenrg_df_plotting, perturbations)
-            x = np.array(freenrg_df_plotting["freenrg_experimental"]).tolist() # TODO also fix so does based on which df is passed
+            x = np.array(freenrg_df_plotting[f"freenrg_{name}"]).tolist() # TODO also fix so does based on which df is passed - get default non calc name?
             y = np.array(freenrg_df_plotting["freenrg_calc"]).tolist()
             all_freenrg_values_pre.append(x)
             all_freenrg_values_pre.append(y)
@@ -806,10 +776,12 @@ class plotting_engines():
 
     # TODO plot cycle closure things?
 
-    def histogram(self, engines=None, pert_val=None, error_dict=None, file_ext=None, perturbations=None):
+    def histogram(self, engines=None, pert_val=None, error_dict=None, file_ext=None, perturbations=None, name="experimental"):
         """default plots histogram of SEM, if error dict supplied in format {engine: error_list}, will plot these
         """
         # TODO this is currently plotting the standard error of the 
+
+        name = self._validate_in_names_list(name)
 
         if error_dict:
             type_error = "error"
@@ -846,7 +818,7 @@ class plotting_engines():
             if error_dict:
                 x = error_dict[eng] 
             else:
-                freenrg_df_plotting = self.freenrg_df_dict[eng][pert_val].dropna()
+                freenrg_df_plotting = [self.freenrg_df_dict][name][eng][pert_val].dropna()
                 freenrg_df_plotting = self._prune_perturbations(freenrg_df_plotting, perturbations)
                 x = freenrg_df_plotting["err_calc"]   
 
@@ -867,7 +839,7 @@ class plotting_engines():
             plt.plot(x, y, '--', linewidth=2, color=self.colours["experimental"])
             
             best_fit_dict.update({eng:((x, y), mu, std)})
-            # TODO also save as pickle, and also save as tipe with mu and std
+            # TODO also save as pickle? and also save as tipe with mu and std
 
             #plot
             plt.xlabel('Error')
