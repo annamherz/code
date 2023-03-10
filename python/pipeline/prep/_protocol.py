@@ -79,7 +79,8 @@ class pipeline_protocol():
                     'minimisation steps': '10000',
                     'equilibrium runtime': '100',
                     'equilibrium runtime unit': 'ps',
-                    'engine':"ALL"
+                    'engine':"ALL",
+                    "fepprep":"start"
                     }
         
         return default_dict
@@ -187,6 +188,7 @@ class pipeline_protocol():
             self.eq_runtime(query_dict['equilibrium runtime'])
             self.eq_runtime_unit(query_dict['equilibrium runtime unit'])
             self.engine(query_dict['engine'])
+            self.fepprep(query_dict["fepprep"])
             
             # choose timestep based on whether HMR is applied or not
             # this is important as BSS hmr mixin considers the timestep for the default auto
@@ -225,6 +227,19 @@ class pipeline_protocol():
 
     # this is not part of the default protocol and is found in the network file
     # it needs to be allocated before fepprep
+    def fepprep(self, value=None):
+
+        if value:
+            options_list = ["start","middle","both"]
+            if value not in options_list:
+                raise ValueError(f"fepprep option must be in {options_list}")
+            self._query_dict["fepprep"] = value
+            self._fepprep = value
+        else:
+            value = self._fepprep
+
+        return value
+
     def num_lambda(self, value=None):
 
         if value:
