@@ -79,13 +79,13 @@ class merge():
         return ligand
 
     @staticmethod
-    def merge_system(system0, system1, engine_query):
+    def merge_system(system0, system1, **kwargs):
         """merges to BSS systems for FEP.
 
         Args:
             system0 (BioSimSpace._SireWrappers._system.System): system for the ligand at lambda 0. Is the base system.
             system1 (BioSimSpace._SireWrappers._system.System): system from which the ligand at lmabda 1 will be obtained
-            engine_query (BioSimSpace.FreeEnergy.engines()): an engine allowed for FEP
+            kwargs (dict): extra options for merging the ligands
 
         Raises:
             _Exceptions.AlignmentError: If the ligands could not be aligned
@@ -94,7 +94,6 @@ class merge():
             BioSimSpace._SireWrappers._system.System: system0 with the ligand replaced by the merged ligand
         """
 
-        engine = validate.engine(engine_query)
         system_0 = validate.system(system0)
         system_1 = validate.system(system1)
 
@@ -109,7 +108,7 @@ class merge():
 
         # merge the ligands based on the engine.
         print("mapping, aligning and merging the ligands...")
-        merged_trans = merge.merge_ligands(ligand_0, ligand_1, engine)
+        merged_trans = merge.merge_ligands(ligand_0, ligand_1, **kwargs)
 
         # put the merged ligand into the system_0 in place of ligand_0
         system_0.removeMolecules(ligand_0)
