@@ -79,7 +79,7 @@ class pipeline_protocol():
                     'minimisation steps': '10000',
                     'equilibrium runtime': '100',
                     'equilibrium runtime unit': 'ps',
-                    'engine':"ALL",
+                    'engines':"ALL",
                     "fepprep":"start"
                     }
         
@@ -187,17 +187,12 @@ class pipeline_protocol():
             self.min_steps(query_dict['minimisation steps'])
             self.eq_runtime(query_dict['equilibrium runtime'])
             self.eq_runtime_unit(query_dict['equilibrium runtime unit'])
-            self.engine(query_dict['engine'])
-            self.fepprep(query_dict["fepprep"])
+            self.engines(query_dict['engines'])
             
             # choose timestep based on whether HMR is applied or not
             # this is important as BSS hmr mixin considers the timestep for the default auto
             self.hmr(query_dict['hmr'])
-            if self._hmr:
-                if query_dict['hmr factor'].lower() == "auto":
-                    self._hmr_factor = "auto"
-                else:
-                    self.hmr_factor(query_dict['hmr factor'])
+            self.hmr_factor(query_dict['hmr factor'])
 
             self.timestep(query_dict["timestep"])
             self.timestep_unit(query_dict['timestep unit'])
@@ -254,11 +249,22 @@ class pipeline_protocol():
     def engine(self, value=None):
 
         if value:
-            value = validate.engines(value)
-            self._query_dict["engine"] = value
+            value = validate.engine(value)
+            # self._query_dict["engine"] = value # dont need as only for fepprep
             self._engine = value
         else:
             value = self._engine
+
+        return value
+
+    def engines(self, value=None):
+
+        if value:
+            value = validate.engines(value)
+            self._query_dict["engines"] = value
+            self._engines = value
+        else:
+            value = self._engines
 
         return value
 
@@ -486,25 +492,24 @@ class pipeline_protocol():
 
         if value:
             if self._hmr:
-                if value.lower() == "auto":
-                    self._hmr_factor = "auto"
-                else:
-                    try:
-                        self._hmr_factor = validate.is_float(value)
-                    except:
-                        raise ValueError("hmr_factor must be 'auto' or a integer/float")
-                
-                self._query_dict['hmr factor'] = value
-
-                return value  
-            
+                pass
             else:
-                print("'hmr' must be set to True for a hmr factor to be applied")
-                return
-        
+                print(f"'hmr' must be set to True for a hmr factor to be applied. It will still be set as {value}.")
+
+            if value.lower() == "auto":
+                self._hmr_factor = "auto"
+            else:
+                try:
+                    self._hmr_factor = validate.is_float(value)
+                except:
+                    raise ValueError("hmr_factor must be 'auto' or a integer/float")
+            
+            self._query_dict['hmr factor'] = value
+
         else:
             value = self._hmr_factor
-            return value
+        
+        return value
 
 
     def timestep_overwrite(self, value=None):
