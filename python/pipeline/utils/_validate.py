@@ -744,12 +744,10 @@ class validate():
         if fepprep:
             if not hasattr(protocol, "num_lambda"):
                 warnings.warn("the provided protocol does not have attribute 'num_lambda'.\n 11 lambda windows will be used...")
-                protocol.num_lambda = 11
+                protocol.num_lambda(11)
             if not hasattr(protocol, "engine"):
-                raise TypeError("protocol must have an engine to be used for fep.\n please set an engine using protocol.engine = 'ENGINE' ")
-            else:
-                protocol.engine = validate.engine(protocol.engine)
-                # TODO someway to check that it is just one engine for the fepprep
+                raise TypeError("protocol must have an engine to be used for fep. This is usually defined in the network file. \
+                                This is different from protocol.engines in the protocol file. ")
 
         return protocol
 
