@@ -17,3 +17,6 @@ build/
 
 # VSCode config
 .vscode/
+
+# test dir
+.test/

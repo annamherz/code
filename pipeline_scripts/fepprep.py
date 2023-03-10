@@ -25,6 +25,7 @@ engine_query = str(sys.argv[2]).upper()
 num_lambda_query = int(sys.argv[3])
 
 # files that were set in the run_all script
+pmemd_path = os.environ["amber"] + "/bin/pmemd.cuda"
 main_dir = os.environ["MAINDIRECTORY"]
 net_file = os.environ["net_file"] # network file
 prot_file = os.environ["prot_file"] # protocol file
@@ -77,5 +78,7 @@ for name, leg in zip(["lig", "sys"], ["free", "bound"]):
         system_bound = merge.merge_system(system_1, system_2)
 
 # instantiate each system as a fepprep class with the protocol
-fepprep = fepprep(system_free, system_bound, protocol)
-fepprep.generate_folders(workdir)
+fepprep_obj = fepprep(system_free, system_bound, protocol)
+fepprep_obj.prep_system_middle(pmemd_path) # equilibrate at 0.5
+# then generate all folders starting from 0.5
+fepprep_obj.generate_folders(workdir)

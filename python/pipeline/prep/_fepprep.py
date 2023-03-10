@@ -2,7 +2,8 @@ import BioSimSpace as BSS
 from distutils.dir_util import copy_tree
 
 from ..utils._validate import *
-
+from ._ligprep import *
+from ._equilibrate import *
 
 class fepprep():
     """class for fepprep
@@ -17,15 +18,15 @@ class fepprep():
         # generate the BSS protocols from the pipeline protocol
         fepprep._generate_bss_protocols(self)
 
-
     def _generate_bss_protocols(self):
 
         protocol = self._pipeline_protocol
 
         if protocol.engine() == 'AMBER' or protocol.engine() == 'GROMACS':
             
-            min_protocol = BSS.Protocol.FreeEnergyMinimisation(num_lam=protocol.num_lambda(),
-                                                            steps=protocol.min_steps()
+            min_protocol = BSS.Protocol.FreeEnergyMinimisation(
+                                                            num_lam=protocol.num_lambda(),
+                                                            steps=protocol.min_steps(),
                                                             )
             heat_protocol = BSS.Protocol.FreeEnergyEquilibration(timestep=protocol.timestep()*protocol.timestep_unit(),
                                                                 num_lam=protocol.num_lambda(),
@@ -78,6 +79,22 @@ class fepprep():
         self._eq_protocol = eq_protocol
         self._freenrg_protocol = freenrg_protocol
 
+    def prep_system_middle(self, pmemd_path):
+
+        if self._pipeline_protocol.fepprep() == "middle":
+            # Solvate and run each the bound and the free system.
+            legs_mols, legs = [self._free_system, self._bound_system], ["lig", "sys"]
+
+            # zip together the molecules in that leg with the name for that leg
+            for leg, leg_mol in zip(legs, legs_mols):
+                leg_equil_final = minimise_equilibrate_leg(leg_mol, "AMBER", pmemd_path, lig_fep="fepprep")
+                if leg == "lig":
+                    self._free_system = leg_equil_final
+                if leg == "sys":
+                    self._bound_system = leg_equil_final
+        
+        return self._free_system, self._bound_system 
+
 
     def generate_folders(self, work_dir):
 
@@ -121,29 +138,29 @@ class fepprep():
                     work_dir=f"{work_dir}/{leg}_0/min"
                 )
 
-                BSS.FreeEnergy.Relative(
-                    system,
-                    heat_protocol,
-                    engine=f"{protocol.engine()}",
-                    work_dir=f"{work_dir}/{leg}_0/heat",
-                    extra_options={}
-                )
+                # BSS.FreeEnergy.Relative(
+                #     system,
+                #     heat_protocol,
+                #     engine=f"{protocol.engine()}",
+                #     work_dir=f"{work_dir}/{leg}_0/heat",
+                #     extra_options={}
+                # )
 
-                BSS.FreeEnergy.Relative(
-                    system,
-                    eq_protocol,
-                    engine=f"{protocol.engine()}",
-                    work_dir=f"{work_dir}/{leg}_0/eq",
-                    extra_options={}
-                )
+                # BSS.FreeEnergy.Relative(
+                #     system,
+                #     eq_protocol,
+                #     engine=f"{protocol.engine()}",
+                #     work_dir=f"{work_dir}/{leg}_0/eq",
+                #     extra_options={}
+                # )
 
-                BSS.FreeEnergy.Relative(
-                    system,
-                    freenrg_protocol,
-                    engine=f"{protocol.engine()}",
-                    work_dir=f"{work_dir}/{leg}_0",
-                    extra_options={}
-                )
+                # BSS.FreeEnergy.Relative(
+                #     system,
+                #     freenrg_protocol,
+                #     engine=f"{protocol.engine()}",
+                #     work_dir=f"{work_dir}/{leg}_0",
+                #     extra_options={}
+                # )
 
         if protocol.engine() == "SOMD":
             for leg, system in zip(["bound", "free"], [system_bound, system_free]):
@@ -166,7 +183,7 @@ class fepprep():
 
         # default folder is with no integer.
         # for the sake of analysis , doesnt matter as finds folders w names of leg
-        more_repeats = list(range(1, protocol.repeats))
+        more_repeats = list(range(1, protocol.repeats()))
 
         print(f"there are {protocol.repeats()} folder(s) being made for each leg...")
         for r in more_repeats:
