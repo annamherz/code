@@ -3,7 +3,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=5
 #SBATCH --job-name=fepprep
-#SBATCH --time=02:00:00
+#SBATCH --time=05:00:00
 #SBATCH -o ../slurm_logs/fepprep_%A_%a.out
 #SBATCH -e ../slurm_logs/fepprep_%A_%a.err
 

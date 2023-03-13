@@ -118,9 +118,17 @@ class merge():
 
 
     @staticmethod
-    def atom_mappings(system0, system1, engine_query):
+    def atom_mappings(system0, system1, **kwargs):
 
-        engine = validate.engine(engine_query)
+        prune_perturbed_constraints=None
+        prune_crossing_constraints=None
+
+        for key,value in kwargs.items():
+            if key == "prune perturbed constraints":
+                prune_perturbed_constraints = validate.boolean(value)
+            if key == "prune crossing constraints":
+                prune_crossing_constraints = validate.boolean(value)           
+
         system_0 = validate.system(system0)
         system_1 = validate.system(system1)
 
@@ -133,8 +141,13 @@ class merge():
             raise _Exceptions.AlignmentError(
                 "Could not extract ligands from input systems. Check that your ligands/proteins are properly prepared!")
 
-        # Align ligand2 on ligand1
+
+        # Align ligand1 on ligand0
         mapping = BSS.Align.matchAtoms(
-            ligand_0, ligand_1, engine=engine, complete_rings_only=True)
+                                    ligand_0, ligand_1,
+                                    complete_rings_only=True,
+                                    prune_perturbed_constraints=prune_perturbed_constraints,
+                                    prune_crossing_constraints=prune_crossing_constraints
+                                    )      
 
         return (ligand_0.getAtoms(), ligand_1.getAtoms(), mapping)

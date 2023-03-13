@@ -1,4 +1,5 @@
 import BioSimSpace as BSS
+from BioSimSpace import _Exceptions
 from BioSimSpace.Units.Length import angstrom as _angstrom
 
 from ..utils._validate import *
@@ -77,6 +78,7 @@ def nvt_prots(lig_fep):
         temperature_start=0*BSS.Units.Temperature.kelvin,
         temperature_end=300*BSS.Units.Temperature.kelvin,
         restraint="all",
+        restart=True,
         **args
     )
 
@@ -85,12 +87,14 @@ def nvt_prots(lig_fep):
         runtime=400*BSS.Units.Time.picosecond,
         temperature=300*BSS.Units.Temperature.kelvin,
         restraint="heavy",
+        restart=True,
         **args
     )
     # NVT no restraints
     protocol_nvt = func(
         runtime=400*BSS.Units.Time.picosecond,
         temperature_end=300*BSS.Units.Temperature.kelvin,
+        restart=True,
         **args
     )
 
@@ -111,6 +115,7 @@ def npt_prots(lig_fep):
         pressure=1*BSS.Units.Pressure.atm,
         temperature=300*BSS.Units.Temperature.kelvin,
         restraint="heavy",
+        restart=True,
         **args
     )
     # NPT with gradual release of restraints
@@ -120,6 +125,7 @@ def npt_prots(lig_fep):
         temperature=300*BSS.Units.Temperature.kelvin,
         restraint="heavy",
         force_constant=5,
+        restart=True,
         **args
     )
     # NPT no restraints
@@ -127,6 +133,7 @@ def npt_prots(lig_fep):
         runtime=1000*BSS.Units.Time.picosecond,
         pressure=1*BSS.Units.Pressure.atm,
         temperature=300*BSS.Units.Temperature.kelvin,
+        restart=True,
         **args
     )
 

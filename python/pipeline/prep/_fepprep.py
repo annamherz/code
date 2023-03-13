@@ -87,6 +87,7 @@ class fepprep():
 
             # zip together the molecules in that leg with the name for that leg
             for leg, leg_mol in zip(legs, legs_mols):
+                print(f"carrying out for {leg}")
                 leg_equil_final = minimise_equilibrate_leg(leg_mol, "AMBER", pmemd_path, lig_fep="fepprep")
                 if leg == "lig":
                     self._free_system = leg_equil_final
@@ -138,29 +139,29 @@ class fepprep():
                     work_dir=f"{work_dir}/{leg}_0/min"
                 )
 
-                # BSS.FreeEnergy.Relative(
-                #     system,
-                #     heat_protocol,
-                #     engine=f"{protocol.engine()}",
-                #     work_dir=f"{work_dir}/{leg}_0/heat",
-                #     extra_options={}
-                # )
+                BSS.FreeEnergy.Relative(
+                    system,
+                    heat_protocol,
+                    engine=f"{protocol.engine()}",
+                    work_dir=f"{work_dir}/{leg}_0/heat",
+                    extra_options={}
+                )
 
-                # BSS.FreeEnergy.Relative(
-                #     system,
-                #     eq_protocol,
-                #     engine=f"{protocol.engine()}",
-                #     work_dir=f"{work_dir}/{leg}_0/eq",
-                #     extra_options={}
-                # )
+                BSS.FreeEnergy.Relative(
+                    system,
+                    eq_protocol,
+                    engine=f"{protocol.engine()}",
+                    work_dir=f"{work_dir}/{leg}_0/eq",
+                    extra_options={}
+                )
 
-                # BSS.FreeEnergy.Relative(
-                #     system,
-                #     freenrg_protocol,
-                #     engine=f"{protocol.engine()}",
-                #     work_dir=f"{work_dir}/{leg}_0",
-                #     extra_options={}
-                # )
+                BSS.FreeEnergy.Relative(
+                    system,
+                    freenrg_protocol,
+                    engine=f"{protocol.engine()}",
+                    work_dir=f"{work_dir}/{leg}_0",
+                    extra_options={}
+                )
 
         if protocol.engine() == "SOMD":
             for leg, system in zip(["bound", "free"], [system_bound, system_free]):

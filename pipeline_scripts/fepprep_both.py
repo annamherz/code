@@ -12,6 +12,7 @@ import BioSimSpace as BSS
 import os
 import sys
 import csv
+import shutil
 
 from pipeline.prep import *
 from pipeline.utils import *
@@ -78,8 +79,44 @@ for name, leg in zip(["lig", "sys"], ["free", "bound"]):
 
 # instantiate each system as a fepprep class with the protocol
 fepprep_obj = fepprep(system_free, system_bound, protocol)
-fepprep_obj.prep_system_middle(pmemd_path) # equilibrate at 0.5
-# remove any existing files in the workdir
-os.rmdir(workdir)
 # then generate all folders starting from 0.5
 fepprep_obj.generate_folders(workdir)
+
+workdir2 = f"{main_dir}/outputs/{engine_query}/{lig_1}~{lig_2}_temp"
+# create the system for each the free and the bound leg.
+system_free = None
+system_bound = None
+
+for name, leg in zip(["lig", "sys"], ["free", "bound"]):
+    # Load equilibrated inputs for both ligands
+    system_1 = BSS.IO.readMolecules(
+        [f"{prep_dir}/{lig_1}_{name}_equil_solv.rst7", f"{prep_dir}/{lig_1}_{name}_equil_solv.prm7"])
+    system_2 = BSS.IO.readMolecules(
+        [f"{prep_dir}/{lig_2}_{name}_equil_solv.rst7", f"{prep_dir}/{lig_2}_{name}_equil_solv.prm7"])
+
+    print(f"Preparing the {leg} leg...")
+    # swap order of mapping systems so maps to system 2
+    if leg == "free":
+        system_free = merge.merge_system(system_2, system_1)
+    if leg == "bound":
+        system_bound = merge.merge_system(system_2, system_1)
+
+# instantiate each system as a fepprep class with the protocol
+fepprep_obj = fepprep(system_free, system_bound, protocol)
+# then generate all folders starting from 0.5
+fepprep_obj.generate_folders(workdir2)
+
+end_lambdas = ["0.6000", "0.7000", "0.8000", "0.9000", "1.0000"]
+start_lambdas = ["0.0000", "0.1000", "0.2000", "0.3000", "0.4000", "0.5000"]
+
+for lam in end_lambdas:
+    os.rmdir(f"{workdir}/*{lam}")
+
+for lam in end_lambdas:
+    print("moving end lambdas to main run folder")
+    shutil.move(f"{workdir2}/lambda_{lam}", f"{workdir}/lambda_{lam}")
+    shutil.move(f"{workdir2}/min/lambda_{lam}", f"{workdir}/min/lambda_{lam}")
+    shutil.move(f"{workdir2}/eq/lambda_{lam}", f"{workdir}/eq/lambda_{lam}")
+    shutil.move(f"{workdir2}/heat/lambda_{lam}", f"{workdir}/heat/lambda_{lam}")
+
+os.rmdir(f"{workdir2}")

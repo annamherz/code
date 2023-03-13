@@ -80,7 +80,7 @@ class pipeline_protocol():
                     'equilibrium runtime': '100',
                     'equilibrium runtime unit': 'ps',
                     'engines':"ALL",
-                    "fepprep":"start"
+                    "fepprep":"middle"
                     }
         
         return default_dict
@@ -188,6 +188,7 @@ class pipeline_protocol():
             self.eq_runtime(query_dict['equilibrium runtime'])
             self.eq_runtime_unit(query_dict['equilibrium runtime unit'])
             self.engines(query_dict['engines'])
+            self.fepprep(query_dict['fepprep'])
             
             # choose timestep based on whether HMR is applied or not
             # this is important as BSS hmr mixin considers the timestep for the default auto

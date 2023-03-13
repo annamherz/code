@@ -2,10 +2,10 @@
 #SBATCH -n 1
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=5
-#SBATCH --job-name=ligprep
+#SBATCH --job-name=fepprep
 #SBATCH --time=05:00:00
-#SBATCH -o ../slurm_logs/ligprep_%A_%a.out
-#SBATCH -e ../slurm_logs/ligprep_%A_%a.err
+#SBATCH -o ../slurm_logs/fepprep_%A_%a.out
+#SBATCH -e ../slurm_logs/fepprep_%A_%a.err
 
 # sourcing
 source $BSS
@@ -17,12 +17,14 @@ date
 start=`date +%s`
 
 echo "Folder for these runs is : $MAINDIRECTORY"
-echo "Ligands file is : $lig_file"
+echo "Network file is : $net_file"
 
-lig=${lig_array[$SLURM_ARRAY_TASK_ID]}
+trans=${trans_array[$SLURM_ARRAY_TASK_ID]}
+eng=${eng_array[$SLURM_ARRAY_TASK_ID]}
+win=${win_array[$SLURM_ARRAY_TASK_ID]}
 
-echo "prep for $lig..."
-python $scripts_dir/ligprep.py $lig
+echo "fepprep for $trans using $eng"
+python $scripts_dir/fepprep_both.py $trans $eng $win # no eq during setup
 
 end=`date +%s`
 runtime=$((end-start))
