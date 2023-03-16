@@ -161,26 +161,26 @@ def minimise_equilibrate_leg(system_solvated, engine="AMBER", pmemd=None, lig_fe
     protocol_npt_heavy, protocol_npt_heavy_lighter, protocol_npt = npt_prots(lig_fep)
 
     # run all the protocols
-    # if lig_fep == "ligprep":
-    print("minimising...")
-    minimised1 = run_process(system_solvated, protocol_min_rest, engine, pmemd, work_dir=work_dir)
-    minimised2 = run_process(minimised1, protocol_min, engine, pmemd, work_dir=work_dir)
-    print("equilibrating NVT...")
-    equil1 = run_process(minimised2, protocol_nvt_sol, engine, pmemd, work_dir=work_dir)
-    equil2 = run_process(equil1, protocol_nvt_heavy, engine, pmemd, work_dir=work_dir)
-    equil3 = run_process(equil2, protocol_nvt, engine, pmemd, work_dir=work_dir)
-    print("equilibrating NPT...") 
-    equil4 = run_process(equil3, protocol_npt_heavy, engine, pmemd, work_dir=work_dir)
-    equil5 = run_process(equil4, protocol_npt_heavy_lighter, engine, pmemd, work_dir=work_dir)
-    sys_equil_fin = run_process(equil5, protocol_npt, engine, pmemd, work_dir=work_dir)
+    if lig_fep == "ligprep":
+        print("minimising...")
+        minimised1 = run_process(system_solvated, protocol_min_rest, engine, pmemd, work_dir=work_dir)
+        minimised2 = run_process(minimised1, protocol_min, engine, pmemd, work_dir=work_dir)
+        print("equilibrating NVT...")
+        equil1 = run_process(minimised2, protocol_nvt_sol, engine, pmemd, work_dir=work_dir)
+        equil2 = run_process(equil1, protocol_nvt_heavy, engine, pmemd, work_dir=work_dir)
+        equil3 = run_process(equil2, protocol_nvt, engine, pmemd, work_dir=work_dir)
+        print("equilibrating NPT...") 
+        equil4 = run_process(equil3, protocol_npt_heavy, engine, pmemd, work_dir=work_dir)
+        equil5 = run_process(equil4, protocol_npt_heavy_lighter, engine, pmemd, work_dir=work_dir)
+        sys_equil_fin = run_process(equil5, protocol_npt, engine, pmemd, work_dir=work_dir)
     
-    # if lig_fep == "fepprep":
-    #     print("minimising...")
-    #     minimised1 = run_process(system_solvated, protocol_min_rest, engine, pmemd)
-    #     minimised2 = run_process(minimised1, protocol_min, engine, pmemd)
-    #     print("equilibrating NVT...")
-    #     equil_nvt = run_process(minimised2, protocol_nvt, engine, pmemd)
-    #     print("equilibrating NPT...") 
-    #     sys_equil_fin = run_process(equil_nvt, protocol_npt, engine, pmemd)
+    if lig_fep == "fepprep":
+        print("minimising...")
+        minimised1 = run_process(system_solvated, protocol_min_rest, engine, pmemd)
+        minimised2 = run_process(minimised1, protocol_min, engine, pmemd)
+        print("equilibrating NVT...")
+        equil_nvt = run_process(minimised2, protocol_nvt, engine, pmemd)
+        print("equilibrating NPT...") 
+        sys_equil_fin = run_process(equil_nvt, protocol_npt, engine, pmemd)
 
     return sys_equil_fin
