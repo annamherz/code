@@ -78,7 +78,7 @@ for name, leg in zip(["lig", "sys"], ["free", "bound"]):
 
 # instantiate each system as a fepprep class with the protocol
 fepprep_obj = fepprep(system_free, system_bound, protocol)
-fepprep_obj.prep_system_middle(pmemd_path) # equilibrate at 0.5
+# fepprep_obj.prep_system_middle(pmemd_path) # equilibrate at 0.5
 # remove any existing files in the workdir
 os.rmdir(workdir)
 # then generate all folders starting from 0.5

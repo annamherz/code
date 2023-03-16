@@ -79,7 +79,7 @@ class fepprep():
         self._eq_protocol = eq_protocol
         self._freenrg_protocol = freenrg_protocol
 
-    def prep_system_middle(self, pmemd_path):
+    def prep_system_middle(self, pmemd_path, work_dir=None):
 
         if self._pipeline_protocol.fepprep() == "middle":
             # Solvate and run each the bound and the free system.
@@ -88,7 +88,7 @@ class fepprep():
             # zip together the molecules in that leg with the name for that leg
             for leg, leg_mol in zip(legs, legs_mols):
                 print(f"carrying out for {leg}")
-                leg_equil_final = minimise_equilibrate_leg(leg_mol, "AMBER", pmemd_path, lig_fep="fepprep")
+                leg_equil_final = minimise_equilibrate_leg(leg_mol, "AMBER", pmemd_path, lig_fep="fepprep", work_dir=work_dir)
                 if leg == "lig":
                     self._free_system = leg_equil_final
                 if leg == "sys":
