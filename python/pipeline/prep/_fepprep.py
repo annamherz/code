@@ -15,17 +15,17 @@ class fepprep():
 
         # instantiate the class with the system and pipeline_protocol
         if free_system:
-            self._free_system = validate.system(free_system).copy()
+            self._merge_free_system = validate.system(free_system).copy()
         else:
-            self._free_system = None
+            self._merge_free_system = None
             self._free_system_0 = None
             self._free_system_1 = None
             print("please add a system for free with lig0 and free with lig1 and merge these")
 
         if bound_system:
-            self._bound_system = validate.system(bound_system).copy()
+            self._merge_bound_system = validate.system(bound_system).copy()
         else:
-            self._bound_system = None
+            self._merge_bound_system = None
             self._bound_system_0 = None
             self._bound_system_1 = None
             print("please add a system for bound with lig0 and bound with lig1 and merge these")
@@ -50,6 +50,7 @@ class fepprep():
         if free_bound == "bound" and start_end == "end":
             self._bound_system_1 = validate.system(system).copy()
 
+
     def _merge_systems(self, align_to):
             
         free_system = merge.merge_system(self._free_system_0, self._free_system_1, **{"align to": align_to})
@@ -59,7 +60,7 @@ class fepprep():
     
     def merge_systems(self, align_to="lig0"):
 
-        self._free_system, self._bound_system = self._merge_systems(align_to)
+        self._merge_free_system, self._merge_bound_system = self._merge_systems(align_to)
 
     def _generate_bss_protocols(self):
 
@@ -126,18 +127,18 @@ class fepprep():
 
         if self._pipeline_protocol.fepprep() == "middle":
             # Solvate and run each the bound and the free system.
-            legs_mols, legs = [self._free_system, self._bound_system], ["lig", "sys"]
+            legs_mols, legs = [self._merge_free_system, self._merge_bound_system], ["lig", "sys"]
 
             # zip together the molecules in that leg with the name for that leg
             for leg, leg_mol in zip(legs, legs_mols):
                 print(f"carrying out for {leg}")
                 leg_equil_final = minimise_equilibrate_leg(leg_mol, "AMBER", pmemd_path, lig_fep="fepprep", work_dir=work_dir)
                 if leg == "lig":
-                    self._free_system = leg_equil_final
+                    self._merge_free_system = leg_equil_final
                 if leg == "sys":
-                    self._bound_system = leg_equil_final
+                    self._merge_bound_system = leg_equil_final
         
-        return self._free_system, self._bound_system 
+        return self._merge_free_system, self._merge_bound_system 
 
     def _generate_folders(self, system_free, system_bound, work_dir):
         
@@ -248,10 +249,10 @@ class fepprep():
                 remove_tree(f"{work_dir}/{lig}")
 
         else:
-            if not self._free_system or not self._bound_system:
+            if not self._merge_free_system or not self._merge_bound_system:
                 print("no merged systems, merging....")
                 self.merge_systems()
-            self._generate_folders(self._free_system, self._bound_system, work_dir)
+            self._generate_folders(self._merge_free_system, self._merge_bound_system, work_dir)
 
         # default folder is with no integer.
         # for the sake of analysis , doesnt matter as finds folders w names of leg

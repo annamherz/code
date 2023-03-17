@@ -59,7 +59,7 @@ class merge():
             ligand_0_a = BSS.Align.rmsdAlign(ligand_0, ligand_1, mapping)
             # Generate merged molecule.
             merged_ligands = BSS.Align.merge(
-                ligand_1, ligand_0_a, inv_mapping, allow_ring_breaking=allow_ring_breaking)
+                ligand_0_a, ligand_1, mapping, allow_ring_breaking=allow_ring_breaking)
             
         else:
             raise ValueError("must align to 'lig0' or 'lig1'")
