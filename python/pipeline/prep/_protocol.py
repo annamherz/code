@@ -80,7 +80,7 @@ class pipeline_protocol():
                     'equilibrium runtime': '100',
                     'equilibrium runtime unit': 'ps',
                     'engines':"ALL",
-                    "fepprep":"middle"
+                    "fepprep":"start"
                     }
         
         return default_dict
@@ -309,7 +309,7 @@ class pipeline_protocol():
             self._query_dict["box edges"] = value
             self._box_edges = value
         else:
-            self._box_edges
+            value = self._box_edges
 
         return value
 
