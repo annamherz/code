@@ -80,7 +80,7 @@ for leg, leg_mol in zip(legs, legs_mols):
 
     # minimise and eqiulibrate these
     print(f"minimising and equilibrating for {leg} and {lig_name}")
-    leg_equil_final = ligprep.minimise_equilibrate_leg(leg_mol_solvated, leg, engine, pmemd_path)
+    leg_equil_final = minimise_equilibrate_leg(leg_mol_solvated, engine, pmemd_path)
 
     # finally, save last snapshot
     print(f"Saving solvated/equilibrated for {leg} and {lig_name}")

@@ -12,7 +12,7 @@ import BioSimSpace as BSS
 import os
 import sys
 import csv
-from distutils.dir_util import remove_tree
+import shutil
 
 from pipeline.prep import *
 from pipeline.utils import *
@@ -26,7 +26,7 @@ engine_query = str(sys.argv[2]).upper()
 num_lambda_query = int(sys.argv[3])
 
 # files that were set in the run_all script
-pmemd_path = os.environ["amber"] + "/bin/pmemd.cuda"
+pmemd_path = os.environ["AMBERHOME"] + "/bin/pmemd.cuda"
 main_dir = os.environ["MAINDIRECTORY"]
 net_file = os.environ["net_file"] # network file
 prot_file = os.environ["prot_file"] # protocol file
@@ -60,24 +60,63 @@ protocol.validate() # validate all the input
 protocol.num_lambda(num_lambda_query)
 protocol.engine(engine_query)
 
-# instantiate each system as a fepprep class with the protocol
-fepprep_obj = fepprep(protocol=protocol)
+# create the system for each the free and the bound leg.
+system_free = None
+system_bound = None
 
 for name, leg in zip(["lig", "sys"], ["free", "bound"]):
-
     # Load equilibrated inputs for both ligands
     system_1 = BSS.IO.readMolecules(
         [f"{prep_dir}/{lig_1}_{name}_equil_solv.rst7", f"{prep_dir}/{lig_1}_{name}_equil_solv.prm7"])
     system_2 = BSS.IO.readMolecules(
         [f"{prep_dir}/{lig_2}_{name}_equil_solv.rst7", f"{prep_dir}/{lig_2}_{name}_equil_solv.prm7"])
 
-    fepprep_obj.add_system(system_1, free_bound=leg, start_end="start")
-    fepprep_obj.add_system(system_2, free_bound=leg, start_end="end")
+    print(f"Preparing the {leg} leg...")
+    if leg == "free":
+        system_free = merge.merge_system(system_1, system_2)
+    if leg == "bound":
+        system_bound = merge.merge_system(system_1, system_2)
 
-# remove any existing files in the workdir
-try:    
-    remove_tree(workdir)
-except:
-    pass
-# generate folder based on fepprep protocol (both or start)
+# instantiate each system as a fepprep class with the protocol
+fepprep_obj = fepprep(system_free, system_bound, protocol)
+# then generate all folders starting from 0.5
 fepprep_obj.generate_folders(workdir)
+
+workdir2 = f"{main_dir}/outputs/{engine_query}/{lig_1}~{lig_2}_temp"
+# create the system for each the free and the bound leg.
+system_free = None
+system_bound = None
+
+for name, leg in zip(["lig", "sys"], ["free", "bound"]):
+    # Load equilibrated inputs for both ligands
+    system_1 = BSS.IO.readMolecules(
+        [f"{prep_dir}/{lig_1}_{name}_equil_solv.rst7", f"{prep_dir}/{lig_1}_{name}_equil_solv.prm7"])
+    system_2 = BSS.IO.readMolecules(
+        [f"{prep_dir}/{lig_2}_{name}_equil_solv.rst7", f"{prep_dir}/{lig_2}_{name}_equil_solv.prm7"])
+
+    print(f"Preparing the {leg} leg...")
+    # swap order of mapping systems so maps to system 2
+    if leg == "free":
+        system_free = merge.merge_system(system_2, system_1)
+    if leg == "bound":
+        system_bound = merge.merge_system(system_2, system_1)
+
+# instantiate each system as a fepprep class with the protocol
+fepprep_obj = fepprep(system_free, system_bound, protocol)
+# then generate all folders starting from 0.5
+fepprep_obj.generate_folders(workdir2)
+
+end_lambdas = ["0.6000", "0.7000", "0.8000", "0.9000", "1.0000"]
+start_lambdas = ["0.0000", "0.1000", "0.2000", "0.3000", "0.4000", "0.5000"]
+
+for lam in end_lambdas:
+    os.rmdir(f"{workdir}/*{lam}")
+
+for lam in end_lambdas:
+    print("moving end lambdas to main run folder")
+    shutil.move(f"{workdir2}/lambda_{lam}", f"{workdir}/lambda_{lam}")
+    shutil.move(f"{workdir2}/min/lambda_{lam}", f"{workdir}/min/lambda_{lam}")
+    shutil.move(f"{workdir2}/eq/lambda_{lam}", f"{workdir}/eq/lambda_{lam}")
+    shutil.move(f"{workdir2}/heat/lambda_{lam}", f"{workdir}/heat/lambda_{lam}")
+
+os.rmdir(f"{workdir2}")

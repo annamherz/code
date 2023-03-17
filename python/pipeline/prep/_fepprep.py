@@ -1,22 +1,66 @@
 import BioSimSpace as BSS
-from distutils.dir_util import copy_tree
+from distutils.dir_util import copy_tree, remove_tree
 
 from ..utils._validate import *
-
+from ._merge import *
+from ._ligprep import *
+from ._equilibrate import *
 
 class fepprep():
     """class for fepprep
         makes all the protocols and writes the folders
     """
 
-    def __init__(self, free_system, bound_system, protocol):
+    def __init__(self, free_system=None, bound_system=None, protocol=None):
+
         # instantiate the class with the system and pipeline_protocol
-        self._free_system = validate.system(free_system)
-        self._bound_system = validate.system(bound_system)
+        if free_system:
+            self._merge_free_system = validate.system(free_system).copy()
+        else:
+            self._merge_free_system = None
+            self._free_system_0 = None
+            self._free_system_1 = None
+            print("please add a system for free with lig0 and free with lig1 and merge these")
+
+        if bound_system:
+            self._merge_bound_system = validate.system(bound_system).copy()
+        else:
+            self._merge_bound_system = None
+            self._bound_system_0 = None
+            self._bound_system_1 = None
+            print("please add a system for bound with lig0 and bound with lig1 and merge these")
+
         self._pipeline_protocol = validate.pipeline_protocol(protocol, fepprep=True)
         # generate the BSS protocols from the pipeline protocol
         fepprep._generate_bss_protocols(self)
 
+    def add_system(self, system, free_bound=None, start_end=None):
+
+        if free_bound not in ["free", "bound"]:
+            raise ValueError("free_bound must be free or bound.")
+        if start_end not in ["start", "end"]:
+            raise ValueError("start_end must be start or end.")
+                
+        if free_bound == "free" and start_end == "start":
+            self._free_system_0 = validate.system(system).copy()
+        if free_bound == "free" and start_end == "end":
+            self._free_system_1 = validate.system(system).copy()
+        if free_bound == "bound" and start_end == "start":
+            self._bound_system_0 = validate.system(system).copy()
+        if free_bound == "bound" and start_end == "end":
+            self._bound_system_1 = validate.system(system).copy()
+
+
+    def _merge_systems(self, align_to):
+            
+        free_system = merge.merge_system(self._free_system_0, self._free_system_1, **{"align to": align_to})
+        bound_system = merge.merge_system(self._bound_system_0, self._bound_system_1, **{"align to": align_to})
+        
+        return free_system, bound_system
+    
+    def merge_systems(self, align_to="lig0"):
+
+        self._merge_free_system, self._merge_bound_system = self._merge_systems(align_to)
 
     def _generate_bss_protocols(self):
 
@@ -24,8 +68,9 @@ class fepprep():
 
         if protocol.engine() == 'AMBER' or protocol.engine() == 'GROMACS':
             
-            min_protocol = BSS.Protocol.FreeEnergyMinimisation(num_lam=protocol.num_lambda(),
-                                                            steps=protocol.min_steps()
+            min_protocol = BSS.Protocol.FreeEnergyMinimisation(
+                                                            num_lam=protocol.num_lambda(),
+                                                            steps=protocol.min_steps(),
                                                             )
             heat_protocol = BSS.Protocol.FreeEnergyEquilibration(timestep=protocol.timestep()*protocol.timestep_unit(),
                                                                 num_lam=protocol.num_lambda(),
@@ -78,19 +123,30 @@ class fepprep():
         self._eq_protocol = eq_protocol
         self._freenrg_protocol = freenrg_protocol
 
+    def prep_system_middle(self, pmemd_path, work_dir=None):
 
-    def generate_folders(self, work_dir):
+        if self._pipeline_protocol.fepprep() == "middle":
+            # Solvate and run each the bound and the free system.
+            legs_mols, legs = [self._merge_free_system, self._merge_bound_system], ["lig", "sys"]
 
-        work_dir = validate.folder_path(work_dir, create=True)
+            # zip together the molecules in that leg with the name for that leg
+            for leg, leg_mol in zip(legs, legs_mols):
+                print(f"carrying out for {leg}")
+                leg_equil_final = minimise_equilibrate_leg(leg_mol, "AMBER", pmemd_path, lig_fep="fepprep", work_dir=work_dir)
+                if leg == "lig":
+                    self._merge_free_system = leg_equil_final
+                if leg == "sys":
+                    self._merge_bound_system = leg_equil_final
+        
+        return self._merge_free_system, self._merge_bound_system 
 
-        system_free = self._free_system
-        system_bound = self._bound_system
+    def _generate_folders(self, system_free, system_bound, work_dir):
+        
         protocol = self._pipeline_protocol
         min_protocol = self._min_protocol
         heat_protocol = self._heat_protocol
         eq_protocol = self._eq_protocol
         freenrg_protocol = self._freenrg_protocol
-
 
         print(f"setting up FEP run in {work_dir}...")
 
@@ -164,11 +220,45 @@ class fepprep():
                     extra_options={'minimise': False, 'equilibrate': False}
                 )
 
+
+    def generate_folders(self, work_dir):
+
+        work_dir = validate.folder_path(work_dir, create=True)
+
+        if self._pipeline_protocol.fepprep() == "both":
+            ligs = ["lig0", "lig1"]
+            for lig in ligs:
+                free_system, bound_system = self._merge_systems(align_to=lig)
+                self._generate_folders(free_system, bound_system, f"{work_dir}/{lig}")
+
+            lambdas_list = self._min_protocol.getLambdaValues()
+            middle_index=len(lambdas_list)//2        
+            first_half=lambdas_list[:middle_index]
+            sec_half=lambdas_list[middle_index:]
+            
+            # copy files to main folder
+            print("copying generated folders for the endstates into a combined folder, so first half is lig0 and second half is lig1")
+            for lig, lam_list in zip(ligs, [first_half, sec_half]):
+                for leg in ["bound", "free"]:
+                    for part in ["min/","heat/", "eq/", ""]:
+                        for lam in lam_list:
+                            copy_tree(f"{work_dir}/{lig}/{leg}_0/{part}lambda_{lam:.4f}", f"{work_dir}/{leg}_0/{part}lambda_{lam:.4f}")
+                
+                # remove the dir
+                print(f"removing directory for {lig} as copied...")
+                remove_tree(f"{work_dir}/{lig}")
+
+        else:
+            if not self._merge_free_system or not self._merge_bound_system:
+                print("no merged systems, merging....")
+                self.merge_systems()
+            self._generate_folders(self._merge_free_system, self._merge_bound_system, work_dir)
+
         # default folder is with no integer.
         # for the sake of analysis , doesnt matter as finds folders w names of leg
-        more_repeats = list(range(1, protocol.repeats))
+        more_repeats = list(range(1, self._pipeline_protocol.repeats()))
 
-        print(f"there are {protocol.repeats()} folder(s) being made for each leg...")
+        print(f"there are {self._pipeline_protocol.repeats()} folder(s) being made for each leg...")
         for r in more_repeats:
             for leg in ["bound", "free"]:
                 copy_tree(f"{work_dir}/{leg}_0", f"{work_dir}/{leg}_{r}")
