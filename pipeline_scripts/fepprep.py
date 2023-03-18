@@ -12,6 +12,7 @@ import BioSimSpace as BSS
 import os
 import sys
 import csv
+from distutils.dir_util import remove_tree
 
 from pipeline.prep import *
 from pipeline.utils import *
@@ -25,6 +26,7 @@ engine_query = str(sys.argv[2]).upper()
 num_lambda_query = int(sys.argv[3])
 
 # files that were set in the run_all script
+pmemd_path = os.environ["amber"] + "/bin/pmemd.cuda"
 main_dir = os.environ["MAINDIRECTORY"]
 net_file = os.environ["net_file"] # network file
 prot_file = os.environ["prot_file"] # protocol file
@@ -58,24 +60,24 @@ protocol.validate() # validate all the input
 protocol.num_lambda(num_lambda_query)
 protocol.engine(engine_query)
 
-
-# create the system for each the free and the bound leg.
-system_free = None
-system_bound = None
+# instantiate each system as a fepprep class with the protocol
+fepprep_obj = fepprep(protocol=protocol)
 
 for name, leg in zip(["lig", "sys"], ["free", "bound"]):
+
     # Load equilibrated inputs for both ligands
     system_1 = BSS.IO.readMolecules(
         [f"{prep_dir}/{lig_1}_{name}_equil_solv.rst7", f"{prep_dir}/{lig_1}_{name}_equil_solv.prm7"])
     system_2 = BSS.IO.readMolecules(
         [f"{prep_dir}/{lig_2}_{name}_equil_solv.rst7", f"{prep_dir}/{lig_2}_{name}_equil_solv.prm7"])
 
-    print(f"Preparing the {leg} leg...")
-    if leg == "free":
-        system_free = merge.merge_system(system_1, system_2)
-    if leg == "bound":
-        system_bound = merge.merge_system(system_1, system_2)
+    fepprep_obj.add_system(system_1, free_bound=leg, start_end="start")
+    fepprep_obj.add_system(system_2, free_bound=leg, start_end="end")
 
-# instantiate each system as a fepprep class with the protocol
-fepprep = fepprep(system_free, system_bound, protocol)
-fepprep.generate_folders(workdir)
+# remove any existing files in the workdir
+try:    
+    remove_tree(workdir)
+except:
+    pass
+# generate folder based on fepprep protocol (both or start)
+fepprep_obj.generate_folders(workdir)
