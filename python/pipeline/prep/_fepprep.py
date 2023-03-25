@@ -231,7 +231,7 @@ class fepprep():
                 free_system, bound_system = self._merge_systems(align_to=lig)
                 self._generate_folders(free_system, bound_system, f"{work_dir}/{lig}")
 
-            lambdas_list = self._min_protocol.getLambdaValues()
+            lambdas_list = self._freenrg_protocol.getLambdaValues()
             middle_index=len(lambdas_list)//2        
             first_half=lambdas_list[:middle_index]
             sec_half=lambdas_list[middle_index:]
