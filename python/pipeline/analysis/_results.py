@@ -11,6 +11,7 @@ from ._plotting import *
 from ._statistics import *
 from ._convergence import *
 from ._dictionaries import *
+from ._convert import *
 
 import cinnabar
 from cinnabar import wrangle,plotting,stats
@@ -321,14 +322,14 @@ class analysis_network():
                 # compute the per ligand for the network
                 network = wrangle.FEMap(f"{cinnabar_file_name}.csv")
                 self._cinnabar_networks.update({eng:network})
-                
-                # for self plotting of per ligand
-                self.cinnabar_calc_val_dict.update({eng: make_dict.from_cinnabar_network_node(network, "calc")})
-                self.cinnabar_exper_val_dict.update({eng: make_dict.from_cinnabar_network_node(network, "exp", normalise=True)})
 
                 # from cinnabar graph
                 self.cinnabar_calc_pert_dict.update({eng: make_dict.from_cinnabar_network_edges(network, "calc", self.perturbations)})
-                self.cinnabar_exper_pert_dict.update({eng: make_dict.from_cinnabar_network_edges(network, "exp", self.perturbations)})
+                self.cinnabar_exper_pert_dict.update({eng: make_dict.from_cinnabar_network_edges(network, "exp", self.perturbations)})      
+
+                # for self plotting of per ligand
+                self.cinnabar_calc_val_dict.update({eng: make_dict.from_cinnabar_network_node(network, "calc")})
+                self.cinnabar_exper_val_dict.update({eng: make_dict.from_cinnabar_network_node(network, "exp", normalise=True)})
 
             except Exception as e:
                 print(e)

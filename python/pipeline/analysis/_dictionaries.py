@@ -19,7 +19,6 @@ import numpy as np
 import pandas as pd 
 
 from ..utils import *
-from ._convert import *
 
 # functions
 # TODO clean up and make sure have description at start
@@ -35,7 +34,8 @@ class make_dict():
     @staticmethod
     def comp_results(results_files=None, perturbations=None, engine=None, output_file=None):
         
-        results_files = validate.is_list(results_files)
+        # check if list, if not make a list
+        results_files = validate.is_list(results_files, make_list=True)
         for file in results_files:
             validate.file_path(file)
         
@@ -152,7 +152,8 @@ class make_dict():
                 comp_ddG = np.average(ddGs)
                 # comp_ddG = np.average([ddG.value() for ddG in ddGs])
                 if len(ddGs) == 1:
-                    comp_err = ddGs_error.value()
+                    comp_err = ddGs_error[0]
+                    # comp_err = ddGs_error.value()
                 else:
                     comp_err = sem(ddGs)
                     # comp_err = sem([ddG.value() for ddG in ddGs])
