@@ -241,8 +241,11 @@ class fepprep():
             for lig, lam_list in zip(ligs, [first_half, sec_half]):
                 for leg in ["bound", "free"]:
                     for part in ["min/","heat/", "eq/", ""]:
-                        for lam in lam_list:
-                            copy_tree(f"{work_dir}/{lig}/{leg}_0/{part}lambda_{lam:.4f}", f"{work_dir}/{leg}_0/{part}lambda_{lam:.4f}")
+                        try: # so will not copy if folders do not exist
+                            for lam in lam_list:
+                                copy_tree(f"{work_dir}/{lig}/{leg}_0/{part}lambda_{lam:.4f}", f"{work_dir}/{leg}_0/{part}lambda_{lam:.4f}")
+                        except:
+                            pass
                 
                 # remove the dir
                 print(f"removing directory for {lig} as copied...")
