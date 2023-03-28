@@ -3,42 +3,6 @@ from BioSimSpace.Units.Length import angstrom as _angstrom
 
 from ..utils._validate import *
 
-
-def run_process(system, protocol, engine="AMBER", pmemd_path=None, work_dir=None):
-    """
-    Given a solvated system (BSS object) and BSS protocol, run a process workflow with either 
-    AMBER or GROMACS. Returns the processed system.
-    """
-
-    # Create the process passing a working directory.
-    if engine == "AMBER":
-        if pmemd_path:
-            process = BSS.Process.Amber(
-                system, protocol, work_dir=work_dir, exe=pmemd_path)
-        else:
-            process = BSS.Process.Amber(
-                system, protocol, work_dir=work_dir)
-
-    elif engine == "GROMACS":
-        process = BSS.Process.Gromacs(
-            system, protocol, work_dir=work_dir)
-
-    # Start the process, wait for it to exit
-    process.start()
-    process.wait()
-
-    # Check for errors.
-    if process.isError():
-        print(process.stdout())
-        print(process.stderr())
-        raise _Exceptions.ThirdPartyError("The process exited with an error!")
-
-    # If it worked, try to get the system. No need to block, since it's already finished.
-    system = process.getSystem()
-
-    return system
-
-
 class ligprep():
     """class to store lig prep functions, and also create a ligprep object.
     """
@@ -122,88 +86,6 @@ class ligprep():
         
         return param_molecule
             
-
-    @staticmethod
-    def minimise_equilibrate_leg(system_solvated, lig_sys=None, engine="AMBER", pmemd=None):  # times at the top
-        """
-        Default protocols and running of the lig_paramateriserep.
-        system_solvated is a BSS system
-        lig_sys is if lig or sys .
-        """
-        # define all the protocols
-
-        # Minimisations
-        # minimisation of solvent
-        protocol_min_rest = BSS.Protocol.Minimisation(
-            steps=10000,
-            restraint="all"
-        )
-        # minimisation full system
-        protocol_min = BSS.Protocol.Minimisation(
-            steps=10000
-        )
-
-        # NVTs
-        # NVT restraining all non solvent atoms
-        protocol_nvt_sol = BSS.Protocol.Equilibration(
-            runtime=400*BSS.Units.Time.picosecond,
-            temperature_start=0*BSS.Units.Temperature.kelvin,
-            temperature_end=300*BSS.Units.Temperature.kelvin,
-            restraint="all"
-        )
-        # if lig_sys is lig or sys
-        if lig_sys == "sys":
-            back_rest = "backbone"
-        elif lig_sys == "lig":
-            back_rest = "heavy"
-        else:
-            raise NameError("lig_sys must be either 'sys' or 'lig'.")
-        # NVT restraining all backbone/heavy atoms
-        protocol_nvt_backbone = BSS.Protocol.Equilibration(
-            runtime=400*BSS.Units.Time.picosecond,
-            temperature=300*BSS.Units.Temperature.kelvin,
-            restraint=back_rest
-        )
-        # NVT no restraints
-        protocol_nvt = BSS.Protocol.Equilibration(
-            runtime=400*BSS.Units.Time.picosecond,
-            temperature_end=300*BSS.Units.Temperature.kelvin
-        )
-
-        # NPTs
-        # NPT restraining all non solvent heavy atoms
-        protocol_npt_heavy = BSS.Protocol.Equilibration(
-            runtime=400*BSS.Units.Time.picosecond,
-            pressure=1*BSS.Units.Pressure.atm,
-            temperature=300*BSS.Units.Temperature.kelvin,
-            restraint="heavy"
-        )
-        # NPT with gradual release of restraints
-        protocol_npt_heavy_lighter = BSS.Protocol.Equilibration(
-            runtime=400*BSS.Units.Time.picosecond,
-            pressure=1*BSS.Units.Pressure.atm,
-            temperature=300*BSS.Units.Temperature.kelvin,
-            restraint="heavy",
-            force_constant=5
-        )
-        # NPT no restraints
-        protocol_npt = BSS.Protocol.Equilibration(
-            runtime=1000*BSS.Units.Time.picosecond,
-            pressure=1*BSS.Units.Pressure.atm,
-            temperature=300*BSS.Units.Temperature.kelvin,
-        )
-
-        # run all the protocols
-        minimised1 = run_process(system_solvated, protocol_min_rest, engine, pmemd)
-        minimised2 = run_process(minimised1, protocol_min, engine, pmemd)
-        equil1 = run_process(minimised2, protocol_nvt_sol, engine, pmemd)
-        equil2 = run_process(equil1, protocol_nvt_backbone, engine, pmemd)
-        equil3 = run_process(equil2, protocol_nvt, engine, pmemd)
-        equil4 = run_process(equil3, protocol_npt_heavy, engine, pmemd)
-        equil5 = run_process(equil4, protocol_npt_heavy_lighter, engine, pmemd)
-        sys_equil_fin = run_process(equil5, protocol_npt, engine, pmemd)
-
-        return sys_equil_fin
 
     @staticmethod
     def minimum_solvation(system, solvent, box_type, box_edges, box_edges_unit="angstrom", verbose=True):

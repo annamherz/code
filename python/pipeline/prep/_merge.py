@@ -24,6 +24,7 @@ class merge():
         allow_ring_breaking = False
         prune_perturbed_constraints=None
         prune_crossing_constraints=None
+        align_to = "lig0" 
 
         for key,value in kwargs.items():
             if key == "allow ring breaking":
@@ -32,8 +33,11 @@ class merge():
                 prune_perturbed_constraints = validate.boolean(value)
             if key == "prune crossing constraints":
                 prune_crossing_constraints = validate.boolean(value)           
+            if key == "align to":
+                align_to = validate.string(value)  
 
         # Align ligand2 on ligand1
+        # get the mapping of ligand0 to atoms in ligand1
         mapping = BSS.Align.matchAtoms(
                                     ligand_0, ligand_1,
                                     complete_rings_only=True,
@@ -41,11 +45,24 @@ class merge():
                                     prune_crossing_constraints=prune_crossing_constraints
                                     )           
         inv_mapping = {v: k for k, v in mapping.items()}
-        ligand_2_a = BSS.Align.rmsdAlign(ligand_1, ligand_0, inv_mapping)
 
-        # Generate merged molecule.
-        merged_ligands = BSS.Align.merge(
-            ligand_0, ligand_2_a, mapping, allow_ring_breaking=allow_ring_breaking)
+        if align_to == "lig0":
+            # need inverse mapping to align
+            # aligns atoms in first argument to atoms in second argument
+            ligand_1_a = BSS.Align.rmsdAlign(ligand_1, ligand_0, inv_mapping)
+            # Generate merged molecule.
+            merged_ligands = BSS.Align.merge(
+                ligand_0, ligand_1_a, mapping, allow_ring_breaking=allow_ring_breaking)
+            
+        elif align_to == "lig1":
+            # align ligand 0 to ligand 1
+            ligand_0_a = BSS.Align.rmsdAlign(ligand_0, ligand_1, mapping)
+            # Generate merged molecule.
+            merged_ligands = BSS.Align.merge(
+                ligand_0_a, ligand_1, mapping, allow_ring_breaking=allow_ring_breaking)
+            
+        else:
+            raise ValueError("must align to 'lig0' or 'lig1'")
 
         return merged_ligands
     
@@ -79,13 +96,13 @@ class merge():
         return ligand
 
     @staticmethod
-    def merge_system(system0, system1, engine_query):
+    def merge_system(system0=None, system1=None, **kwargs):
         """merges to BSS systems for FEP.
 
         Args:
             system0 (BioSimSpace._SireWrappers._system.System): system for the ligand at lambda 0. Is the base system.
             system1 (BioSimSpace._SireWrappers._system.System): system from which the ligand at lmabda 1 will be obtained
-            engine_query (BioSimSpace.FreeEnergy.engines()): an engine allowed for FEP
+            kwargs (dict): extra options for merging the ligands
 
         Raises:
             _Exceptions.AlignmentError: If the ligands could not be aligned
@@ -94,9 +111,16 @@ class merge():
             BioSimSpace._SireWrappers._system.System: system0 with the ligand replaced by the merged ligand
         """
 
-        engine = validate.engine(engine_query)
-        system_0 = validate.system(system0)
-        system_1 = validate.system(system1)
+        # default arguments
+        align_to = "lig0" 
+
+        # check kwargs
+        for key,value in kwargs.items():
+            if key == "align to":
+                align_to = validate.string(value)
+
+        system_0 = validate.system(system0).copy()
+        system_1 = validate.system(system1).copy()
 
         ligand_0 = merge.extract_ligand(system_0)
         ligand_1 = merge.extract_ligand(system_1)
@@ -109,19 +133,36 @@ class merge():
 
         # merge the ligands based on the engine.
         print("mapping, aligning and merging the ligands...")
-        merged_trans = merge.merge_ligands(ligand_0, ligand_1, engine)
+        merged_trans = merge.merge_ligands(ligand_0, ligand_1, **kwargs)
 
-        # put the merged ligand into the system_0 in place of ligand_0
-        system_0.removeMolecules(ligand_0)
-        system_final = merged_trans + system_0
+        if align_to == "lig0":
+            # put the merged ligand into the system_0 in place of ligand_0
+            system_0.removeMolecules(ligand_0)
+            system_final = merged_trans + system_0
 
+        elif align_to == "lig1":
+            # put the merged ligand into the system_0 in place of ligand_0
+            system_1.removeMolecules(ligand_1)
+            system_final = merged_trans + system_1
+
+        else:
+            raise ValueError("must align to 'lig0' or 'lig1'")
+        
         return system_final
 
 
     @staticmethod
-    def atom_mappings(system0, system1, engine_query):
+    def atom_mappings(system0, system1, **kwargs):
 
-        engine = validate.engine(engine_query)
+        prune_perturbed_constraints=None
+        prune_crossing_constraints=None
+
+        for key,value in kwargs.items():
+            if key == "prune perturbed constraints":
+                prune_perturbed_constraints = validate.boolean(value)
+            if key == "prune crossing constraints":
+                prune_crossing_constraints = validate.boolean(value)           
+
         system_0 = validate.system(system0)
         system_1 = validate.system(system1)
 
@@ -134,8 +175,13 @@ class merge():
             raise _Exceptions.AlignmentError(
                 "Could not extract ligands from input systems. Check that your ligands/proteins are properly prepared!")
 
-        # Align ligand2 on ligand1
+
+        # Align ligand1 on ligand0
         mapping = BSS.Align.matchAtoms(
-            ligand_0, ligand_1, engine=engine, complete_rings_only=True)
+                                    ligand_0, ligand_1,
+                                    complete_rings_only=True,
+                                    prune_perturbed_constraints=prune_perturbed_constraints,
+                                    prune_crossing_constraints=prune_crossing_constraints
+                                    )      
 
         return (ligand_0.getAtoms(), ligand_1.getAtoms(), mapping)
