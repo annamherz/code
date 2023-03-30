@@ -54,6 +54,11 @@ class pipeline_protocol():
             self._is_validated = False
 
     def default_dict(self):
+        """the default dictionary for the protocol
+
+        Returns:
+            dict: the default dictionary for the protocol
+        """
 
         default_dict = {'ligand forcefield': 'gaff2',
                     'solvent': 'TIP3P',
@@ -124,6 +129,9 @@ class pipeline_protocol():
 
     def _check_query(self):
         """fills in any gaps of the dict from the protocol file
+
+        Returns:
+            dict: the filled in query dictionary
         """
         
         query_dict = self._query_dict
@@ -147,7 +155,13 @@ class pipeline_protocol():
 
     
     def rewrite_protocol(self, file_path=None):
-        """ rewrite the protocol to the same file after validation
+        """rewrite the protocol to the same file after validation
+
+        Args:
+            file_path (str, optional): path to a new protocol file location. Defaults to None.
+
+        Raises:
+            ValueError: if file_path is None and there is no file path to overwrite.
         """
         if file_path:
             new_file = validate.string(file_path)
@@ -207,6 +221,8 @@ class pipeline_protocol():
 
     
     def print_protocol(self):
+        """prints the protocol.
+        """
 
         if not self._is_validated:
             print("please validate the protocol first.")
@@ -224,6 +240,17 @@ class pipeline_protocol():
     # this is not part of the default protocol and is found in the network file
     # it needs to be allocated before fepprep
     def fepprep(self, value=None):
+        """set the fepprep in the protocol or return its value.
+
+        Args:
+            value (str, optional): fepprep value. Defaults to None.
+
+        Raises:
+            ValueError:if not 'start', 'middle', or 'end'.
+
+        Returns:
+            str: fepprep value.
+        """
 
         if value:
             options_list = ["start","middle","both"]
@@ -237,6 +264,14 @@ class pipeline_protocol():
         return value
 
     def num_lambda(self, value=None):
+        """set the number of lambda windows in the protocol or return its value.
+
+        Args:
+            value (int, optional): number of lambda windows value. Defaults to None.
+
+        Returns:
+            int: number of lambda windows
+        """
 
         if value:
             value = validate.integer(value)
@@ -248,6 +283,14 @@ class pipeline_protocol():
         return value
 
     def engine(self, value=None):
+        """set the engine in the protocol or return its value.
+
+        Args:
+            value (str, optional): the engine. Defaults to None.
+
+        Returns:
+            str: engine
+        """
 
         if value:
             value = validate.engine(value)
@@ -259,6 +302,14 @@ class pipeline_protocol():
         return value
 
     def engines(self, value=None):
+        """set the engines in the protocol or return its value.
+
+        Args:
+            value (list, optional): list of engines. Defaults to None.
+
+        Returns:
+            list: engines
+        """
 
         if value:
             value = validate.engines(value)
@@ -270,6 +321,14 @@ class pipeline_protocol():
         return value
 
     def ligand_forcefield(self, value=None):
+        """set the ligand forcefield in the protocol or return its value.
+
+        Args:
+            value (str, optional): ligand forcefield. Defaults to None.
+
+        Returns:
+            str: ligand forcefield
+        """
 
         if value:
             value = validate.lig_ff(value)
@@ -281,6 +340,14 @@ class pipeline_protocol():
         return value
 
     def protein_forcefield(self, value=None):
+        """set the protein forcefield in the protocol or return its value.
+
+        Args:
+            value (str, optional): protein forcefield. Defaults to None.
+
+        Returns:
+            str: protein forcefield
+        """
 
         if value:
             value = validate.prot_ff(value)
@@ -292,6 +359,14 @@ class pipeline_protocol():
         return value
 
     def solvent(self, value=None):
+        """set the solvent forcefield in the protocol or return its value.
+
+        Args:
+            value (str, optional): solvent forcefield. Defaults to None.
+
+        Returns:
+            str: solvent forcefield
+        """
 
         if value:
             value = validate.solvent_ff(value)
@@ -303,6 +378,14 @@ class pipeline_protocol():
         return value
 
     def box_edges(self, value=None):
+        """set the box edges length in the protocol or return its value.
+
+        Args:
+            value (int, optional): box edges length. Defaults to None.
+
+        Returns:
+            int: box edges length
+        """
 
         if value:
             value = validate.integer(value)
@@ -314,6 +397,14 @@ class pipeline_protocol():
         return value
 
     def box_edges_unit(self, value=None):
+        """set the box edges unit in the protocol or return its value.
+
+        Args:
+            value (str, optional): box edges unit. Defaults to None.
+
+        Returns:
+            str: box edges unit
+        """
 
         if value:
             value = validate.box_edges_unit(value)
@@ -325,6 +416,14 @@ class pipeline_protocol():
         return value
 
     def box_type(self, value=None):
+        """set the box type in the protocol or return its value.
+
+        Args:
+            value (str, optional): box type. Defaults to None.
+
+        Returns:
+            str: box edges type
+        """
 
         if value:
             value = validate.box_type(value)
@@ -336,7 +435,15 @@ class pipeline_protocol():
         return value
 
     def sampling(self, value=None):
+        """set the sampling value in the protocol or return its value.
 
+        Args:
+            value (int, optional): sampling value. Defaults to None.
+
+        Returns:
+            int: sampling value
+        """
+        
         if value:
             value = validate.integer(value)
             self._query_dict["sampling"] = value
@@ -347,6 +454,14 @@ class pipeline_protocol():
         return value
 
     def sampling_unit(self, value=None):
+        """set the sampling unit in the protocol or return its value.
+
+        Args:
+            value (str, optional): sampling unit. Defaults to None.
+
+        Returns:
+            str: sampling unit
+        """
 
         if value:
             value = validate.time_unit(value)
@@ -358,6 +473,14 @@ class pipeline_protocol():
         return value    
     
     def repeats(self, value=None):
+        """set the number of repeats in the protocol or return its value.
+
+        Args:
+            value (int, optional): number of repeats. Defaults to None.
+
+        Returns:
+            int: number of repeats
+        """
 
         if value:
             value = validate.integer(value)
@@ -369,6 +492,14 @@ class pipeline_protocol():
         return value  
     
     def trajectories(self, value=None):
+        """set the trajectories to keep in the protocol or return its value.
+
+        Args:
+            value (str, optional): trajectories to keep. Defaults to None.
+
+        Returns:
+            str: trajectories to keep
+        """
 
         if value:
             value = validate.trajectories(value)
@@ -380,6 +511,14 @@ class pipeline_protocol():
         return value  
 
     def start_temperature(self, value=None):
+        """set the start temperature at equilibration in the protocol or return its value.
+
+        Args:
+            value (int, optional): the start temperature. Defaults to None.
+
+        Returns:
+            int: start temperature
+        """
 
         if value:
             value = validate.integer(value)
@@ -391,6 +530,14 @@ class pipeline_protocol():
         return value  
 
     def end_temperature(self, value=None):
+        """set the end temperature at equilibration in the protocol or return its value.
+
+        Args:
+            value (int, optional): the end temperature. Defaults to None.
+
+        Returns:
+            int: end temperature
+        """
 
         if value:
             value = validate.integer(value)
@@ -402,6 +549,14 @@ class pipeline_protocol():
         return value  
 
     def temperature(self, value=None):
+        """set the temperature of the simulation in the protocol or return its value.
+
+        Args:
+            value (int, optional): the temperature. Defaults to None.
+
+        Returns:
+            int: temperature
+        """
 
         if value:
             value = validate.integer(value)
@@ -413,6 +568,14 @@ class pipeline_protocol():
         return value  
 
     def temperature_unit(self, value=None):
+        """set the temperature unit of the simulation in the protocol or return its value.
+
+        Args:
+            value (str, optional): the temperature unit. Defaults to None.
+
+        Returns:
+            str: temperature unit
+        """
 
         if value:
             value = validate.temperature_unit(value)
@@ -424,6 +587,14 @@ class pipeline_protocol():
         return value  
 
     def pressure(self, value=None):
+        """set the pressure of the simulation in the protocol or return its value.
+
+        Args:
+            value (int, optional): the pressure. Defaults to None.
+
+        Returns:
+            int: the pressure
+        """
 
         if value:
             value = validate.integer(value)
@@ -435,6 +606,14 @@ class pipeline_protocol():
         return value  
 
     def pressure_unit(self, value=None):
+        """set the pressure unit of the simulation in the protocol or return its value.
+
+        Args:
+            value (str, optional): the pressure unit. Defaults to None.
+
+        Returns:
+            str: pressure unit
+        """
 
         if value:
             value = validate.pressure_unit(value)
@@ -446,6 +625,14 @@ class pipeline_protocol():
         return value  
 
     def min_steps(self, value=None):
+        """set the number of minimisation steps in the protocol or return its value.
+
+        Args:
+            value (int, optional): the number of minimisation steps. Defaults to None.
+
+        Returns:
+            int: the number of minimisation steps
+        """
 
         if value:
             value = validate.integer(value)
@@ -457,6 +644,14 @@ class pipeline_protocol():
         return value  
 
     def eq_runtime(self, value=None):
+        """set the equilibrium runtime in the protocol or return its value.
+
+        Args:
+            value (int, optional): the equilibrium runtime. Defaults to None.
+
+        Returns:
+            int: the equilibrium runtime
+        """
 
         if value:
             value = validate.integer(value)
@@ -468,6 +663,14 @@ class pipeline_protocol():
         return value  
 
     def eq_runtime_unit(self, value=None):
+        """set the equilibrium runtime unit of the simulation in the protocol or return its value.
+
+        Args:
+            value (str, optional): the equilibrium runtime unit. Defaults to None.
+
+        Returns:
+            str: equilibrium runtime unit
+        """
 
         if value:
             value = validate.time_unit(value)
@@ -479,6 +682,14 @@ class pipeline_protocol():
         return value  
 
     def hmr(self, value=None):
+        """set whether HMR is applied to the system in the protocol or return its value.
+
+        Args:
+            value (boolean, optional): if HMR is applied. Defaults to None.
+
+        Returns:
+            boolean: if HMR is applied
+        """
 
         if value:
             value = validate.boolean(value)
@@ -490,6 +701,14 @@ class pipeline_protocol():
         return value  
 
     def hmr_factor(self, value=None):
+        """set the hmr factor in the protocol or return its value.
+
+        Args:
+            value (int, optional): the hmr factor. Defaults to None.
+
+        Returns:
+            int: the hmr factor
+        """
 
         if value:
             if self._hmr:
@@ -514,6 +733,15 @@ class pipeline_protocol():
 
 
     def timestep_overwrite(self, value=None):
+        """set whether the timestep in the protocol should be overwritten based on the HMR or return its value.
+        If True, overwrite the timestep to 4 fs if HMR is applied or 2 fs if not.
+ 
+        Args:
+            value (boolean, optional): whether to overwrite the timestep. Defaults to None.
+
+        Returns:
+            boolean: whether to overwrite the timestep
+        """
 
         if value:
             value = validate.boolean(value)
@@ -533,6 +761,14 @@ class pipeline_protocol():
         return value
 
     def timestep_unit(self, value=None):
+        """set the timestep unit of the simulation in the protocol or return its value.
+
+        Args:
+            value (str, optional): the timestep unit. Defaults to None.
+
+        Returns:
+            str: timestep unit
+        """
 
         if value:
             value = validate.time_unit(value)
@@ -544,6 +780,14 @@ class pipeline_protocol():
         return value
 
     def timestep(self, value=None):
+        """set the timestep in the protocol or return its value.
+
+        Args:
+            value (int, optional): the timestep. Defaults to None.
+
+        Returns:
+            int: the timestep
+        """
 
         if value:
             value = validate.integer(value)
@@ -608,6 +852,14 @@ class analysis_protocol(pipeline_protocol):
 
 
     def estimator(self, value=None):
+        """set the estimator in the analysis protocol or return its value.
+
+        Args:
+            value (str, optional): the estimator. Defaults to None.
+
+        Returns:
+            str: estimator
+        """
 
         if value:
             value = validate.estimator(value)
@@ -619,6 +871,14 @@ class analysis_protocol(pipeline_protocol):
         return value
     
     def analysis_method(self, value=None):
+        """set the analysis method (eg native, alchemlyb) in the analysis protocol or return its value.
+
+        Args:
+            value (str, optional): the analysis method. Defaults to None.
+
+        Returns:
+            str: analysis method
+        """
 
         if value:
             value = validate.analysis_method(value)
@@ -630,6 +890,14 @@ class analysis_protocol(pipeline_protocol):
         return value
 
     def check_overlap(self, value=None):
+        """set whether to check the overlap in the analysis protocol or return its value.
+
+        Args:
+            value (boolean, optional): whether to check the overlap. Defaults to None.
+
+        Returns:
+            boolean: if to check the overlap
+        """
 
         if value:
             value = validate.boolean(value)
@@ -639,6 +907,14 @@ class analysis_protocol(pipeline_protocol):
             value = self._check_overlap
 
     def try_pickle(self, value=None):
+        """set whether to try to find/use pickle files in the analysis protocol or return its value.
+
+        Args:
+            value (boolean, optional): whether to use pickle files. Defaults to None.
+
+        Returns:
+            boolean: if to use pickle files
+        """
 
         if value:
             value = validate.boolean(value)
@@ -650,6 +926,14 @@ class analysis_protocol(pipeline_protocol):
         return value
 
     def save_pickle(self, value=None):
+        """set whether to try to save pickle files in the analysis protocol or return its value.
+
+        Args:
+            value (boolean, optional): whether to save pickle files. Defaults to None.
+
+        Returns:
+            boolean: if to save pickle files
+        """
 
         if value:
             value = validate.boolean(value)
@@ -661,6 +945,14 @@ class analysis_protocol(pipeline_protocol):
         return value
     
     def auto_equilibration(self, value=None):
+        """set whether to use auto equilibration in the analysis protocol or return its value.
+
+        Args:
+            value (boolean, optional): whether to use auto equilibration. Defaults to None.
+
+        Returns:
+            boolean: if to use auto equilibration
+        """
 
         if value:
             value = validate.boolean(value)
@@ -672,6 +964,14 @@ class analysis_protocol(pipeline_protocol):
         return value
 
     def statistical_inefficiency(self, value=None):
+        """set whether to use statistical inefficiency in the analysis protocol or return its value.
+
+        Args:
+            value (boolean, optional): whether to use statistical inefficiency. Defaults to None.
+
+        Returns:
+            boolean: if to use statistical inefficiency
+        """
 
         if value:
             value = validate.boolean(value)
@@ -683,6 +983,14 @@ class analysis_protocol(pipeline_protocol):
         return value
 
     def truncate_percentage(self, value=None):
+        """set how much percentage-wise to truncate the data by in the analysis protocol or return its value.
+
+        Args:
+            value (int, optional): how much to truncate. Defaults to None.
+
+        Returns:
+            int: truncate percentage
+        """
 
         if value:
             value = validate.integer(value)
@@ -694,6 +1002,14 @@ class analysis_protocol(pipeline_protocol):
         return value
 
     def truncate_keep(self, value=None):
+        """set which part of the truncated to keep (start or end) in the analysis protocol or return its value.
+
+        Args:
+            value (str, optional): truncate keep. Defaults to None.
+
+        Returns:
+            str: truncate keep
+        """
 
         if value:
             value = validate.truncate_keep(value)
@@ -705,7 +1021,14 @@ class analysis_protocol(pipeline_protocol):
         return value
 
     def mbar_method(self, value=None):
+        """set the mbar method for use with pymbar in the analysis protocol or return its value.
 
+        Args:
+            value (str, optional): the mbar method. Defaults to None.
+
+        Returns:
+            str: mbar method
+        """
         if value:
             value = validate.mbar_method(value)
             self._query_dict["mbar method"] = value

@@ -18,7 +18,18 @@ class analyse():
     """class to analyse a work dir 
     """
 
-    def __init__(self, work_dir, pert=None, engine=None):
+    def __init__(self, work_dir, pert=None, engine=None, analysis_protocol=None):
+        """class for analysing results in a directory for a single perturbation
+
+        Args:
+            work_dir (str): directory of the perturbation results
+            pert (str, optional): Name of the perturbation. lig0~lig1 . Defaults to None.
+            engine (str, optional): engine to analyse for. Defaults to None.
+            analysis_protocol (pipeline.prep.analysis_protocol, optional): the analysis protocol. Defaults to None.
+
+        Raises:
+            ValueError: need to have perturbation written as 'ligand_0~ligand_1'
+        """
         # instantiate the class with the work directory
 
         self._work_dir = validate.folder_path(work_dir)
@@ -75,8 +86,17 @@ class analyse():
         self._set_default_options() # will set default options and file extension
         self.is_analysed = False
 
+        if analysis_protocol:
+            analysis_protocol = validate.analysis_protocol(analysis_protocol)
+            self.set_options(analysis_protocol)
+
     @staticmethod
     def _default_analysis_options_dict():
+        """the default analysis options dictionary
+
+        Returns:
+            dict: default dictionary
+        """
 
         options_dict = {'estimator': "MBAR",
                     "method":"alchemlyb",
@@ -93,12 +113,19 @@ class analyse():
         return options_dict
 
     def _set_default_options(self):
+        """set the default options in the class
+        """
 
         default_options = analyse._default_analysis_options_dict()
         self.set_options(default_options)
 
 
     def _file_ext(self):
+        """set the file extension for the analusis files based on the options dict
+
+        Returns:
+            str: the file extension
+        """
         
         file_ext = analyse.file_ext(self.options_dict)
         self.file_ext = file_ext
@@ -107,9 +134,17 @@ class analyse():
     
     @staticmethod
     def file_ext(options_dict):
+        """write a file extension based on a protocol style options dictionary
+
+        Args:
+            options_dict (dict): analysis protocol dictionary
+
+        Returns:
+            str: the file extension
+        """
         
         # validate any inputs in the dictionary
-        options_dict = analyse._set_options_dict(options_dict)
+        options_dict = analyse._update_options_dict(options_dict)
 
         file_ext = str(f"{options_dict['estimator']}_{options_dict['method']}_{options_dict['mbar method']}_"+
                     f"eq{str(options_dict['auto equilibration']).lower()}_"+
@@ -119,6 +154,11 @@ class analyse():
         return file_ext
     
     def _pickle_ext(self):
+        """the extension for the pickle files based on the file extension, engine, and perturbation
+
+        Returns:
+            str: pickle extension
+        """
 
         if not self.file_ext:
             self._file_ext()
@@ -131,7 +171,16 @@ class analyse():
         return pickle_ext
 
     @staticmethod
-    def _set_options_dict(options_dict, current_options=None):
+    def _update_options_dict(options_dict, current_options=None):
+        """update the options dict, if no current one the default will be used.
+
+        Args:
+            options_dict (dict or pipeline.prep.analysis_protocol): dictionary of options or the analysis protocol
+            current_options (dict, optional): current options. Defaults to None.
+
+        Returns:
+            dict: the new options dict that will be used
+        """
         # returns a dict with the considered options, and fills in any not provided with default or previous options.
         
         # if analysis protocol is supplied, make sure to get the dictionary form
@@ -140,6 +189,7 @@ class analyse():
 
         options_dict = validate.dictionary(options_dict)
 
+        # use the default dict as the default options
         if not current_options:
             current_options = analyse._default_analysis_options_dict()
         else:
@@ -164,6 +214,14 @@ class analyse():
 
     @staticmethod
     def _validate_options_dict(options_dict):
+        """ validate the passed dictionary
+
+        Args:
+            options_dict (dict): analysis options dict
+
+        Returns:
+            dict: validated options dictionary.
+        """
         # validate all the new inputs
         # replace as needed in the options dict
 
@@ -215,10 +273,15 @@ class analyse():
 
 
     def set_options(self, options_dict):
+        """set the analysis options for this object
+
+        Args:
+            options_dict (dict or pipeline.prep.analysis_protocol): options for analysis
+        """
 
         # first use staticmethod to get a new options dict
         # if already have an options dict for this object, want to use that
-        options_dict = analyse._set_options_dict(options_dict, current_options=self.options_dict)
+        options_dict = analyse._update_options_dict(options_dict, current_options=self.options_dict)
 
         # update self.options_dict for use w the file extension
         self.options_dict = options_dict
@@ -241,6 +304,12 @@ class analyse():
 
 
     def _get_repeat_folders(self):
+        """how many of each the free and bound repeat folders there are.
+
+        Raises:
+            ValueError: can't find bound folders
+            ValueError: can't find free folders
+        """
 
         self._work_dir = self._work_dir
         # Read how many repeats are in the direct
@@ -287,6 +356,11 @@ class analyse():
 
 
     def _check_pickle(self):
+        """check if there are all the pickle files present in the pickle folder.
+
+        Returns:
+            boolean: whether to try pickle when analysing
+        """
 
         try_pickle = True
         pickle_ext = self.pickle_ext
@@ -322,6 +396,10 @@ class analyse():
 
     def analyse_all_repeats(self):
         """Analyse all existing free-energy data from a simulation working directory.
+
+        Returns:
+            tuple: tuple of result, error, repeats tuple list
+            (freenrg_rel[0], freenrg_rel[1], repeats_tuple_list)
         """
 
         if self._try_pickle:
@@ -357,6 +435,9 @@ class analyse():
 
     def _analyse_all_repeats_normal(self):
         """Analyse all existing free-energy data from a simulation working directory.
+
+        Returns:
+            tuple: (freenrg_rel, repeats_tuple_list)
         """
 
         # list for the successful calculations
@@ -430,8 +511,12 @@ class analyse():
 
 
     def _analyse_all_repeats_pickle(self):
-        """Analyse all existing free-energy data from a simulation working directory.
+        """Analyse all existing free-energy data from a simulation working directory in the pickle directory.
+
+        Returns:
+            tuple: (freenrg_rel, repeats_tuple_list)
         """
+
 
         # list for the successful calculations
         bound_calculated = []
@@ -464,7 +549,17 @@ class analyse():
         return (freenrg_rel, repeats_tuple_list)
 
 
+    # TODO dont need free calculated and bound calcualted, can get from dict keys??
     def _calculate_freenrg(self, free_calculated, bound_calculated):
+        """calculate the free energy. Will use the names of the list for the respective dictionaries.
+
+        Args:
+            free_calculated (list): list of free calculated names
+            bound_calculated (list): list of bound calculated names
+
+        Returns:
+            tuple: (freenrg_rel, repeats_tuple_list)
+        """
 
         # list for all the repeats
         repeats_tuple_list = []
@@ -495,6 +590,7 @@ class analyse():
 
         # create tuple list of each repeat that was calculated
         # first check the length of the calculated values and check if this is also the length of the folders found
+        # TODO here use dict values?
         if len(bound_calculated) != self._no_of_b_repeats:
             print("the number of calculated values for bound does not match the number of bound folders.\n maybe try reanalysing/check errors?")
         if len(free_calculated) != self._no_of_f_repeats:
@@ -539,6 +635,8 @@ class analyse():
 
 
     def save_pickle(self):
+        """save the analysis as a pickle.
+        """
 
         self._pickle_dir = validate.folder_path(self._pickle_dir, create=True)
         pickle_ext = self.pickle_ext
@@ -571,6 +669,8 @@ class analyse():
 
 
     def check_overlap(self):
+        """check the overlap of the analysed object.
+        """
 
         if not self.is_analysed:
             warnings.warn(
@@ -600,6 +700,8 @@ class analyse():
 
 
     def plot_graphs(self):
+        """plot (overlap matrix or dHdl) for the analysed run.
+        """
 
         if not self.is_analysed:
             warnings.warn(

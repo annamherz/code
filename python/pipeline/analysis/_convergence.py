@@ -19,6 +19,18 @@ class plot_convergence():
     """
 
     def __init__(self, outputs_dir, perturbations=None, engines=None, file_ext=None, res_folder=None):
+        """ plot convergence for the different perturbations.
+
+        Args:
+            outputs_dir (str): folder where the outputs to plot are located.
+            perturbations (list, optional): list of perturbations to consider. Defaults to None.
+            engines (list, optional): list of engines to plot for. Defaults to None.
+            file_ext (str, optional): file extension to use. Defaults to None.
+            res_folder (str, optional): directory to save the plots. Defaults to None.
+
+        Raises:
+            ValueError: need to include the perturbations
+        """
 
         # need the outputs directory
         self.outputs_dir = validate.folder_path(outputs_dir)
@@ -39,6 +51,14 @@ class plot_convergence():
         self.set_colours()
 
     def set_colours(self, colour_dict=None):
+        """set the colours for the convergence. Use the default colours from plotting if not provided.
+
+        Args:
+            colour_dict (dict, optional): dicitonary of colours for the engines. Defaults to None.
+
+        Returns:
+           dict: colour dictionary
+        """
         
         set_colour_dict = plotting_engines._set_colours(colour_dict)
         self.colours = set_colour_dict
@@ -46,6 +66,8 @@ class plot_convergence():
         return set_colour_dict
 
     def plot_convergence_all(self):
+        """plot convergence for all perturbations
+        """
 
         for pert in self.perturbations:
             lig_0 = pert.split("~")[0]
@@ -55,6 +77,12 @@ class plot_convergence():
 
 
     def plot_convergence_single(self, perturbation, engines=None):
+        """plot convergence for a single perturbation
+
+        Args:
+            perturbation (str): name of the perturbation
+            engines (list, optional): list of the engines. Defaults to None.
+        """
 
         for leg in [ 'free','bound']:
             
@@ -89,10 +117,9 @@ class plot_convergence():
         plt.figure()
         lines = []
         for eng in engines:
-            # with open (f'/home/anna/Documents/benchmark/{prot}/outputs/{eng}/{perturbation}/bound_pmf_{perturbation}_{eng}.pickle', 'rb') as handle:
+            # open the pickles
             with open (f'{self.outputs_dir}/{eng}/{perturbation}/pickle/bound_pmf_{perturbation}_{eng}_{self.file_ext}.pickle', 'rb') as handle:
                 bound_pmf_dict = pickle.load(handle)
-            # with open (f'/home/anna/Documents/benchmark/{prot}/outputs/{eng}/{perturbation}/free_pmf_{perturbation}_{eng}.pickle', 'rb') as handle:
             with open (f'{self.outputs_dir}/{eng}/{perturbation}/pickle/free_pmf_{perturbation}_{eng}_{self.file_ext}.pickle', 'rb') as handle:
                 free_pmf_dict = pickle.load(handle)
             lines += plt.plot(0,0,c=self.colours[eng], label=eng)

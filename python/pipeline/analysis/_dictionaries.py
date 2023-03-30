@@ -34,6 +34,17 @@ class make_dict():
     
     @staticmethod
     def comp_results(results_files=None, perturbations=None, engine=None, output_file=None):
+        """write results files into different file or dictionary for certain perturbations.
+
+        Args:
+            results_files (list, optional): list of results files (for the repeats). Defaults to None.
+            perturbations (list, optional): list of perturbations to use. Defaults to None.
+            engine (str, optional): engine to use. Defaults to None.
+            output_file (str, optional): output file to write. Defaults to None.
+
+        Returns:
+            dict: dictionary of the computed differences (RBFE)
+        """
         
         results_files = validate.is_list(results_files)
         for file in results_files:
@@ -50,6 +61,8 @@ class make_dict():
         # make a dictionary with the results of the files
         comp_dict_list = {}
         comp_err_dict_list = {}
+
+        # TODO get analysis method and method from file or from extra options. engine in extra options.
 
         # append for results file
         for res_file in results_files:
@@ -96,16 +109,13 @@ class make_dict():
         # put these into a dictionary
         comp_diff_dict = {}
 
-        # TODO combine this with file writer for network in _files
+        # TODO combine this with file writer for network in _files. modified results files writing?
         if output_file:
             # write these to a csv file
             with open(f"{output_file}.csv", "w") as comp_pert_file:
                 writer = csv.writer(comp_pert_file, delimiter=",")
-                if engine:
-                    writer.writerow(["lig_1","lig_2","freenrg","error","engine"])
-                else:
-                    writer.writerow(["lig_1","lig_2","freenrg","error","source"])
-                
+                writer.writerow(["lig_1","lig_2","freenrg","error","engine","analysis","method"])
+
                 for pert in perturbations:
                     lig_0 = pert.split("~")[0]
                     lig_1 = pert.split("~")[1]
@@ -134,9 +144,9 @@ class make_dict():
                     comp_diff_dict.update({pert:(comp_ddG, comp_err)})
 
                     if engine:
-                        writer.writerow([lig_0, lig_1, comp_ddG, comp_err, engine])
+                        writer.writerow([lig_0, lig_1, comp_ddG, comp_err, engine, "not specified", "None"])
                     else:
-                        writer.writerow([lig_0, lig_1, comp_ddG, comp_err, "source"])
+                        writer.writerow([lig_0, lig_1, comp_ddG, comp_err, "source", "not specified", "None"])
 
 
         for pert in perturbations:
@@ -170,6 +180,14 @@ class make_dict():
 
     @staticmethod
     def error_list_from_files(results_files):
+        """get list of errors from the files. Used for error histogram plotting.
+
+        Args:
+            results_files (list): list of results files
+
+        Returns:
+            list: list of errors.
+        """
 
         results_files = validate.is_list(results_files)
         for file in results_files:
@@ -183,6 +201,7 @@ class make_dict():
             for index,row in res_df.iterrows():
                 
                 # assume here as this is normal format of files
+                # TODO get from error index
                 if not isinstance(row[3], float):
                     ddG_err = BSS.Types.Energy(float(row[3].split()[0]),row[3].split()[-1]).value()
                 else:
@@ -194,6 +213,16 @@ class make_dict():
 
     @staticmethod
     def experimental_from_freenrgworkflows(experimental_DDGs, ligands, perturbations):
+        """get the experimental dicts from the freenergworkflows
+
+        Args:
+            experimental_DDGs (freenergworkflows experimental): from frreenergworkflows
+            ligands (list): list of ligands
+            perturbations (list): list of perturbations
+
+        Returns:
+            tuple: (experimental difference dict, experimental value dict)
+        """
         
         ligands = validate.is_list(ligands)
         perturbations = validate.is_list(perturbations)
@@ -205,6 +234,15 @@ class make_dict():
     
     @staticmethod
     def _from_freenrgworkflows_experimental_val(experimental_DDGs, ligands):
+        """get the experimental value dict from the freenergworkflows
+
+        Args:
+            experimental_DDGs (freenergworkflows experimental): from frreenergworkflows
+            ligands (list): list of ligands
+
+        Returns:
+            dict: dictionary of values.
+        """
 
         # create a dictionary for the experimental values
         exper_val_dict = {}
@@ -227,6 +265,15 @@ class make_dict():
 
     @staticmethod
     def _from_freenrgworkflows_experimental_diff(exper_val_dict, perturbations):
+        """get the experimental difference dict from the freenergworkflows
+
+        Args:
+            experimental_DDGs (freenergworkflows experimental): from frreenergworkflows
+            perturbations (list): list of perturbations
+
+        Returns:
+            dict: dictionary of diff based on provided perturbations.
+        """
 
         # we can also create a dictionary with all the experimental values for the perturbations
         exper_diff_dict = {}
@@ -251,6 +298,14 @@ class make_dict():
 
     @staticmethod
     def from_freenrgworkflows_network_analyser(computed_relative_DDGs):
+        """convert freenergworkflows into a dictionary
+
+        Args:
+            computed_relative_DDGs (freenergworkflows computed): from freenergworkflows
+
+        Returns:
+            dict: dictionary of freenerg values per ligand
+        """
 
         freenrg_dict = {}
 
@@ -266,6 +321,7 @@ class make_dict():
 
     @staticmethod
     def from_cinnabar_network_edges(network, calc_exp, perturbations):
+        # TODO docstring
 
         if calc_exp not in ["calc","exp"]:
             raise ValueError("calc_exp must be either 'calc' or 'exp'")
@@ -300,6 +356,7 @@ class make_dict():
 
     @staticmethod
     def from_cinnabar_network_node(network, calc_exp, normalise=False):
+        # TODO docstring
 
         if calc_exp not in ["calc","exp"]:
             raise ValueError("calc_exp must be either 'calc' or 'exp'")
@@ -320,6 +377,16 @@ class make_dict():
 
     @staticmethod
     def experimental_for_network(exper_dict, ligands, perturbations):
+        """make experimental dicts based on certain ligands and perturbations
+
+        Args:
+            exper_dict (dict): dictionary of experimental values
+            ligands (list): list of ligands
+            perturbations (list): list of perturbations
+
+        Returns:
+            tuple: (experimental diff dict, exper val dict)
+        """
         
         ligands = validate.is_list(ligands)
         perturbations = validate.is_list(perturbations)
@@ -331,7 +398,16 @@ class make_dict():
 
     @staticmethod
     def _exper_from_ligands(exper_val_dict, ligands, normalise=False):
+        """make a new dict of experimental values, can normalise.
 
+        Args:
+            exper_dict (dict): dictionary of experimental values
+            ligands (list): list of ligands
+            normalise (bool, optional): whether to normalise the values. Defaults to False.
+
+        Returns:
+            dict: experimental value dict
+        """
         exper_val_dict = validate.dictionary(exper_val_dict)
         ligands = validate.is_list(ligands)
         normalise = validate.boolean(normalise)
@@ -355,7 +431,16 @@ class make_dict():
 
     @staticmethod
     def _exper_from_perturbations(exper_val_dict, perturbations):
+        """make experimental dict based on and perturbations
 
+        Args:
+            exper_dict (dict): dictionary of experimental values
+            perturbations (list): list of perturbations
+
+        Returns:
+            dict: experimental differences dict
+        """
+        
         exper_diff_dict = {}
 
         # calculate the experimental RBFEs
@@ -370,6 +455,14 @@ class make_dict():
 
     @staticmethod
     def _normalise_data(data):
+        """normalise the data
+
+        Args:
+            data (list or dict): data to normalise
+
+        Returns:
+            list or dict: normalised data
+        """
         # normalise either a list / np / dict of data
 
         try:
@@ -401,6 +494,7 @@ class make_dict():
 
     @staticmethod
     def cycle_closures(pert_dict, cycle_closures):
+        # TODO docstring
 
         pert_dict = validate.dictionary(pert_dict)
         cycle_closures = validate.is_list(cycle_closures)

@@ -38,7 +38,13 @@ class convert:
 
     # TODO more robust yml file conversion
     @staticmethod
-    def yml_into_freenrgworkflows(exp_file, exp_file_dat, data_format=None):
+    def yml_into_freenrgworkflows(exp_file, exp_file_dat):
+        """convert yml format into one suitable for freenergworkflows
+
+        Args:
+            exp_file (str): yml file path of experimental data
+            exp_file_dat (str): new file to write experimental data to (fwf format)
+        """
         # get the experimental data into a useable format (from yml to csv)
         # for freenergworkflows, want to save as lig, Ki
         # experimental values (e.g. ic50/ki) for all ligands in our set.
@@ -64,6 +70,16 @@ class convert:
 
     @staticmethod
     def convert_M_kcal(value, magnitude = "uM", temp=300):
+        """convert value into kcal/mol
+
+        Args:
+            value (float): value
+            magnitude (str, optional): unit/magnitude of the value. uM or nM . Defaults to "uM".
+            temp (int, optional): temperature of the simulation. Defaults to 300.
+
+        Returns:
+            string: value in kcal/mol
+        """
         if magnitude == "uM":
             power = 10**-6
         if magnitude == "nM":
@@ -74,7 +90,16 @@ class convert:
         return kcal_val
 
     @staticmethod
-    def yml_into_exper_dict(exp_file, data_format=None, temp=300):
+    def yml_into_exper_dict(exp_file, temp=300):
+        """convert yml file into experimental dictionary of values.
+
+        Args:
+            exp_file (str): yml file
+            temp (int, optional): Temperature to use during the conversion. Defaults to 300.
+
+        Returns:
+            dict: kcal/mol value for each ligand
+        """
         
         exp_file = validate.file_path(exp_file)
         temp = validate.is_float(temp)
@@ -116,6 +141,14 @@ class convert:
 
     @staticmethod
     def cinnabar_file(results_files, exper_val, output_file, perturbations=None):
+        """convert results files into format needed for cinnabar. If multiple results files, uses the average of a perturbation.
+
+        Args:
+            results_files (list): list of results files
+            exper_val (dict or str): dict of experimental values or yml file of experimental values.
+            output_file (str): output file path
+            perturbations (list, optional): list of perturbations to include. Defaults to None.
+        """
         # files is a list of files
         results_files = validate.is_list(results_files)
         # output file

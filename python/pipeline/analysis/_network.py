@@ -17,6 +17,16 @@ import pandas as pd
 from ..utils import *
 
 def get_info_network(net_file=None, results_files=None, extra_options=None):
+    """get information about the network from the network file
+
+    Args:
+        net_file (str, optional): network file. Defaults to None.
+        results_files (list, optional): list of results files. Defaults to None.
+        extra_options (dict, optional): extra options (engine or engines). Defaults to None.
+
+    Returns:
+        tuple: (perturbations, ligands)
+    """
     # get info from a network file for engine
     # For the network that we are considering,
     # we want to get results files with these perturbations from the overall file that contains the large network results (if this is the case).
@@ -33,7 +43,7 @@ def get_info_network(net_file=None, results_files=None, extra_options=None):
 
     if not use_net_file:
         try:
-            results_files = validate.is_list(results_files)
+            results_files = validate.is_list(results_files, make_list=True)
             for file in results_files:
                 validate.file_path(file)
         except Exception as e:
@@ -102,6 +112,14 @@ def get_info_network(net_file=None, results_files=None, extra_options=None):
 
 
 def get_info_network_from_dict(res_dict):
+    """get list of perturbations and ligands from a dictionary
+
+    Args:
+        res_dict (dict): dictionary of free energy results
+
+    Returns:
+        tuple: (perturbations, ligands)
+    """
     # get info for the network from a perturbation results dictionary
 
     res_dict = validate.dictionary(res_dict)
@@ -124,6 +142,13 @@ def get_info_network_from_dict(res_dict):
 class net_graph():
     
     def __init__(self, ligands, perturbations, file_dir=None):
+        """_summary_
+
+        Args:
+            ligands (list): list of ligands
+            perturbations (list): list of perturbations
+            file_dir (str, optional): folder path to save graph image in. Defaults to None.
+        """
 
         self.ligands = validate.is_list(ligands)
         self.perturbations = validate.is_list(perturbations)
@@ -137,6 +162,8 @@ class net_graph():
         net_graph._gen_graph(self)
 
     def _gen_graph(self):
+        """generate a network x graph from the perturbations and ligands.
+        """
 
         # Generate the graph.
         graph = nx.Graph()
@@ -155,6 +182,11 @@ class net_graph():
 
 
     def draw_graph(self, file_dir=None):
+        """draw the network x graph.
+
+        Args:
+            file_dir (str, optional): where to save the image. Defaults to None, no image is saved.
+        """
         
         graph = validate.nxgraph(self.graph)
 
@@ -177,6 +209,11 @@ class net_graph():
 
 
     def cycle_closures(self):
+        """get cycle closures in the network
+
+        Returns:
+            list: list of cycle closures
+        """
 
         cycles = nx.cycle_basis(self.graph)
 
@@ -205,23 +242,27 @@ class net_graph():
         return cycle_closures
 
 
-    def add_weight(self, input_data=None):
+    def add_weight(self, input_data):
+        """add weights to the network x graph for the edges and each perturbation.
+
+        Args:
+            input_data (str or dict, optional): file path or dict of the weights for the perturbation edges.
+
+        Raises:
+            TypeError: if dict, must be of format {(lig_0, lig_1): weight}
+        """
         # these weights are for the lomap or rbfenn score
         
-        if not input_data:
-            raise ValueError("need some kind of input to add weights from! dict or file.")
-
-        else:
-            try:
-                weight_dict = validate.dictionary(input_data)
-                for key in weight_dict.keys():
-                    if not isinstance(key, tuple):
-                        raise TypeError("dict entry must be of the format {(lig_0, lig_1): weight}")
-                use_file = False
-                # print("using dict to add weights")
-            except:
-                use_file = True
-                weight_dict = {}
+        try:
+            weight_dict = validate.dictionary(input_data)
+            for key in weight_dict.keys():
+                if not isinstance(key, tuple):
+                    raise TypeError("dict entry must be of the format {(lig_0, lig_1): weight}")
+            use_file = False
+            # print("using dict to add weights")
+        except:
+            use_file = True
+            weight_dict = {}
 
         if use_file:
             # print("using input file to get the weights")

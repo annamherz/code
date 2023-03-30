@@ -35,6 +35,18 @@ class fepprep():
         fepprep._generate_bss_protocols(self)
 
     def add_system(self, system, free_bound=None, start_end=None):
+        """add a merged system to the fepprep and which state it is meant to represent;
+        either the free/bound leg or the state at start(lambda 0.0)/end(lambda 1.0)
+
+        Args:
+            system (BioSimSpace._SireWrappers.System): _description_
+            free_bound (str, optional): free or bound system. Defaults to None.
+            start_end (_type_, optional): system represents start(lambda 0.0) or end(lambda 1.0). Defaults to None.
+
+        Raises:
+            ValueError: free_bound must be free or bound.
+            ValueError: start_end must be start or end.
+        """
 
         if free_bound not in ["free", "bound"]:
             raise ValueError("free_bound must be free or bound.")
@@ -51,18 +63,27 @@ class fepprep():
             self._bound_system_1 = validate.system(system).copy()
 
 
-    def _merge_systems(self, align_to):
+    def merge_systems(self, align_to="lig_0"):
+        """merge the systems based on whether aligning to the lambda 0.0 coordinates or the lmabda 1.0 coordinates.
+
+        Args:
+            align_to (_type_): 'lig0' or 'lig1'.
+
+        Returns:
+            BioSimSpace._SireWrappers.System: the free system and the bound system
+        """
             
         free_system = merge.merge_system(self._free_system_0, self._free_system_1, **{"align to": align_to})
         bound_system = merge.merge_system(self._bound_system_0, self._bound_system_1, **{"align to": align_to})
+
+        self._merge_free_system = free_system
+        self._merge_bound_system = bound_system
         
         return free_system, bound_system
     
-    def merge_systems(self, align_to="lig0"):
-
-        self._merge_free_system, self._merge_bound_system = self._merge_systems(align_to)
-
     def _generate_bss_protocols(self):
+        """internal function to generate bss protocols for setup based on passed pipeline protocol.
+        """
 
         protocol = self._pipeline_protocol
 
@@ -123,7 +144,17 @@ class fepprep():
         self._eq_protocol = eq_protocol
         self._freenrg_protocol = freenrg_protocol
 
+
     def prep_system_middle(self, pmemd_path, work_dir=None):
+        """trying to prep the system at lambda 0.5 (not very robust currently)
+
+        Args:
+            pmemd_path (str): path to pmemd executable for use with amber
+            work_dir (str, optional): the work directory for the runs. Defaults to None.
+
+        Returns:
+            BioSimSpace._SireWrappers.System: the free and bound merged systems
+        """
 
         if self._pipeline_protocol.fepprep() == "middle":
             # Solvate and run each the bound and the free system.
@@ -141,6 +172,13 @@ class fepprep():
         return self._merge_free_system, self._merge_bound_system 
 
     def _generate_folders(self, system_free, system_bound, work_dir):
+        """generating the folders for the free and the bound system
+
+        Args:
+            system_free (BioSimSpace._SireWrappers.System): the free merged system
+            system_bound (BioSimSpace._SireWrappers.System): the bound merged system
+            work_dir (str): the work dir for where the folders will be generated
+        """
         
         protocol = self._pipeline_protocol
         min_protocol = self._min_protocol
@@ -222,15 +260,21 @@ class fepprep():
 
 
     def generate_folders(self, work_dir):
+        """generate the folders for the RBFE run.
+
+        Args:
+            work_dir (str): the folder to generate the folders in.
+        """
 
         work_dir = validate.folder_path(work_dir, create=True)
 
         if self._pipeline_protocol.fepprep() == "both":
             ligs = ["lig0", "lig1"]
             for lig in ligs:
-                free_system, bound_system = self._merge_systems(align_to=lig)
+                free_system, bound_system = self.merge_systems(align_to=lig)
                 self._generate_folders(free_system, bound_system, f"{work_dir}/{lig}")
 
+            # get half of the lambdas
             lambdas_list = self._freenrg_protocol.getLambdaValues()
             middle_index=len(lambdas_list)//2        
             first_half=lambdas_list[:middle_index]
