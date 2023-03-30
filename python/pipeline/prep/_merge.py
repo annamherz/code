@@ -153,6 +153,18 @@ class merge():
 
     @staticmethod
     def atom_mappings(system0, system1, **kwargs):
+        """get the atoms and mappings for ligands in two systems
+
+        Args:
+            system0 (BioSimSpace._SireWrappers.System): unmerged system at lambda 0.0
+            system1 (BioSimSpace._SireWrappers.System): unmerged system at lambda 1.0
+
+        Raises:
+            _Exceptions.AlignmentError: can't extract ligands from input system
+
+        Returns:
+            dict: ligand_0 atoms, ligand_1 atoms, mapping dictionary)
+        """
 
         prune_perturbed_constraints=None
         prune_crossing_constraints=None

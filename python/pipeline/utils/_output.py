@@ -129,7 +129,10 @@ class extract():
     
 
     def _set_extract_dir(self):
+        """set the directory for extracted data based on the passed trans_dir
+        """
 
+        # rename so just output_extracted instead of output
         extract_dir = f"{self.trans_dir.split('outputs')[0]}outputs_extracted{self.trans_dir.split('outputs')[1]}"
 
         # make directory
@@ -140,7 +143,7 @@ class extract():
 
 
     def extract_output(self):
-        """Extracts only the output files from the 
+        """Extracts the output files from the directory.
 
         Args:
             main_dir (str): Main directory, outputs directory.
@@ -150,9 +153,16 @@ class extract():
 
     @staticmethod
     def _extract_output(folder, extract_dir):
+        """extract simulation output needed for the AFE analysis.
+
+        Args:
+            folder (str): folder path to the folder to extract data from
+            extract_dir (str): folder path to the extracted dir
+        """
 
         dir_list = [dirs[0] for dirs in os.walk(folder)]
 
+        # exclude the min, heat, eq directories from extraction.
         for dirs in dir_list:
             if not "min" in dirs:
                 if not "heat" in dirs:
@@ -192,6 +202,16 @@ class extract():
         
         
     def extract_frames(self, traj_lambdas=None, rmsd=True, overwrite=False):
+        """extract the rmsd and/or frames for certain lambda windows.
+
+        Args:
+            traj_lambdas (list, optional): lambda values at which the trajectory should be extracted. Defaults to None.
+            rmsd (bool, optional): whether or not to calculate the rmsd of the ligand for the simulation. Defaults to True.
+            overwrite (bool, optional): wether to overwrite any existing extracted data in the folder. Defaults to False. If True, will rextract.
+
+        Raises:
+            ValueError: _description_
+        """
 
         trans_dir = self.trans_dir
         rmsd = validate.boolean(rmsd)
@@ -207,6 +227,7 @@ class extract():
             print("no traj_lambdas provided, will not extract any frames.")
             traj_lambdas = []
 
+        # exclude pickle folder from list, only do bound and free legs
         for item in items_in_folder:
             if not "pickle" in item:
                 if "bound" in item:
@@ -291,6 +312,15 @@ class extract():
     
     @staticmethod
     def centre_molecule(universe, selection):
+        """centre the molecule (eg either 'resname LIG' or 'protein') in the mda universe/
+
+        Args:
+            universe (MDAnalysis.Universe): mda analysis universe
+            selection (str): a valid mda selection criterion. (eg 'resname LIG' or 'protein')
+
+        Returns:
+            MDAnalysis.Universe: mda universe centred around the molecule selection
+        """
         
         u = universe
 
@@ -307,6 +337,12 @@ class extract():
 
     @staticmethod
     def _write_traj_frames(universe, traj_extract_dir):
+        """write 5 evenly spaced trajectory frames from the universe. Start, three evenly spaced from the middle, end.
+
+        Args:
+            universe (MDAnalysis.Universe): mda universe, best if centred
+            traj_extract_dir (str): folder path to where the frames should be written
+        """
 
         write_dir = traj_extract_dir
         u = universe
@@ -314,6 +350,7 @@ class extract():
         print("starting to write trajectory frames...")
         timesteps = [u.trajectory.ts for ts in u.trajectory]
         timestep_freq = int(len(timesteps)/4)
+        # five frames - if 4 ns, this is every ns
         timesteps_used = [0, timestep_freq-1, (timestep_freq*2)-1, (timestep_freq*3)-1, int(len(timesteps)-1)]
 
         for time in timesteps_used:
@@ -326,6 +363,12 @@ class extract():
 
     @staticmethod
     def _rmsd_trajectory(universe, traj_extract_dir):
+        """rmsd of the ligand (with name 'LIG') over the course of the trajectory
+
+        Args:
+            universe (MDAnalysis.Universe): mda universe
+            traj_extract_dir (str): folder path to where the frames should be written
+        """
 
         u = universe
         ref = universe
@@ -372,4 +415,5 @@ class extract():
 
         extract._extract_output(main_dir, extract_dir)
 
-        # TODO so does entire extraction for all things
+        # TODO so does entire extraction for all things, add extract frames
+        #TODO for specific perturbations?
