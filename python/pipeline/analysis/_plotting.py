@@ -28,6 +28,15 @@ from ._network import *
 class plotting_engines():
 
     def __init__(self, analysis_object=None, output_folder=None):
+        """for plotting analysis network results.
+
+        Args:
+            analysis_object (pipeline.analysis.analysis_network, optional): analysis object that is to be plotted for. Defaults to None.
+            output_folder (str, optional): output folder for generated csv files and graph images. Defaults to None.
+
+        Raises:
+            ValueError: must ptovide an analysis network object.
+        """
 
         if analysis_object:
             self._analysis_object = analysis_object
@@ -53,6 +62,8 @@ class plotting_engines():
 
 
     def analysis_obj_into_format(self):
+        """turn the passed pipeline.analysis.analysis_network object into format for this class
+        """
 
         ana_obj = self._analysis_object
         
@@ -68,45 +79,92 @@ class plotting_engines():
         self._eng_other_list()
         
         # file extension
-        self._file_ext()
-        self._net_ext()
+        self.file_extension(self.default_file_ext)
+        self.network_extension(self.default_net_ext)
 
         # dictionaries of engines for plotting from cinnabar
-        self.calc_val_dict = ana_obj.cinnabar_calc_val_dict
-        self.exper_val_dict = ana_obj.cinnabar_exper_val_dict
-        self.calc_pert_dict = ana_obj.cinnabar_calc_pert_dict
-        self.exper_pert_dict = ana_obj.cinnabar_exper_pert_dict
+        if ana_obj.cinnabar_calc_pert_dict:
+            self.calc_val_dict = ana_obj.cinnabar_calc_val_dict
+            self.exper_val_dict = ana_obj.cinnabar_exper_val_dict
+            self.calc_pert_dict = ana_obj.cinnabar_calc_pert_dict
+            self.exper_pert_dict = ana_obj.cinnabar_exper_pert_dict # TODO is this ever used?
+        else:
+            print("no cinnabar calculation has been performed. Can only plot 'pert' values.")
+            self.calc_val_dict = {}
+            self.exper_val_dict = {}
+            self.calc_pert_dict = ana_obj.calc_pert_dict
+            self.exper_pert_dict = ana_obj.exper_pert_dict # TODO is this ever used?
+
         # experimental calculated directly from exp values (for bar)
         self.all_exper_pert_dict = ana_obj.exper_pert_dict
         self.all_exper_val_dict = ana_obj.normalised_exper_val_dict
 
-    def _file_ext(self):
+    def default_file_ext(self):
+        """file extension from the analysis object, if none is provided na.
+
+        Returns:
+            str: file extension
+        """
 
         file_ext = self._analysis_object.file_ext
 
         if file_ext == ".+":
-            self.file_ext = "na"
-        else:
-            self.file_ext = file_ext
+            file_ext = "na"
  
         return file_ext
     
-    def _net_ext(self):
+    def default_net_ext(self):
+        """the network extension
+
+        Returns:
+            str: network extension
+        """
 
         net_ext = self._analysis_object.net_ext
         self.net_ext = net_ext    
 
         return net_ext    
     
-    def set_file_ext(self, file_ext):
+    def file_extension(self, file_ext=None):
+        """set or return the file extension
 
-        self.file_ext = validate.string(file_ext)
+        Args:
+            file_ext (str, optional): file extension to set. Defaults to None.
 
-    def set_net_ext(self, net_ext):
+        Returns:
+            str: the file extension
+        """
 
-        self.net_ext = validate.string(net_ext)
+        if file_ext:
+            self.file_ext = validate.string(file_ext)
+        else:
+            pass
+
+        return self.file_ext
+
+    def network_extension(self, net_ext=None):
+        """set or return the network extension
+
+        Args:
+            file_ext (str, optional): network extension to set. Defaults to None.
+
+        Returns:
+            str: the network extension
+        """
+
+        if net_ext:
+            self.net_ext = validate.string(net_ext)
+        else:
+            pass
+
+        return self.net_ext
 
     def _eng_other_list(self):
+        """list of engines and any other results and the experimental.
+
+        Returns:
+            list: names list
+        """
 
         names_list = []
 
@@ -124,6 +182,17 @@ class plotting_engines():
         return names_list
 
     def _validate_in_names_list(self, name):
+        """validate if the name is in the names list
+
+        Args:
+            name (str): the name to validate
+
+        Raises:
+            ValueError: if not in names list
+
+        Returns:
+            str: the validated name
+        """
 
         name = validate.string(name)
         if name not in self.names_list:
@@ -132,26 +201,30 @@ class plotting_engines():
         return name            
 
     def _analysis_dicts_to_df(self):
+        """turn the dicts from the analysis network to ones for the plotting object
+        """
 
+        # create the overall dict from all the passed results
         self._overall_dict()
         self.freenrg_df_dict = {}
         for name in self.names_list:
             self.freenrg_df_dict.update({name:None})
         self._calc_all_dict_to_df()
 
-    def _calc_all_dict_to_df(self):
-
-        for name in self.names_list:
-            self._dict_to_df(x_name=name)
 
     def _overall_dict(self):
+        """create an overall dict with the information passed from the analysis network object.
+
+        Returns:
+            dict: values dict for all the engines, other results, and experimental. Each dict in the dict contains the 'perts', 'ligs', 'pert_results', and 'val_results'.
+        """
 
         values_dict = {}
         for name in self.names_list:
             values_dict.update({name:{}})
 
         # run for all engines with selected network and populate the dictionary for plotting
-        for eng in self.engines:
+        for eng in (self.engines + self.other_results_names):
             try:
                 # get perts and ligands for each engine
                 pert_lig = get_info_network_from_dict(self.calc_pert_dict[eng])
@@ -159,39 +232,47 @@ class plotting_engines():
                 values_dict[eng]["ligs"] = pert_lig[1]
                 # put results into values dict
                 values_dict[eng]["pert_results"] = self.calc_pert_dict[eng]
-                values_dict[eng]["val_results"] = self.calc_val_dict[eng]
-            
+                
             except Exception as e:
                 values_dict[eng]["perts"] = [None]
                 values_dict[eng]["ligs"] = [None]
                 values_dict[eng]["pert_results"] = [None]
-                values_dict[eng]["val_results"] = [None]
                 print(e)
                 print(f"could not convert {eng} values for plotting. None will be used. Was earlier analysis okay?")
 
+            try:
+                values_dict[eng]["val_results"] = self.calc_val_dict[eng]
+            except Exception as e:
+                values_dict[eng]["val_results"] = [None]
+                print(e)
+                print(f"could not convert val {eng} values for plotting. None will be used. Was cinnabar analysis carried out correctly?")
 
         values_dict["experimental"]["perts"] = self.perturbations
         values_dict["experimental"]["ligs"] = self.ligands
         values_dict["experimental"]["pert_results"] = self.all_exper_pert_dict
         values_dict["experimental"]["val_results"] = self.all_exper_val_dict #normalised data
 
-        # add other values to dict 
-        for name in self.other_results_names:
-            # get perts and ligands for each engine
-            pert_lig = get_info_network_from_dict(self.calc_pert_dict[name])
-            values_dict[name]["perts"] = pert_lig[0]
-            values_dict[name]["ligs"] = pert_lig[1]
-            # put results into values dict
-            values_dict[name]["pert_results"] = self.calc_pert_dict[name]
-            values_dict[name]["val_results"] = self.calc_val_dict[name]
-
         self.values_dict = values_dict
 
         return values_dict
 
-    # TODO calculate dict to df for all ?
+    def _calc_all_dict_to_df(self):
+        """for all identified engines, other results, and experimental, convert the dictionary into a dataframe.
+        """
+
+        for name in self.names_list:
+            self._dict_to_df(x_name=name)
 
     def _dict_to_df(self, x_name="experimental"):
+        """turn a dictionary of results into a dataframe
+
+        Args:
+            x_name (str, optional): name of the dictionary to convert. Defaults to "experimental".
+
+        Returns:
+            dict: dictionary of pandas dataframe, which is a dictionary (other names) of the 'pv' (pert or val) to match the values found in the x_name dictionary.
+        """
+
         # calculate df w respect to each other value
 
         x_name = self._validate_in_names_list(x_name)
@@ -238,13 +319,33 @@ class plotting_engines():
     
 
     @staticmethod
-    def _prune_perturbations(df, perturbations):
+    def _prune_perturbations(df, perturbations, remove=False):
+        """keep or remove perturbations in list from the dataframe
 
-        # keep only specified perturbations in the dataframe
-        to_del = []
-        for pert in df.index:
-            if pert not in perturbations:
-                to_del.append(pert)
+        Args:
+            df (pandas.dataframe): dataframe of results
+            perturbations (list): list of perturbations that want to keep.
+            remove (boolean): whether to keep or remove the perturbations in the list
+
+        Returns:
+            df: pruned dataframe
+        """
+        
+        remove = validate.boolean(remove)
+        perturbations = validate.is_list(perturbations, make_list=True)
+
+        if remove:
+            # keep only specified perturbations in the dataframe
+            to_del = []
+            for pert in df.index:
+                if pert in perturbations:
+                    to_del.append(pert)
+        else:
+            # keep only specified perturbations in the dataframe
+            to_del = []
+            for pert in df.index:
+                if pert not in perturbations:
+                    to_del.append(pert)
 
         for pert in to_del:
             df = df.drop(index=[pert])
@@ -253,12 +354,22 @@ class plotting_engines():
 
 
     def _set_style(self):
+        """set the style of the graphs.
+        """
 
         self.set_colours()
         self._get_bar_spacing()
 
 
     def set_colours(self, colour_dict=None):
+        """set the colours of the bars or scatter plots.
+
+        Args:
+            colour_dict (dict, optional): dicitonary of names and their colours. Defaults to None.
+
+        Returns:
+            dict: dictionary of new colours
+        """
         
         set_colour_dict = self._set_colours(colour_dict)
         self.colours = set_colour_dict
@@ -267,30 +378,33 @@ class plotting_engines():
 
     @staticmethod
     def _set_colours(colour_dict=None):
+        """set colours to replace those in the default dictionary.
+
+        Args:
+            colour_dict (_type_, optional): _description_. Defaults to None.
+
+        Returns:
+            _type_: _description_
+        """
 
         default_colour_dict = {"AMBER":"orange",
                     "SOMD":"darkturquoise",
                     "GROMACS":"orchid",
                     "experimental":"midnightblue"
                     }
-        allowed_keys = ["AMBER","SOMD","GROMACS","experimental"]
 
-        if not colour_dict:
-            colour_dict = default_colour_dict
-
-        else:
+        if colour_dict:
             colour_dict = validate.dictionary(colour_dict)
             for key in colour_dict:
-                if key not in allowed_keys:
-                    raise ValueError(f"{colour_dict} may only have the keys in {allowed_keys}.")
-                # replace in the default dict and have this as new colour dict
+                # replace default colour dict keys with those in the passed dictionary
                 default_colour_dict[key] = colour_dict[key]
-                colour_dict = default_colour_dict
         
-        return colour_dict
+        return default_colour_dict
 
 
     def _get_bar_spacing(self):
+        """_get the bar spacing based on how many engines.
+        """
 
         bar_spacing, bar_width = plotting_engines.get_bar_spacing(engines=self.engines, experimental=True)
 
@@ -300,7 +414,9 @@ class plotting_engines():
 
     @staticmethod
     def get_bar_spacing(engines=None, experimental=True):
-        
+        #TODO adjust so based on how many passed ie if also other results are to be plotted
+        # TODO extend so based on no of values and experimetnal is the final one, placement istn a dict but a list and just takes positions?
+
         engines = validate.is_list(engines)
         experimental = validate.boolean(experimental)
         
@@ -325,8 +441,6 @@ class plotting_engines():
             placement = [0]
         else:
             raise ValueError("length of the engine list + exp cannot exceed 4? must have atleast 1 engine/exp.")
-        
-        # TODO extend so based on no of values and experimetnal is the final one, placement istn a dict but a list and just takes positions?
 
         for eng,place in zip(engines, placement):
             placement_dict.update({eng:place}) # for each engine
@@ -337,31 +451,36 @@ class plotting_engines():
 
 
     def _plotting_engines(self, engines_query):
+        """engines to be used for plotting
+
+        Args:
+            engines_query (list): list of engines to be plotted for
+
+        Returns:
+            list: validated list of engines to be plotted for.
+        """
 
         # get engines for analysis
         if not engines_query:
             engines = self.engines
         else:
             try:
-                engines_query = validate.is_list(engines_query)
-                val_engines = []
-                for engine in engines_query:
-                    engine_val = validate.engine(engine)
-                    val_engines.append(engine_val)
-                engines = val_engines
-            # if single engine string, put into list
+                engines = validate.engines(engines_query)
             except:
-                try:
-                    engines_query = validate.string(engines_query)
-                    engines_query = validate.engine(engines_query)
-                    engines = [engines_query]
-                except:
-                    print("engine input not recognised. Will use all engines for which there is data.")
-                    engines = self.engines
+                print("engine input not recognised. Will use all engines for which there is data.")
+                engines = self.engines
         
         return engines
 
-    def bar(self, pert_val=None, engines=None, name="experimental", perturbations=None, extra_options=None):
+    def bar(self, pert_val=None, engines=None, name="experimental", perturbations=None, **kwargs):
+        """plot a bar plot of the results
+
+        Args:
+            pert_val (str, optional): whether plotting 'pert' ie perturbations or 'val' ie values (per ligand result). Defaults to None.
+            engines (list, optional): engines to plot for. Defaults to None.
+            name (str, optional): what to plot against. Defaults to "experimental". #TODO fix so can plot multiple other results
+            perturbations (list, optional): list of perturbations to plot for. Defaults to None.
+        """
 
         pert_val = validate.pert_val(pert_val)
         name = self._validate_in_names_list(name)
@@ -433,12 +552,27 @@ class plotting_engines():
 
 
     def scatter(self, pert_val=None, engines=None, name="experimental", perturbations=None, **kwargs):
+        """plot scatter plot.
+
+        Args:
+            pert_val (str, optional): whether plotting 'pert' ie perturbations or 'val' ie values (per ligand result). Defaults to None.
+            engines (list, optional): engines to plot for. Defaults to None.
+            name (str, optional): what to plot against. Defaults to "experimental". #TODO fix so can plot multiple other results
+            perturbations (list, optional): list of perturbations to plot for. Defaults to None.
+
+        Raises:
+            ValueError: the name must be available in the other names list ie have results assosciated with it.
+        """
 
         pert_val = validate.pert_val(pert_val)
         name = self._validate_in_names_list(name)
 
         if engines:
-            engines = self._plotting_engines(engines)
+            for eng in engines:
+                if eng not in self.names_list:
+                    raise ValueError("name must be in calc names")
+
+            # engines = self._plotting_engines(engines)
         # if no engines provided, use the defaults that were set based on the analysis object
         else:
             engines = self.engines
@@ -599,7 +733,17 @@ class plotting_engines():
         plt.show()
 
 
-    def outlier(self, pert_val="pert", engines=None, outliers=3, perturbations=None, name="experimental"):
+    def outlier(self, pert_val="pert", engines=None, outliers=3,  name="experimental", perturbations=None, **kwargs):
+        """plot scatter plot with annotated outliers.
+
+        Args:
+            pert_val (str, optional): whether plotting 'pert' ie perturbations or 'val' ie values (per ligand result). Defaults to None.
+            engines (list, optional): engines to plot for. Defaults to None.
+            outliers (int, optional): number of outliers to annotate. Defaults to 3.
+            name (str, optional): what to plot against. Defaults to "experimental". #TODO fix so can plot multiple other results
+            perturbations (list, optional): list of perturbations to plot for. Defaults to None.
+            
+        """
 
         pert_val = validate.pert_val(pert_val)
         name = self._validate_in_names_list(name)
@@ -743,7 +887,15 @@ class plotting_engines():
     # some functions so cleaner in plotting functions
     @staticmethod
     def _get_eng_name(engines):
+        """get the engine names for writing the titles and file names
 
+        Args:
+            engines (list): list of engines
+
+        Returns:
+            str: name for the plotting and file name
+        """
+        #TODO adjust so also includes other results names
         if len(engines) == 3:
             eng_name = "all"
         else:
@@ -753,6 +905,18 @@ class plotting_engines():
 
     @staticmethod
     def _get_bounds_scatter(engines, freenrg_df_dict, pert_val, perturbations, name):
+        """get the upper and lower bounds of the scatter plot based on the results plotted.
+
+        Args:
+            engines (list): list of engines and other results.
+            freenrg_df_dict (dict): dictionary of dataframes of results
+            pert_val (str, optional): whether plotting 'pert' ie perturbations or 'val' ie values (per ligand result).
+            perturbations (list, optional): list of perturbations to plot for.
+            name (str): what is being plotted against.
+
+        Returns:
+            tuple: min and max limit for plotting.
+        """
 
         # get the bounds. This can be done with min/max or simply by hand.
         all_freenrg_values_pre = []
@@ -778,8 +942,18 @@ class plotting_engines():
 
     def histogram(self, engines=None, pert_val=None, error_dict=None, file_ext=None, perturbations=None, name="experimental"):
         """default plots histogram of SEM, if error dict supplied in format {engine: error_list}, will plot these
+
+        Args:
+            engines (list, optional): list of engines. Defaults to None.
+            pert_val (str, optional): whether plotting 'pert' ie perturbations or 'val' ie values (per ligand result). Defaults to None.
+            error_dict (dict, optional): dictionary of errors if want to plot that instead. Defaults to None.
+            file_ext (str, optional): file extension to be used for the plots. Defaults to None (object file extension).
+            perturbations (list, optional): list of perturbations to plot for. Defaults to None.
+            name (str): what is being plotted against. Defaults to "experimental".
+
+        Returns:
+            dict: dictionary of histograms (for names / engines, and the over all 'dist')
         """
-        # TODO this is currently plotting the standard error of the 
 
         name = self._validate_in_names_list(name)
 

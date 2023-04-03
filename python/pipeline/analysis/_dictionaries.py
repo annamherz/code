@@ -112,7 +112,7 @@ class make_dict():
         # TODO combine this with file writer for network in _files. modified results files writing?
         if output_file:
             # write these to a csv file
-            with open(f"{output_file}.csv", "w") as comp_pert_file:
+            with open(f"{output_file}.csv", "w+") as comp_pert_file:
                 writer = csv.writer(comp_pert_file, delimiter=",")
                 writer.writerow(["lig_1","lig_2","freenrg","error","engine","analysis","method"])
 

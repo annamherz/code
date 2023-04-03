@@ -20,37 +20,39 @@ from pipeline.analysis import *
 from pipeline.prep import *
 from pipeline.utils import *
 
-protein = "tyk2"
+# "lig_27~lig_29", "lig_33~lig_38", "lig_56~lig_58"
+transf = ["lig_ejm31~lig_ejm45", "lig_ejm31~lig_ejm48","lig_ejm43~lig_ejm46", "lig_ejm46~lig_jmc28", "lig_jmc27~lig_jmc28"]
+# transf = ["lig_27~lig_38", "lig_33~lig_38", "lig_56~lig_58"]
+engine = "AMBER"
+main_dir = "/home/anna/Documents/benchmark/tyk2_benchmark"
+# methods = ["1fs", "2fs_HMR4", "4fs", "4fs_HMR3", "2fs_HMR3", "2fs"]
+methods = ["both"]
 
-bench_folder = f"/home/anna/Documents/benchmark"
-main_dir = f"{bench_folder}/extracted/{protein}"
+# options
+ana_file = f"/home/anna/Documents/benchmark/extracted/tyk2/execution_model/analysis_protocol.dat"
+analysis_options = analysis_protocol(ana_file, auto_validate=True)
+analysis_options.try_pickle(False)
+analysis_options.estimator("TI")
+# analysis_options.rewrite_protocol()
 
-# choose location for the files
-net_file = f"{main_dir}/execution_model/network_lomap.dat"
-ana_file = f"{main_dir}/execution_model/analysis_protocol.dat"
-# exp_file = f"{bench_folder}/inputs/experimental/tyk2.yml"
-exp_file = f"/home/anna/Documents/benchmark/inputs/experimental/{protein}.yml"
+for method in methods:
+    for trans in transf:
+        # trans = f"{trans.split('~')[1]}~{trans.split('~')[0]}" # for reverse
+        # path_to_dir = f"{main_dir}/outputs_extracted/{engine}/{method}/{trans}"
+        path_to_dir = f"{main_dir}/outputs_extracted/{engine}/{trans}"
+        print(path_to_dir)
+        final_results_folder = f"{main_dir}/outputs_extracted/results"
 
-if os.path.exists(f"{main_dir}/outputs_extracted/results"):
-    results_folder = f"{main_dir}/outputs_extracted/results"
-elif os.path.exists(f"{main_dir}/outputs/results"):
-    results_folder = f"{main_dir}/outputs/results"
-else:
-    raise ValueError(f"results directory not found in the {main_dir}. please make sure results were written using the analysis script previously in the pipeline")
-
-output_folder = validate.folder_path(f"{main_dir}/analysis", create=True)
-
-all_analysis_object = analysis_network(results_folder,
-                                       exp_file=exp_file,
-                                       net_file=net_file,
-                                       output_folder=output_folder,
-                                       analysis_ext=ana_file
-                                        )
-
-# can add any other results files
-# all_analysis_object.compute_other_results(file_name=None, name=None)
-all_analysis_object.compute(cycle_closure=False)
-all_analysis_object.calc_mae(pert_val="pert")
+        try:
+            # using the pipeline module for analysis
+            analysed_pert = analyse(path_to_dir)
+            analysed_pert.set_options(analysis_options)
+            avg, error, repeats_tuple_list = analysed_pert.analyse_all_repeats()
+            # analysed_pert.plot_graphs()
+            write_analysis_file(analysed_pert, final_results_folder, method=method)
+        except Exception as e:
+            print(e)
+            print(f"could not analyse {path_to_dir}")
 
 # # fwf exp data
 # print("fwf")
