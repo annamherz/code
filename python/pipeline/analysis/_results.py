@@ -54,18 +54,6 @@ class analysis_network():
         else:
             self._net_file = validate.file_path(net_file)
             self.net_ext = validate.string(f"{net_file.split('/')[-1].split('.')[0]}")
-        
-        if not output_folder:
-            if self._results_directory:
-                print("no output folder provided, writing all output to the 'results_directory'.")
-                self.output_folder = f"{self._results_directory}"
-                self.graph_dir = validate.folder_path(f"{self._results_directory}/graphs", create=True)
-            else:
-                print("no output or results directory, so writing files to current folder...")
-                self.output_folder = os.getcwd()
-        else:
-            self.output_folder = validate.folder_path(output_folder, create=True)
-            self.graph_dir = validate.folder_path(f"{output_folder}/graphs", create=True)
 
         if not analysis_ext:
             self.file_ext = ".+" # wildcard, all files in the folder included
@@ -81,7 +69,6 @@ class analysis_network():
                 except:
                     raise TypeError(f"{analysis_ext} analysis ext must be either a string or an analysis protocol file/dictionary")
 
-        
         if results_directory:
             self._results_directory = validate.folder_path(results_directory)
             # get files from results directory
@@ -97,6 +84,17 @@ class analysis_network():
             self._results_bound_repeat_files = None
             self._results_files = None
 
+        if not output_folder:
+            if self._results_directory:
+                print("no output folder provided, writing all output to the 'results_directory'.")
+                self.output_folder = f"{self._results_directory}"
+                self.graph_dir = validate.folder_path(f"{self._results_directory}/graphs", create=True)
+            else:
+                print("no output or results directory, so writing files to current folder...")
+                self.output_folder = os.getcwd()
+        else:
+            self.output_folder = validate.folder_path(output_folder, create=True)
+            self.graph_dir = validate.folder_path(f"{output_folder}/graphs", create=True)
 
         # set defaults
         self.temperature = 300
@@ -149,11 +147,13 @@ class analysis_network():
         # for checking against free energy workflows
         self._fwf_experimental_DDGs = None
         self._fwf_computed_relative_DDGs = {}
+        self._fwf_path = None
 
         # for plotting
         self._plotting_object = None
         # for stats
         self._stats_object = None
+
 
     def _get_results_repeat_files(self, leg=None):
         """get the files of all the repeats for a specific leg. Used during init to set free and bound repeat files.
@@ -869,23 +869,28 @@ class analysis_network():
     # TODO write an output file for the dictionary               
 
     # freenergworkflows stuff for comparison
+    def _add_fwf_path(self, fwf_path):
 
-    def _get_exp_fwf(self, fwf_path=None):
+        # using freenergworkflows
+        if not fwf_path:
+            raise ValueError("pls incl the path to freenergworkflows")
+
+        fwf_path = validate.folder_path(fwf_path)
+
+        if fwf_path not in sys.path:
+            sys.path.insert(1, fwf_path)
+        
+        self._fwf_path = fwf_path
+
+
+    def _get_exp_fwf(self):
         """get experimental values using freenergworkflows
-
-        Args:
-            fwf_path (str, optional): path to the fwf library. Defaults to None.
-
-        Raises:
-            ValueError: need path to freenergworkflows
 
         Returns:
             tuple: (exp_lig_dict, exp_pert_dict)
         """
-        # using freenergworkflows
-        if not fwf_path:
-            raise ValueError("pls incl the path to freenergworkflows")
-        sys.path.insert(1, fwf_path)
+        if not self._fwf_path:
+            raise ValueError("need fwf path added using _add_fwf_path(fwf_path)")
         import experiments
 
         # first need to convert the yml file into one useable by freenergworkflows
@@ -901,24 +906,21 @@ class analysis_network():
         return exp_lig_dict, exp_pert_dict
 
 
-    def _get_ana_fwf(self, fwf_path=None, engine=None):
+    def _get_ana_fwf(self, engine=None):
         """get experimental values using freenergworkflows
 
         Args:
-            fwf_path (str, optional): path to the fwf library. Defaults to None.
             engine (str, optional): name of engine. Defaults to None.
 
         Raises:
-            ValueError: need path to freenergworkflows
             ValueError: need an engine
 
         Returns:
             dict: freenerg dict of results for that engine
         """
         # using freenergworkflows 
-        if not fwf_path:
-            raise ValueError("pls incl the path to freenergworkflows")
-        sys.path.insert(1, fwf_path)
+        if not self._fwf_path:
+            raise ValueError("need fwf path added using _add_fwf_path(fwf_path)")
         import networkanalysis
 
         if not engine:
@@ -928,14 +930,27 @@ class analysis_network():
         nA = networkanalysis.NetworkAnalyser()
 
         first_file = False
+        nf = 0
         for file_name in self._results_repeat_files[engine]:
+
+            # rewrite the file to include only lig_0, lig_1, freenrg, error, engine
+            new_file_name = f"{self.output_folder}/fwf_{engine}_file_{nf}.csv"
+            data = pd.read_csv(file_name, delimiter=",")
+            header_data = data[['lig_0', 'lig_1', 'freenrg', 'error', 'engine']]
+            clean_data = header_data.replace("kcal/mol","", regex=True)
+            pd.DataFrame.to_csv(clean_data, new_file_name, sep=",", index=False)
+            nf += 1
+
             if first_file is False:
-                nA.read_perturbations_pandas(file_name, comments='#')
+                nA.read_perturbations_pandas(new_file_name, comments='#', source='lig_0', target='lig_1')
                 first_file = True
             else:
                 # add more replicates to the graph. FreeNrgWorkflows will take care of averaging 
                 # the free energies as well as propagating the error.
-                nA.add_data_to_graph_pandas(file_name)
+                nA.add_data_to_graph_pandas(new_file_name, comments='#', source='lig_0', target='lig_1')
+        
+        # set network analyser graph as graph
+        self.fwf_graph = nA._graph
 
         computed_relative_DDGs = nA.freeEnergyInKcal
 
@@ -945,24 +960,21 @@ class analysis_network():
         return freenrg_dict
 
 
-    def _get_stats_fwf(self, fwf_path=None, engine=None):
+    def _get_stats_fwf(self, engine=None):
         """get stats using freenergworkflows
 
         Args:
-            fwf_path (str, optional): path to the fwf library. Defaults to None.
             engine (str, optional): name of engine. Defaults to None.
 
         Raises:
-            ValueError: need path to freenergworkflows
             ValueError: need an engine
 
         Returns:
             tuple: r_confidence, tau_confidence, mue_confidence 
         """
         # using freenergworkflows 
-        if not fwf_path:
-            raise ValueError("pls incl the path to freenergworkflows")
-        sys.path.insert(1, fwf_path)
+        if not self._fwf_path:
+            raise ValueError("need fwf path added using _add_fwf_path(fwf_path)")
         import stats
 
         if not engine:
@@ -987,6 +999,5 @@ class analysis_network():
 # TODO new class that inherits from above, so can compare different methods
 
 # for analysis between diff engines
-#         # calc mae between
 #         # stat compare convergence
 #         # compare how fast reach concurrent results for length of runs?

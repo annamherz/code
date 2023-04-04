@@ -79,8 +79,8 @@ class plotting_engines():
         self._eng_other_list()
         
         # file extension
-        self.file_extension(self.default_file_ext)
-        self.network_extension(self.default_net_ext)
+        self.file_extension(self.default_file_ext())
+        self.network_extension(self.default_net_ext())
 
         # dictionaries of engines for plotting from cinnabar
         if ana_obj.cinnabar_calc_pert_dict:
@@ -551,7 +551,7 @@ class plotting_engines():
         plt.show()
 
 
-    def scatter(self, pert_val=None, engines=None, name="experimental", perturbations=None, **kwargs):
+    def scatter(self, pert_val=None, engines=None, name="experimental", perturbations=None, **kwargs): # TODO change x_name, y_name
         """plot scatter plot.
 
         Args:
@@ -568,6 +568,7 @@ class plotting_engines():
         name = self._validate_in_names_list(name)
 
         if engines:
+            engines = validate.is_list(engines, make_list=True)
             for eng in engines:
                 if eng not in self.names_list:
                     raise ValueError("name must be in calc names")
