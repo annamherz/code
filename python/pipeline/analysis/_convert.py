@@ -22,6 +22,7 @@ import numpy as np
 import pandas as pd 
 
 from ..utils import *
+from ._dictionaries import *
 
 # conversion of constants
 from scipy.constants import R, calorie
@@ -189,43 +190,25 @@ class convert:
             writer.writerow(["# Calculated block"])
             writer.writerow(["# Ligand1","Ligand2","calc_DDG","calc_dDDG(MBAR)", "calc_dDDG(additional)"])
 
-            # write each perturbation and repeat to the file
-            for file in results_files:
-                with open(file, "r") as res_file:
-                    for line in res_file:
-                        if "freenrg" in line: # avoid the header
+            # need to write the average of the data, otherwise cinnabar just uses the last entry
+            comp_diff_dict = make_dict.comp_results(results_files, perturbations=perturbations)
+
+            # write to file
+            for key in comp_diff_dict:
+                lig_0 = key.split("~")[0]
+                lig_1 = key.split("~")[1]
+                comp_ddG = comp_diff_dict[key][0]
+                comp_err = comp_diff_dict[key][1]            
+
+                if not comp_ddG:
+                    pass
+                else:
+                    if perturbations:
+                        pert = f"{lig_0}~{lig_1}"
+                        if pert in perturbations:
+                            writer.writerow([lig_0, lig_1, comp_ddG, comp_err, "0.0"])
+                        else:
                             pass
-                        else:                           
-                            # assume here as this is normal format of files
-                            lig_0 = line.split(",")[0]
-                            lig_1 = line.split(",")[1]
-                            comp_ddG = line.split(",")[2]
-                            comp_err = line.split(",")[3]
 
-                            # try to validate as float
-                            try:
-                                comp_ddG = validate.is_float(comp_ddG)
-                                comp_err = validate.is_float(comp_err)
-                            except:
-                                pass
-                            
-                            # if not float, try to validate as BSS with unit
-                            if not isinstance(comp_ddG, float):
-                                comp_ddG = BSS.Types.Energy(float(comp_ddG.split()[0]),comp_ddG.split()[-1]).value()
-                            else:
-                                comp_ddG = comp_ddG
-
-                            if not isinstance(comp_err, float):
-                                comp_err = BSS.Types.Energy(float(comp_err.split()[0]),comp_err.split()[-1]).value()
-                            else:
-                                comp_err = comp_err
-
-                            if perturbations:
-                                pert = f"{lig_0}~{lig_1}"
-                                if pert in perturbations:
-                                    writer.writerow([lig_0, lig_1, comp_ddG, comp_err, "0.0"])
-                                else:
-                                    pass
-
-                            else:
-                                writer.writerow([lig_0, lig_1, comp_ddG, comp_err, "0.0"])
+                    else:
+                        writer.writerow([lig_0, lig_1, comp_ddG, comp_err, "0.0"])

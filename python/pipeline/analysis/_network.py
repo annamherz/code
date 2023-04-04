@@ -58,13 +58,15 @@ def get_info_network(net_file=None, results_files=None, extra_options=None):
         extra_options = validate.dictionary(extra_options)
 
         if "engine" in extra_options.keys():
-            engines = [validate.engine(extra_options["engine"])]
+            try:
+                engines = [validate.engine(extra_options["engine"])]
+            except Exception as e:
+                print(e)
         if "engines" in extra_options.keys():
-            engines = validate.is_list(extra_options["engines"])
-            for engine in engines:
-                engine_val = validate.engine(engine)
-                engines = [engine_val if i == engine else i for i in engines]
-       
+            try:
+                engines = validate.engines(extra_options["engines"])
+            except Exception as e:
+                print(e)
     
     # We also want to create a list of the perturbations in our network.
     perturbations = []
@@ -93,7 +95,9 @@ def get_info_network(net_file=None, results_files=None, extra_options=None):
         for res_file in results_files:
             # use the network file to find the ligands and perturbations
             with open(f"{res_file}", "r") as file:
-                for line in file:
+                lines = (line.rstrip() for line in file) # All lines including the blank ones
+                lines = (line for line in lines if line) # Non-blank lines
+                for line in lines:
                     for engine in engines:
                         if line.split(",")[4] == engine:
                             lig_0 = line.split(",")[0]

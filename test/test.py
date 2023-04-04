@@ -7,14 +7,15 @@ import os as _os
 
 BSS.setVerbose = True
 
-try:
-    import pipeline
-except:
-    print("adding code to the pythonpath...")
-    code = '/home/anna/Documents/code/python'
-    if code not in sys.path:
-        sys.path.insert(1, code)
-    import pipeline
+if '/home/anna/Documents/cinnabar' not in sys.path:
+    sys.path.insert(1, '/home/anna/Documents/cinnabar')
+import cinnabar
+
+print("adding code to the pythonpath...")
+code = '/home/anna/Documents/code/python'
+if code not in sys.path:
+    sys.path.insert(1, code)
+import pipeline
 
 print(pipeline.__file__)
 
@@ -23,39 +24,32 @@ from pipeline.analysis import *
 from pipeline.prep import *
 from pipeline.utils import *
 
-transf = ["lig_ejm31~lig_ejm45", "lig_ejm44~lig_ejm45","lig_ejm44~lig_ejm49"]
-engine = "GROMACS"
-main_dir = "/home/anna/Documents/benchmark/tyk2_benchmark"
-# methods = ["1fs", "2fs_HMR4", "4fs_HMR4", "4fs_HMR3", "2fs_HMR3", "2fs"]
-methods = ["2fs"]
+bench_folder = f"/home/anna/Documents/benchmark"
+protein = "tyk2"
+main_dir = f"{bench_folder}/extracted/{protein}"
 
-# options
+# choose location for the files
+net_file = f"{main_dir}/execution_model/network_lomap.dat"
 ana_file = f"{main_dir}/execution_model/analysis_protocol.dat"
-analysis_options = analysis_protocol(ana_file, auto_validate=True)
-# analysis_options.rewrite_protocol()
+exp_file = f"{bench_folder}/inputs/experimental/{protein}.yml"
 
-for method in methods:
-    for trans in transf:
-        path_to_dir = f"{main_dir}/outputs_extracted/{engine}/{method}/{trans}"
-        print(path_to_dir)
-        final_results_folder = f"{main_dir}/outputs_extracted/results"
+if os.path.exists(f"{main_dir}/outputs_extracted/results"):
+    results_folder = f"{main_dir}/outputs_extracted/results"
+elif os.path.exists(f"{main_dir}/outputs/results"):
+    results_folder = f"{main_dir}/outputs/results"
+else:
+    raise ValueError(f"results directory not found in the {main_dir}. please make sure results were written using the analysis script previously in the pipeline")
 
-        # try:
-        # using the pipeline module for analysis
-        analysed_pert = analyse(path_to_dir)
-        analysed_pert.set_options(analysis_options)
-        # analysed_pert.set_options({"try pickle":False})
-        avg, error, repeats_tuple_list = analysed_pert.analyse_all_repeats()
-        # analysed_pert.plot_graphs()
-        data_point_avg = [analysed_pert.ligand_0, analysed_pert.ligand_1,
-                    analysed_pert.freenrg, analysed_pert.error,
-                    analysed_pert.engine, analysed_pert.file_ext, method]
-        print(data_point_avg)
-        # write_analysis_file(analysed_pert, final_results_folder, method=method)
-        # except Exception as e:
-        #     print(e)
-        #     print(f"could not analyse {path_to_dir}")
+output_folder = validate.folder_path(f"{main_dir}/analysis", create=True)
 
+all_analysis_object = analysis_network(results_folder,
+                                       exp_file=exp_file,
+                                       net_file=net_file,
+                                       output_folder=output_folder,
+                                       analysis_ext=ana_file
+                                        )
+
+all_analysis_object.compute(cycle_closure=True)
 
 # # fwf exp data
 # print("fwf")

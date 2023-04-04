@@ -19,7 +19,6 @@ import numpy as np
 import pandas as pd 
 
 from ..utils import *
-from ._convert import *
 
 # functions
 # TODO clean up and make sure have description at start
@@ -46,7 +45,8 @@ class make_dict():
             dict: dictionary of the computed differences (RBFE)
         """
         
-        results_files = validate.is_list(results_files)
+        # check if list, if not make a list
+        results_files = validate.is_list(results_files, make_list=True)
         for file in results_files:
             validate.file_path(file)
         
@@ -112,7 +112,7 @@ class make_dict():
         # TODO combine this with file writer for network in _files. modified results files writing?
         if output_file:
             # write these to a csv file
-            with open(f"{output_file}.csv", "w") as comp_pert_file:
+            with open(f"{output_file}.csv", "w+") as comp_pert_file:
                 writer = csv.writer(comp_pert_file, delimiter=",")
                 writer.writerow(["lig_1","lig_2","freenrg","error","engine","analysis","method"])
 
@@ -162,7 +162,8 @@ class make_dict():
                 comp_ddG = np.average(ddGs)
                 # comp_ddG = np.average([ddG.value() for ddG in ddGs])
                 if len(ddGs) == 1:
-                    comp_err = ddGs_error.value()
+                    comp_err = ddGs_error[0]
+                    # comp_err = ddGs_error.value()
                 else:
                     comp_err = sem(ddGs)
                     # comp_err = sem([ddG.value() for ddG in ddGs])
