@@ -4,79 +4,12 @@ from BioSimSpace.Units.Length import angstrom as _angstrom
 from ..utils._validate import *
 
 class ligprep():
-    """class to store lig prep functions, and also create a ligprep object.
+    """class to store lig prep functions.
     """
 
     def __init__(self):
         pass
 
-    # TODO someway to do the things in the class
-
-    # def __init__(self, molecule, prot_water, protocol, parameterise=True):
-
-        # self.molecule = validate.molecule(molecule)
-        # self.prot_water = validate.system(prot_water)
-        # self.protocol = validate.pipeline_protocol(protocol)
-
-        # parameterise = validate.boolean(parameterise)
-
-        # if parameterise == True:
-        #     self.lig_paramaterise()
-        # else:
-        #     self.lig_p = None
-
-     
-    # def lig_paramaterise(self):
-
-    #     lig_p = self._lig_paramaterise(self.molecule, self.protocol.ligand_forcefield)
-    #     self.lig_p = lig_p
-
-    #     return lig_p
-    
-    # def minimum_solvation(self, lig_sys):
-
-    #     if lig_sys == "lig":
-    #         system = lig_p
-    #     elif lig_sys == "sys":
-    #         system = self.lig_p + self.prot_wat
-    #     else:
-    #         raise ValueError("'lig_sys' must be either 'lig' for the free or 'sys' for the bound leg.")
-
-    #     system_solvated = self._minimum_solvation(system,
-    #                                             self.protocol.solvent,
-    #                                             self.protocol.box_type,
-    #                                             self.protocol.box_edges,
-    #                                             self.protocol.box_edges_unit,
-    #                                             verbose=True)
-
-    #     if lig_sys == "lig":
-    #         self.solvated_
-    #     elif lig_sys == "sys":
-    #         system = self.lig_p + self.prot_wat
-
-    #     return system_solvated
-
-    # def minimise_equilibrate_leg(self, lig_sys):
-
-
-
-    # def run(self, lig_sys=None):
-    #     """ run all the ligprep """
-
-    #     if lig_sys == "lig":
-    #         system = lig_p
-    #     elif lig_sys == "sys":
-    #         system = self.lig_p + self.prot_wat
-    #     else:
-    #         raise ValueError("'lig_sys' must be either 'lig' for the free or 'sys' for the bound leg.")
-        
-    #     system_solvated = self.minimum_solvation(lig_sys)
-    #     sys_equil_fin = self.minimise_equilibrate_leg(lig_sys)
-
-    #     return sys_equil_fin
-
-
-    
     @staticmethod
     def lig_paramaterise(molecule, ligff_query):
         # dicitonary of functions available
