@@ -487,14 +487,14 @@ class plotting_engines():
         
         return engines
 
-    def bar(self, pert_val=None, engines=None, name="experimental", perturbations=None, **kwargs):
+    def bar(self, pert_val=None, engines=None, name="experimental", values=None, **kwargs):
         """plot a bar plot of the results
 
         Args:
             pert_val (str, optional): whether plotting 'pert' ie perturbations or 'val' ie values (per ligand result). Defaults to None.
             engines (list, optional): engines to plot for. Defaults to None.
             name (str, optional): what to plot against. Defaults to "experimental". #TODO fix so can plot multiple other results
-            perturbations (list, optional): list of perturbations to plot for. Defaults to None.
+            values (list, optional): list of values (perturbations or ligands) to plot for. Defaults to None.
         """
 
         pert_val = validate.pert_val(pert_val)
@@ -512,10 +512,13 @@ class plotting_engines():
             bar_spacing = self._bar_spacing
             width = self._bar_width
 
-        if not perturbations:
-            perturbations = self.perturbations
+        if not values:
+            if pert_val == "pert":
+                values = self.perturbations
+            elif pert_val == "val":
+                values = self.ligands
         else:
-            perturbations = validate.is_list(perturbations)
+            values = validate.is_list(values)
 
         plt.rc('font', size=12)
         fig, ax = plt.subplots(figsize=(15,8))
@@ -530,7 +533,7 @@ class plotting_engines():
             freenrg_df_plotting = self.freenrg_df_dict[name][eng][pert_val].fillna(0)
 
             # prune df to only have perturbations considered
-            freenrg_df_plotting = self._prune_perturbations(freenrg_df_plotting, perturbations)
+            freenrg_df_plotting = self._prune_perturbations(freenrg_df_plotting, values)
 
             # determine positions for X axis labels.
             x_locs = np.arange(len(freenrg_df_plotting))
@@ -566,14 +569,14 @@ class plotting_engines():
         plt.show()
 
 
-    def scatter(self, pert_val=None, engines=None, name="experimental", perturbations=None, **kwargs): # TODO change x_name, y_name
+    def scatter(self, pert_val=None, engines=None, name="experimental", values=None, **kwargs): # TODO change x_name, y_name
         """plot scatter plot.
 
         Args:
             pert_val (str, optional): whether plotting 'pert' ie perturbations or 'val' ie values (per ligand result). Defaults to None.
             engines (list, optional): engines to plot for. Defaults to None.
             name (str, optional): what to plot against. Defaults to "experimental". #TODO fix so can plot multiple other results
-            perturbations (list, optional): list of perturbations to plot for. Defaults to None.
+            values (list, optional): list of values (perturbations or ligands) to plot for. Defaults to None.
 
         Raises:
             ValueError: the name must be available in the other names list ie have results assosciated with it.
@@ -593,10 +596,13 @@ class plotting_engines():
         else:
             engines = self.engines
 
-        if not perturbations:
-            perturbations = self.perturbations
+        if not values:
+            if pert_val == "pert":
+                values = self.perturbations
+            elif pert_val == "val":
+                values = self.ligands
         else:
-            perturbations = validate.is_list(perturbations)
+            values = validate.is_list(values)
 
         # plot a scatter plot
         plt.rc('font', size=12)
@@ -611,7 +617,7 @@ class plotting_engines():
             freenrg_df_plotting = self.freenrg_df_dict[name][eng][pert_val].dropna()
 
             # prune df to only have perturbations considered
-            freenrg_df_plotting = self._prune_perturbations(freenrg_df_plotting, perturbations)
+            freenrg_df_plotting = self._prune_perturbations(freenrg_df_plotting, values)
 
             x = freenrg_df_plotting[f"freenrg_{name}"]
             y = freenrg_df_plotting["freenrg_calc"]
@@ -683,7 +689,7 @@ class plotting_engines():
                         color="grey", 
                         alpha=0.2)
 
-        min_lim, max_lim = self._get_bounds_scatter(engines, self.freenrg_df_dict[name], pert_val, perturbations, name)
+        min_lim, max_lim = self._get_bounds_scatter(engines, self.freenrg_df_dict[name], pert_val, values, name)
 
         # for a scatterplot we want the axis ranges to be the same. 
         plt.xlim(min_lim*1.3, max_lim*1.3)
@@ -712,7 +718,6 @@ class plotting_engines():
         if include_key:
             labels = [l.get_label() for l in lines]
             plt.legend(lines, labels, loc='upper left')
-            # plt.legend(scatterplot, ["TYK2","p38","MCL1"])
 
         if title:
             plt.title(f"{title}")
@@ -749,7 +754,7 @@ class plotting_engines():
         plt.show()
 
 
-    def outlier(self, pert_val="pert", engines=None, outliers=3,  name="experimental", perturbations=None, **kwargs):
+    def outlier(self, pert_val="pert", engines=None, outliers=3,  name="experimental", values=None, **kwargs):
         """plot scatter plot with annotated outliers.
 
         Args:
@@ -757,7 +762,7 @@ class plotting_engines():
             engines (list, optional): engines to plot for. Defaults to None.
             outliers (int, optional): number of outliers to annotate. Defaults to 3.
             name (str, optional): what to plot against. Defaults to "experimental". #TODO fix so can plot multiple other results
-            perturbations (list, optional): list of perturbations to plot for. Defaults to None.
+            values (list, optional): list of values (perturbations or ligands) to plot for. Defaults to None.
             
         """
 
@@ -772,10 +777,13 @@ class plotting_engines():
 
         number_outliers_to_annotate = validate.integer(outliers)
 
-        if not perturbations:
-            perturbations = self.perturbations
+        if not values:
+            if pert_val == "pert":
+                values = self.perturbations
+            elif pert_val == "val":
+                values = self.ligands
         else:
-            perturbations = validate.is_list(perturbations)
+            values = validate.is_list(values)
 
         # plot a scatter plot
         plt.rc('font', size=12)
@@ -788,6 +796,8 @@ class plotting_engines():
             col = self.colours[eng]
 
             freenrg_df_plotting = self.freenrg_df_dict[name][eng][pert_val].dropna()
+            # prune df to only have perturbations considered
+            freenrg_df_plotting = self._prune_perturbations(freenrg_df_plotting, values)
 
             x = freenrg_df_plotting[f"freenrg_{name}"]
             y = freenrg_df_plotting["freenrg_calc"]
@@ -872,7 +882,7 @@ class plotting_engines():
         plt.legend(lines, labels, loc='upper left')
         
         # for a scatterplot we want the axis ranges to be the same.
-        min_lim, max_lim = self._get_bounds_scatter(engines, self.freenrg_df_dict[name], pert_val, perturbations, name)
+        min_lim, max_lim = self._get_bounds_scatter(engines, self.freenrg_df_dict[name], pert_val, values, name)
         plt.xlim(min_lim*1.3, max_lim*1.3)
         plt.ylim(min_lim*1.3, max_lim*1.3)
 
@@ -920,14 +930,14 @@ class plotting_engines():
         return eng_name
 
     @staticmethod
-    def _get_bounds_scatter(engines, freenrg_df_dict, pert_val, perturbations, name):
+    def _get_bounds_scatter(engines, freenrg_df_dict, pert_val, values, name):
         """get the upper and lower bounds of the scatter plot based on the results plotted.
 
         Args:
             engines (list): list of engines and other results.
             freenrg_df_dict (dict): dictionary of dataframes of results
             pert_val (str, optional): whether plotting 'pert' ie perturbations or 'val' ie values (per ligand result).
-            perturbations (list, optional): list of perturbations to plot for.
+            values (list): list of values (perturbations or ligands) to plot for. Defaults to None.
             name (str): what is being plotted against.
 
         Returns:
@@ -938,7 +948,7 @@ class plotting_engines():
         all_freenrg_values_pre = []
         for eng in engines:
             freenrg_df_plotting = freenrg_df_dict[eng][pert_val].dropna()
-            freenrg_df_plotting = plotting_engines._prune_perturbations(freenrg_df_plotting, perturbations)
+            freenrg_df_plotting = plotting_engines._prune_perturbations(freenrg_df_plotting, values)
             x = np.array(freenrg_df_plotting[f"freenrg_{name}"]).tolist() # TODO also fix so does based on which df is passed - get default non calc name?
             y = np.array(freenrg_df_plotting["freenrg_calc"]).tolist()
             all_freenrg_values_pre.append(x)
