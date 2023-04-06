@@ -298,7 +298,7 @@ class plotting_engines():
                                                     self.values_dict[name][f"{pv}_results"],
                                                     x_name,
                                                     "calc",
-                                                    self.values_dict[name][which_list])
+                                                    self.values_dict[x_name][which_list])
 
                 freenrg_df_dict[name][pv] = freenrg_df
 
@@ -311,6 +311,18 @@ class plotting_engines():
 
     @staticmethod
     def match_dicts_to_df(dict_x, dict_y, x_name, y_name, values=None):
+        """match two dictionaries into one dataframe (to be used for plotting)
+
+        Args:
+            dict_x (dict): dictionary of values for x, in format value : (freenerg, err)
+            dict_y (dict): dictionary of values for y, in format value : (freenerg, err)
+            x_name (str): name of the x values ( eg experimental )
+            y_name (str): name of the y values
+            values (list, optional): list of dict values to convert. Defaults to None.
+
+        Returns:
+            _type_: _description_
+        """
 
         freenrg_dict = {}
 

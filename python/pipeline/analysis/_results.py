@@ -954,6 +954,7 @@ class analysis_network():
 
         computed_relative_DDGs = nA.freeEnergyInKcal
 
+        # this is the per ligand results
         freenrg_dict = make_dict.from_freenrgworkflows_network_analyser(computed_relative_DDGs)
         self._fwf_computed_relative_DDGs.update({engine : computed_relative_DDGs})
 
@@ -961,7 +962,7 @@ class analysis_network():
 
 
     def _get_stats_fwf(self, engine=None):
-        """get stats using freenergworkflows
+        """get stats using freenergworkflows for the ligands
 
         Args:
             engine (str, optional): name of engine. Defaults to None.
@@ -980,6 +981,7 @@ class analysis_network():
         if not engine:
             raise ValueError("please incl an engine")
 
+        # these are the per ligand results 
         computed_relative_DDGs = self._fwf_computed_relative_DDGs[engine]
         experimental_DDGs = self._fwf_experimental_DDGs
 

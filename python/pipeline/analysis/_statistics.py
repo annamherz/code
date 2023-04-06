@@ -56,9 +56,9 @@ class stats_engines(plotting_engines):
 
         # have dict to df in plotting and also have match engine to other results - dont wanna use dfs!
                     
-        pv = validate.pert_val(pert_val)
-
         if data_x and data_y:
+            
+            pv = validate.pert_val(pert_val)
 
             data_x = self._validate_in_names_list(data_x)
             data_y = self._validate_in_names_list(data_y)
