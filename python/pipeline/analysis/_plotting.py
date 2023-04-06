@@ -289,25 +289,17 @@ class plotting_engines():
 
             for pv in ["pert","val"]:
 
-                freenrg_pert_dict = {}
-
                 if pv == "pert":
                     which_list = "perts"
                 elif pv == "val":
                     which_list = "ligs"
 
-                for value in self.values_dict[name][which_list]:
-                    try:
-                        x_ddG = self.values_dict[x_name][f"{pv}_results"][value][0]
-                        x_err = self.values_dict[x_name][f"{pv}_results"][value][1]
-                        y_ddG = self.values_dict[name][f"{pv}_results"][value][0]
-                        y_err = self.values_dict[name][f"{pv}_results"][value][1]
-                        freenrg_pert_dict[value] = [x_ddG, x_err, y_ddG, y_err]
-                    except Exception as e:
-                        # print(e)
-                        print(f"could not convert analysis object {value}, {name}, {pv}, into dataframe for {x_name}. Was it able to be computed earlier?")
-                freenrg_df = pd.DataFrame(freenrg_pert_dict, index=[f"freenrg_{x_name}", f"err_{x_name}", "freenrg_calc", "err_calc"]).transpose()
-                
+                freenrg_df = self.match_dicts_to_df(self.values_dict[x_name][f"{pv}_results"],
+                                                    self.values_dict[name][f"{pv}_results"],
+                                                    x_name,
+                                                    "calc",
+                                                    self.values_dict[name][which_list])
+
                 freenrg_df_dict[name][pv] = freenrg_df
 
                 # save our results to a file that can be opened in e.g. Excel.
@@ -316,7 +308,30 @@ class plotting_engines():
         self.freenrg_df_dict[x_name] = freenrg_df_dict
 
         return freenrg_df_dict
-    
+
+    @staticmethod
+    def match_dicts_to_df(dict_x, dict_y, x_name, y_name, values=None):
+
+        freenrg_dict = {}
+
+        if values:
+            values = validate.is_list(values)
+        else:
+            values = dict_x.keys()
+
+        for value in values:
+            try:
+                x_ddG = dict_x[value][0]
+                x_err = dict_x[value][1]
+                y_ddG = dict_y[value][0]
+                y_err = dict_y[value][1]
+                freenrg_dict[value] = [x_ddG, x_err, y_ddG, y_err]
+            except Exception as e:
+                print(f"{value} not in both dicts, {dict_x} and ")
+        
+        freenrg_df = pd.DataFrame(freenrg_dict, index=[f"freenrg_{x_name}", f"err_{x_name}", f"freenrg_{y_name}", f"err_{y_name}"]).transpose()
+
+        return freenrg_df
 
     @staticmethod
     def _prune_perturbations(df, perturbations, remove=False):
