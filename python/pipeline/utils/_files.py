@@ -63,7 +63,7 @@ def write_analysis_file(analysis, results_dir, method=None):
             writer.writerow(data_point_avg)
 
 
-    # write results for each repeat also
+    # write results for each calculated repeat
     no_repeats = list(range(len(analysis.repeats_tuple_list)))
     # use csv to open the results file.
     for r in no_repeats:
@@ -119,18 +119,31 @@ def write_analysis_file(analysis, results_dir, method=None):
             err_dict = analysis._bound_err_dict
             name = bf
 
-        no_repeats = list(range(len(analysis.repeats_tuple_list)))
         # use csv to open the results file.
-        for r in no_repeats:
-            data_point = [analysis.ligand_0,
-                        analysis.ligand_1,
-                        str(val_dict[f"{r}_{name}"]),
-                        str(err_dict[f"{r}_{name}"]),
-                        analysis.engine,
-                        analysis.file_ext,
-                        method
-                        ]
-            results_file_path = f"{results_dir}/{name}_repeat_{no_repeats.index(r)}_{analysis.engine.upper()}_{analysis.file_ext}.csv"
+        for key in val_dict.keys():
+
+            r= key.split('_')[0]
+            
+            try:
+                data_point = [analysis.ligand_0,
+                            analysis.ligand_1,
+                            str(val_dict[f"{key}"]),
+                            str(err_dict[f"{key}"]),
+                            analysis.engine,
+                            analysis.file_ext,
+                            method
+                            ]
+            except:
+                # if that repeat does not have a value, write none in the output file.
+                data_point = [analysis.ligand_0,
+                            analysis.ligand_1,
+                            str(np.nan),
+                            str(np.nan),
+                            analysis.engine,
+                            analysis.file_ext,
+                            method
+                            ]                
+            results_file_path = f"{results_dir}/{name}_repeat_{r}_{analysis.engine.upper()}_{analysis.file_ext}.csv"
             with open(results_file_path, "a") as freenrg_writefile:
                 writer = csv.writer(freenrg_writefile)
 

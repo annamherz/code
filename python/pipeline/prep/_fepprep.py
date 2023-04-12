@@ -63,7 +63,7 @@ class fepprep():
             self._bound_system_1 = validate.system(system).copy()
 
 
-    def merge_systems(self, align_to="lig_0"):
+    def merge_systems(self, align_to="lig0"):
         """merge the systems based on whether aligning to the lambda 0.0 coordinates or the lmabda 1.0 coordinates.
 
         Args:
@@ -247,7 +247,7 @@ class fepprep():
                     eq_protocol,
                     engine=f"{protocol.engine()}",
                     work_dir=f"{work_dir}/{leg}_0/eq",
-                    extra_options={'minimise': True, 'minimise maximum iterations': protocol.min_steps, 'equilibrate': False}
+                    extra_options={'minimise': True, 'minimise maximum iterations': protocol.min_steps(), 'equilibrate': False}
                 )
 
                 BSS.FreeEnergy.Relative(

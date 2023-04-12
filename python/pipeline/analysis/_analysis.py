@@ -572,6 +572,41 @@ class analyse():
             freenrg_val = freenrg_rel[0].value()
             freenrg_err = freenrg_rel[1].value()
 
+        # if just one of the values has only one, need to propagate the error from this for the final result
+        elif len(self._free_val_dict.values()) == 1 and len(self._bound_val_dict.values()) > 1:
+
+            # get the singular result and error
+            free_avg = list(
+                val/_Units.Energy.kcal_per_mol for val in self._free_val_dict.values())[0]
+            free_sem = list(
+                val/_Units.Energy.kcal_per_mol for val in self._free_err_dict.values())[0]
+
+            bound_vals = list(
+                val/_Units.Energy.kcal_per_mol for val in self._bound_val_dict.values())
+            bound_avg = _np.mean(bound_vals)
+            bound_sem = sem(bound_vals)
+            freenrg_val = (bound_avg-free_avg)
+            freenrg_err = (_math.sqrt(
+                _math.pow(bound_sem, 2)+_math.pow(free_sem, 2)))
+            freenrg_rel = (freenrg_val * _Units.Energy.kcal_per_mol,
+                           freenrg_err * _Units.Energy.kcal_per_mol)
+            
+        elif len(self._bound_val_dict.values()) == 1 and len(self._free_val_dict.values()) > 1:
+            free_vals = list(
+                val/_Units.Energy.kcal_per_mol for val in self._free_val_dict.values())
+            free_avg = _np.mean(free_vals)
+            free_sem = sem(free_vals)
+
+            bound_avg = list(
+                val/_Units.Energy.kcal_per_mol for val in self._bound_val_dict.values())[0]
+            bound_sem = list(
+                val/_Units.Energy.kcal_per_mol for val in self._bound_err_dict.values())[0]
+
+            freenrg_val = (bound_avg-free_avg)
+            freenrg_err = (_math.sqrt(
+                _math.pow(bound_sem, 2)+_math.pow(free_sem, 2)))
+            freenrg_rel = (freenrg_val * _Units.Energy.kcal_per_mol,
+                           freenrg_err * _Units.Energy.kcal_per_mol)
         # otherwise, calculate the average and the SEM
         else:
             free_vals = list(
