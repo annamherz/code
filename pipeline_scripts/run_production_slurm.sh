@@ -12,7 +12,7 @@ export OMP_NUM_THREADS=8
 
 # sourcing
 source $BSS
-source $amber
+source $amber/amber.sh
 source $gromacs
 source $scripts_dir/extract_execution_model_bash.sh
 
@@ -74,12 +74,19 @@ fi
 fi
 
 if [ $2 = "GROMACS" ]; then
+
 echo "min"
+cp min/lambda_$lam/gromacs.gro min/lambda_$lam/initial_gromacs.gro
 gmx grompp -f min/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p min/lambda_$lam/gromacs.top -o min/lambda_$lam/gromacs.tpr
 gmx mdrun -ntmpi 1 -deffnm min/lambda_$lam/gromacs ;
+
+gmx grompp -f min1/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p min1/lambda_$lam/gromacs.top -o min1/lambda_$lam/gromacs.tpr
+gmx mdrun -ntmpi 1 -deffnm min1/lambda_$lam/gromacs ;
+
 echo "heat"
-gmx grompp -f heat/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p heat/lambda_$lam/gromacs.top -o heat/lambda_$lam/gromacs.tpr
+gmx grompp -f heat/lambda_$lam/gromacs.mdp -c min1/lambda_$lam/gromacs.gro -p heat/lambda_$lam/gromacs.top -o heat/lambda_$lam/gromacs.tpr
 gmx mdrun -ntmpi 1 -deffnm heat/lambda_$lam/gromacs ;
+
 echo "eq"
 gmx grompp -f eq/lambda_$lam/gromacs.mdp -c heat/lambda_$lam/gromacs.gro -p eq/lambda_$lam/gromacs.top -t heat/lambda_$lam/gromacs.cpt  -o eq/lambda_$lam/gromacs.tpr
 gmx mdrun -ntmpi 1 -deffnm eq/lambda_$lam/gromacs ;

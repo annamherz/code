@@ -89,9 +89,13 @@ class fepprep():
 
         if protocol.engine() == 'AMBER' or protocol.engine() == 'GROMACS':
             
+            if protocol.engine() == "GROMACS":
+                min_steps = protocol.min_steps()/2
+            elif protocol.engine() == "AMBER":
+                min_steps = protocol.min_steps()
             min_protocol = BSS.Protocol.FreeEnergyMinimisation(
                                                             num_lam=protocol.num_lambda(),
-                                                            steps=protocol.min_steps(),
+                                                            steps=min_steps,
                                                             )
             heat_protocol = BSS.Protocol.FreeEnergyEquilibration(timestep=protocol.timestep()*protocol.timestep_unit(),
                                                                 num_lam=protocol.num_lambda(),
@@ -215,6 +219,14 @@ class fepprep():
                     work_dir=f"{work_dir}/{leg}_0/min"
                 )
 
+                if protocol.engine() == "GROMACS":
+                    BSS.FreeEnergy.Relative(
+                        system,
+                        min_protocol,
+                        engine=f"{protocol.engine()}",
+                        work_dir=f"{work_dir}/{leg}_0/min1"
+                    )                    
+
                 BSS.FreeEnergy.Relative(
                     system,
                     heat_protocol,
@@ -284,7 +296,7 @@ class fepprep():
             print("copying generated folders for the endstates into a combined folder, so first half is lig0 and second half is lig1")
             for lig, lam_list in zip(ligs, [first_half, sec_half]):
                 for leg in ["bound", "free"]:
-                    for part in ["min/","heat/", "eq/", ""]:
+                    for part in ["min/","min1/","heat/", "eq/", ""]:
                         try: # so will not copy if folders do not exist
                             for lam in lam_list:
                                 copy_tree(f"{work_dir}/{lig}/{leg}_0/{part}lambda_{lam:.4f}", f"{work_dir}/{leg}_0/{part}lambda_{lam:.4f}")

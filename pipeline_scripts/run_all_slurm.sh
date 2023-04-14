@@ -31,12 +31,12 @@ dos2unix "$ana_file"
 # make sure engines etc are sourced correctly
 export PYTHONPATH=export PYTHONPATH="/home/anna/BioSimSpace/python:$PYTHONPATH" # if using a cloned git branch of BSS - otherwise comment out
 export BSS="/home/anna/anaconda3/bin/activate biosimspace-dev" # to use the conda env to make sure sire works correctly - sourced in each sh script
-export amber="/home/anna/amber22/amber.sh" # sourced in each script
+export amber="/home/anna/amber22" # sourced in each script
 export gromacs="/usr/local/gromacs/bin/GMXRC" # sourced in each script
 
 # sourcing - as needed in the othe sh scripts
 source $BSS
-source $amber
+source $amber/amber.sh
 source $gromacs
 source $scripts_dir/extract_execution_model_bash.sh
 

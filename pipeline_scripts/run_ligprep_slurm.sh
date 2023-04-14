@@ -9,7 +9,7 @@
 
 # sourcing
 source $BSS
-source $amber
+source $amber/amber.sh
 source $gromacs
 source $scripts_dir/extract_execution_model_bash.sh
 
