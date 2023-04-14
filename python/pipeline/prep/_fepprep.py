@@ -90,7 +90,7 @@ class fepprep():
         if protocol.engine() == 'AMBER' or protocol.engine() == 'GROMACS':
             
             if protocol.engine() == "GROMACS":
-                min_steps = protocol.min_steps()/2
+                min_steps = validate.integer(protocol.min_steps()/2)
             elif protocol.engine() == "AMBER":
                 min_steps = protocol.min_steps()
             min_protocol = BSS.Protocol.FreeEnergyMinimisation(

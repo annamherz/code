@@ -22,7 +22,7 @@ echo "Ligands file is : $lig_file"
 lig=${lig_array[$SLURM_ARRAY_TASK_ID]}
 
 echo "prep for $lig..."
-python $scripts_dir/ligprep.py $lig
+python $scripts_dir/ligprep.py -lig $lig -lf $ligands_folder -prot $protein_file -mf $MAINDIRECTORY -p $prot_file
 
 end=`date +%s`
 runtime=$((end-start))

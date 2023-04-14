@@ -24,7 +24,7 @@ eng=${eng_array[$SLURM_ARRAY_TASK_ID]}
 win=${win_array[$SLURM_ARRAY_TASK_ID]}
 
 echo "fepprep for $trans using $eng"
-python $scripts_dir/fepprep.py $trans $eng $win # no eq during setup
+python $scripts_dir/fepprep.py -pert $trans -eng $eng -lam $win -mf $MAINDIRECTORY -p $prot_file
 
 end=`date +%s`
 runtime=$((end-start))
