@@ -170,35 +170,23 @@ class extract():
                         if "lambda" in dirs:      
                             new_dir = validate.folder_path(f"{extract_dir}{dirs.split(f'{folder}')[1]}", create=True)                  
                             if "AMBER" in dirs:
-                                try:
-                                    shutil.copyfile(f"{dirs}/amber.out", f"{new_dir}/amber.out")
-                                except:
-                                    print(f"{dirs} does not have a recognised AMBER input.")
+                                file_names = ["amber.out"]
                             elif "GROMACS" in dirs:
-                                try:
-                                    shutil.copyfile(f"{dirs}/gromacs.xvg", f"{new_dir}/gromacs.xvg")                        
-                                except:
-                                    print(f"{dirs} does not have a recognised GROMACS input.")
+                                file_names = ["gromacs.xvg"]
                             elif "SOMD" in dirs:
-                                try:
-                                    shutil.copyfile(f"{dirs}/simfile.dat", f"{new_dir}/simfile.dat")
-                                except:
-                                    print(f"{dirs} does not have a recognised SOMD input.")
-                            
+                                file_names = ["simfile.dat"]
                             # if cant find the engine in the file path try all
                             else:
+                                print("no engine found in filepath, will try to extract each engine's output format...")
+                                file_names = ["amber.out","gromacs.xvg","simfile.dat"]
+
+                            for file in file_names:
                                 try:
-                                    shutil.copyfile(f"{dirs}/amber.out", f"{new_dir}/amber.out")
+                                    shutil.copyfile(f"{dirs}/{file}", f"{new_dir}/{file}")
+                                    if os.path.getsize(f"{new_dir}/{file}") == 0:
+                                        print(f"File extracting to '{new_dir}/{file}' is empty!") 
                                 except:
-                                    print(f"{dirs} does not have a recognised AMBER input.")
-                                try:
-                                    shutil.copyfile(f"{dirs}/gromacs.xvg", f"{new_dir}/gromacs.xvg")                        
-                                except:
-                                    print(f"{dirs} does not have a recognised GROMACS input.")
-                                try:
-                                    shutil.copyfile(f"{dirs}/simfile.dat", f"{new_dir}/simfile.dat")
-                                except:
-                                    print(f"{dirs} does not have a recognised SOMD input.")
+                                    print(f"{dirs} does not have a recognised input file, {str(file)}.")
         
         
     def extract_frames(self, traj_lambdas=None, rmsd=True, overwrite=False):

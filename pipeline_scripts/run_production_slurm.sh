@@ -22,14 +22,9 @@ start=`date +%s`
 echo "Folder for these runs is : $MAINDIRECTORY"
 echo "The transformation is $1 using $3 windows and $2 as the MD engine with $4 repeats"
 
-# TODO some way to get these from the execution model also ? as is in the network.dat
-# define no of windows based on sys arg 2
-if [ $3 = 11 ]; then
-lamvals=( 0.0000 0.1000 0.2000 0.3000 0.4000 0.5000 0.6000 0.7000 0.8000 0.9000 1.0000 )
-fi
-if [ $3 = 17 ]; then
-lamvals=( 0.0000 0.0625 0.1250 0.1875 0.2500 0.3125 0.3750 0.4375 0.5000 0.5625 0.6250 0.6875 0.7500 0.8125 0.8750 0.9375 1.0000 )
-fi
+# define no of windows based on the assosciative array generated from reading the net_file in extract execution model
+IFS=","
+read -r -a lamvals <<< "${wins_array[$3]}"
 
 # define lambda based on slurm array
 lam=${lamvals[SLURM_ARRAY_TASK_ID]}
@@ -80,6 +75,7 @@ cp min/lambda_$lam/gromacs.gro min/lambda_$lam/initial_gromacs.gro
 gmx grompp -f min/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p min/lambda_$lam/gromacs.top -o min/lambda_$lam/gromacs.tpr
 gmx mdrun -ntmpi 1 -deffnm min/lambda_$lam/gromacs ;
 
+echo "min1"
 gmx grompp -f min1/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p min1/lambda_$lam/gromacs.top -o min1/lambda_$lam/gromacs.tpr
 gmx mdrun -ntmpi 1 -deffnm min1/lambda_$lam/gromacs ;
 

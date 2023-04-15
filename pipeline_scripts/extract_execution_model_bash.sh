@@ -18,10 +18,11 @@ done < $lig_file
 trans_array=()
 eng_array=()
 win_array=()
+declare -A wins_array
 IFS=' '
 while read trans; do
-while read -a tra; do tran=${tra[0]}~${tra[1]}; eng=${tra[-1]}; win=${tra[2]};
-trans_array+=("$tran"); eng_array+=("$eng"); win_array+=("$win"); done <<< $trans
+while read -a tra; do tran=${tra[0]}~${tra[1]}; eng=${tra[-1]}; win=${tra[2]}; wins=(${tra[3]}); #wins=(${tra[@]:3:${#tra[@]}-2})
+trans_array+=("$tran"); eng_array+=("$eng"); win_array+=("$win"); wins_array[$win]=$wins; done <<< $trans
 done < $net_file
 
 # check that the trans, eng, and win arrays are the same length.
