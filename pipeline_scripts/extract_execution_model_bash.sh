@@ -18,7 +18,7 @@ done < $lig_file
 trans_array=()
 eng_array=()
 win_array=()
-declare -A wins_array
+declare -A wins_array # assosciative array
 IFS=' '
 while read trans; do
 while read -a tra; do tran=${tra[0]}~${tra[1]}; eng=${tra[-1]}; win=${tra[2]}; wins=(${tra[3]}); #wins=(${tra[@]:3:${#tra[@]}-2})
