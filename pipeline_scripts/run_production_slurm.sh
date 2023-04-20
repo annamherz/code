@@ -84,7 +84,7 @@ gmx grompp -f min2/lambda_$lam/gromacs.mdp -c min1/lambda_$lam/gromacs.gro -p mi
 gmx mdrun -ntmpi 1 -deffnm min2/lambda_$lam/gromacs ;
 
 echo "heat"
-gmx grompp -f heat/lambda_$lam/gromacs.mdp -c min1/lambda_$lam/gromacs.gro -p heat/lambda_$lam/gromacs.top -o heat/lambda_$lam/gromacs.tpr
+gmx grompp -f heat/lambda_$lam/gromacs.mdp -c min2/lambda_$lam/gromacs.gro -p heat/lambda_$lam/gromacs.top -o heat/lambda_$lam/gromacs.tpr
 gmx mdrun -ntmpi 1 -deffnm heat/lambda_$lam/gromacs ;
 
 echo "eq"

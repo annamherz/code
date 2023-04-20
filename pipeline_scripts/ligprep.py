@@ -13,7 +13,7 @@ from pipeline.utils import *
 from pipeline.prep import *
 
 
-def lig_prep(main_dir, protocol_file, protein_file, ligands_folder, lig_name, engine, pmemd_path):
+def lig_prep(main_dir, protocol_file, protein_file, ligands_folder, lig_name, engine, pmemd_path, work_dir=None):
     # Exit if prep files are already available for ligand and protein
     if os.path.exists(f"{main_dir}/prep/{lig_name}_sys_equil_solv.prm7"):
         if os.path.exists(f"{main_dir}/prep/{lig_name}_lig_equil_solv.prm7"):
@@ -70,7 +70,7 @@ def lig_prep(main_dir, protocol_file, protein_file, ligands_folder, lig_name, en
 
         # minimise and eqiulibrate these
         print(f"minimising and equilibrating for {leg} and {lig_name}")
-        leg_equil_final = minimise_equilibrate_leg(leg_mol_solvated, engine, pmemd_path)
+        leg_equil_final = minimise_equilibrate_leg(leg_mol_solvated, engine, pmemd_path, work_dir=work_dir)
 
         # finally, save last snapshot
         print(f"Saving solvated/equilibrated for {leg} and {lig_name}")
@@ -118,6 +118,7 @@ def main():
     parser.add_argument("-prot", "--protein_path", type=str, default=None, help="path to parameterised protein *.prm7 and *.rst7")
     parser.add_argument("-mf", "--main_folder", type=str, default=None, help="main folder path to create for all the runs")
     parser.add_argument("-p", "--protocol_file", type=str, default=None, help="path to protocol file")
+    parser.add_argument("-w", "--work_dir", type=str, default=None, help="optional work dir")
     args = parser.parse_args()
 
     # check arguments
@@ -135,7 +136,7 @@ def main():
         except:
             raise IOError("please have either 'amber' or 'AMBERHOME' set in the environment.")
 
-    lig_prep(main_dir, protocol_file, protein_file, ligands_folder, lig_name, engine, pmemd_path)
+    lig_prep(main_dir, protocol_file, protein_file, ligands_folder, lig_name, engine, pmemd_path, args.work_dir)
 
 if __name__ == "__main__":
     main()

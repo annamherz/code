@@ -41,8 +41,7 @@ def analysis(pert, engine, ana_file, main_dir):
     print(f"using {analysis_options} for analysis")
 
     # using the pipeline module for analysis
-    analysed_pert = analyse(path_to_dir)
-    analysed_pert.set_options(analysis_options)
+    analysed_pert = analyse(path_to_dir, analysis_protocol=analysis_options)
     avg, error, repeats_tuple_list = analysed_pert.analyse_all_repeats()
     analysed_pert.plot_graphs()
 

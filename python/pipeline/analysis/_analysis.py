@@ -86,6 +86,14 @@ class analyse():
         self._set_default_options() # will set default options and file extension
         self.is_analysed = False
 
+        # initialise values
+        self.free_val = None
+        self.free_err = None
+        self.bound_val = None
+        self.bound_err = None
+        self.freenrg_val = None
+        self.freenrg_err = None
+
         if analysis_protocol:
             analysis_protocol = validate.analysis_protocol(analysis_protocol)
             self.set_options(analysis_protocol)
@@ -567,10 +575,15 @@ class analyse():
         # get average of free energy values just calculated
         # if there is only one repeat use the BSS difference function
         if len(self._free_val_dict.values()) == 1 and len(self._bound_val_dict.values()) == 1:
-            freenrg_rel = BSS.FreeEnergy.Relative.difference(
-                list(self._bound_pmf_dict.items())[0][1], list(self._free_pmf_dict.items())[0][1])
+            bound_pmf = list(self._bound_pmf_dict.items())[0][1]
+            free_pmf = list(self._free_pmf_dict.items())[0][1]
+            freenrg_rel = BSS.FreeEnergy.Relative.difference(bound_pmf, free_pmf)
             freenrg_val = freenrg_rel[0].value()
             freenrg_err = freenrg_rel[1].value()
+            free_avg = free_pmf[-1][1]
+            free_err = free_pmf[-1][2]
+            bound_avg = bound_pmf[-1][1]
+            bound_err= bound_pmf[-1][2]
 
         # if just one of the values has only one, need to propagate the error from this for the final result
         elif len(self._free_val_dict.values()) == 1 and len(self._bound_val_dict.values()) > 1:
@@ -578,16 +591,16 @@ class analyse():
             # get the singular result and error
             free_avg = list(
                 val/_Units.Energy.kcal_per_mol for val in self._free_val_dict.values())[0]
-            free_sem = list(
+            free_err = list(
                 val/_Units.Energy.kcal_per_mol for val in self._free_err_dict.values())[0]
 
             bound_vals = list(
                 val/_Units.Energy.kcal_per_mol for val in self._bound_val_dict.values())
             bound_avg = _np.mean(bound_vals)
-            bound_sem = sem(bound_vals)
+            bound_err = sem(bound_vals)
             freenrg_val = (bound_avg-free_avg)
             freenrg_err = (_math.sqrt(
-                _math.pow(bound_sem, 2)+_math.pow(free_sem, 2)))
+                _math.pow(bound_err, 2)+_math.pow(free_err, 2)))
             freenrg_rel = (freenrg_val * _Units.Energy.kcal_per_mol,
                            freenrg_err * _Units.Energy.kcal_per_mol)
             
@@ -595,16 +608,16 @@ class analyse():
             free_vals = list(
                 val/_Units.Energy.kcal_per_mol for val in self._free_val_dict.values())
             free_avg = _np.mean(free_vals)
-            free_sem = sem(free_vals)
+            free_err = sem(free_vals)
 
             bound_avg = list(
                 val/_Units.Energy.kcal_per_mol for val in self._bound_val_dict.values())[0]
-            bound_sem = list(
+            bound_err = list(
                 val/_Units.Energy.kcal_per_mol for val in self._bound_err_dict.values())[0]
 
             freenrg_val = (bound_avg-free_avg)
             freenrg_err = (_math.sqrt(
-                _math.pow(bound_sem, 2)+_math.pow(free_sem, 2)))
+                _math.pow(bound_err, 2)+_math.pow(free_err, 2)))
             freenrg_rel = (freenrg_val * _Units.Energy.kcal_per_mol,
                            freenrg_err * _Units.Energy.kcal_per_mol)
         # otherwise, calculate the average and the SEM
@@ -612,16 +625,24 @@ class analyse():
             free_vals = list(
                 val/_Units.Energy.kcal_per_mol for val in self._free_val_dict.values())
             free_avg = _np.mean(free_vals)
-            free_sem = sem(free_vals)
+            free_err = sem(free_vals)
             bound_vals = list(
                 val/_Units.Energy.kcal_per_mol for val in self._bound_val_dict.values())
             bound_avg = _np.mean(bound_vals)
-            bound_sem = sem(bound_vals)
+            bound_err = sem(bound_vals)
             freenrg_val = (bound_avg-free_avg)
             freenrg_err = (_math.sqrt(
-                _math.pow(bound_sem, 2)+_math.pow(free_sem, 2)))
+                _math.pow(bound_err, 2)+_math.pow(free_err, 2)))
             freenrg_rel = (freenrg_val * _Units.Energy.kcal_per_mol,
                            freenrg_err * _Units.Energy.kcal_per_mol)
+        
+        # set the average bound and free values and their error
+        self.free_val = free_avg
+        self.free_err = free_err
+        self.bound_val = bound_avg
+        self.bound_err = bound_err
+        self.freenrg_val = freenrg_val
+        self.freenrg_err = freenrg_err
 
         # create tuple list of each repeat that was calculated
         # first check the length of the calculated values and check if this is also the length of the folders found
