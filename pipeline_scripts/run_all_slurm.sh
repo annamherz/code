@@ -11,6 +11,9 @@ export scripts_dir="/home/anna/Documents/code/pipeline_scripts" # choose locatio
 export protein_file="/home/anna/Documents/benchmark/inputs/XXX_parameterised" # this should be the prm7 and rst7 file name. best as input folder 
 export ligands_folder="/home/anna/Documents/benchmark/inputs/XXX"
 
+# if have a different, already prepped ligands folder, can change this here
+export prep_folder="$MAINDIRECTORY/prep"
+
 # export all execution model files for later scripts
 export lig_file="$MAINDIRECTORY/execution_model/ligands.dat"
 export net_file="$MAINDIRECTORY/execution_model/network.dat"

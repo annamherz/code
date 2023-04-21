@@ -18,12 +18,11 @@ from argparse import ArgumentParser
 from pipeline.prep import *
 from pipeline.utils import *
 
-def fep_prep(pert, prot_file, num_lambda_query, engine_query, main_dir):
+def fep_prep(pert, prot_file, num_lambda_query, engine_query, main_dir, prep_dir):
 
     lig_1 = pert.split('~')[0]
     lig_2 = pert.split('~')[1]
 
-    prep_dir = f"{main_dir}/prep"  # define lig prep location
     workdir = f"{main_dir}/outputs/{engine_query}/{lig_1}~{lig_2}" # pert dir
 
     # parse protocol file
@@ -89,7 +88,12 @@ def check_arguments(args):
     else:
         protocol_file = str(input("what is the path to the protocol file?: ").strip())
 
-    return perturbation, protocol_file, num_lambda, engine, main_folder
+    if args.prep_folder:
+        prep_folder = args.prep_folder
+    else:
+        prep_folder = f"{main_folder}/prep"
+
+    return perturbation, protocol_file, num_lambda, engine, main_folder, prep_folder
 
 def main():
 
@@ -100,15 +104,16 @@ def main():
     parser.add_argument("-eng", "--engine", type=str, default=None, help="engine to be used")
     parser.add_argument("-mf", "--main_folder", type=str, default=None, help="main folder path to create for all the runs")
     parser.add_argument("-p", "--protocol_file", type=str, default=None, help="path to protocol file")
+    parser.add_argument("-prep", "--prep_folder", type=str, default=None, help="folder with the prepped ligands")
     args = parser.parse_args()
 
     # check arguments
     print("checking the provided command line arguments...")
-    pert, prot_file, num_lambda_query, engine_query, main_folder = check_arguments(args)
+    pert, prot_file, num_lambda_query, engine_query, main_folder, prep_dir = check_arguments(args)
 
     print(f"fepprep for {pert, prot_file, num_lambda_query, engine_query, main_folder}")
 
-    fep_prep(pert, prot_file, num_lambda_query, engine_query, main_folder)
+    fep_prep(pert, prot_file, num_lambda_query, engine_query, main_folder, prep_dir)
 
 if __name__ == "__main__":
     main()

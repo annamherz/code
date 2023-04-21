@@ -70,22 +70,44 @@ fi
 
 if [ $2 = "GROMACS" ]; then
 
+while [ $min_counter != 5 ]; do
+
+if [ ! -s heat/lambda_$lam/gromacs.xvg ]; then
+echo "min attempt $min_counter"
+min_counter=$((min_counter+1))
+
 echo "min"
 cp min/lambda_$lam/gromacs.gro min/lambda_$lam/initial_gromacs.gro
 gmx grompp -f min/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p min/lambda_$lam/gromacs.top -o min/lambda_$lam/gromacs.tpr
 gmx mdrun -ntmpi 1 -deffnm min/lambda_$lam/gromacs ;
 
-echo "min1"
-gmx grompp -f min1/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p min1/lambda_$lam/gromacs.top -o min1/lambda_$lam/gromacs.tpr
-gmx mdrun -ntmpi 1 -deffnm min1/lambda_$lam/gromacs ;
-
-echo "min2"
-gmx grompp -f min2/lambda_$lam/gromacs.mdp -c min1/lambda_$lam/gromacs.gro -p min2/lambda_$lam/gromacs.top -o min2/lambda_$lam/gromacs.tpr
-gmx mdrun -ntmpi 1 -deffnm min2/lambda_$lam/gromacs ;
-
 echo "heat"
-gmx grompp -f heat/lambda_$lam/gromacs.mdp -c min2/lambda_$lam/gromacs.gro -p heat/lambda_$lam/gromacs.top -o heat/lambda_$lam/gromacs.tpr
+gmx grompp -f heat/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p heat/lambda_$lam/gromacs.top -o heat/lambda_$lam/gromacs.tpr
 gmx mdrun -ntmpi 1 -deffnm heat/lambda_$lam/gromacs ;
+
+else
+echo "heat managed to proceed okay"
+min_counter=5
+fi
+
+done
+
+# echo "min"
+# cp min/lambda_$lam/gromacs.gro min/lambda_$lam/initial_gromacs.gro
+# gmx grompp -f min/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p min/lambda_$lam/gromacs.top -o min/lambda_$lam/gromacs.tpr
+# gmx mdrun -ntmpi 1 -deffnm min/lambda_$lam/gromacs ;
+
+# echo "min1"
+# gmx grompp -f min1/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p min1/lambda_$lam/gromacs.top -o min1/lambda_$lam/gromacs.tpr
+# gmx mdrun -ntmpi 1 -deffnm min1/lambda_$lam/gromacs ;
+
+# echo "min2"
+# gmx grompp -f min2/lambda_$lam/gromacs.mdp -c min1/lambda_$lam/gromacs.gro -p min2/lambda_$lam/gromacs.top -o min2/lambda_$lam/gromacs.tpr
+# gmx mdrun -ntmpi 1 -deffnm min2/lambda_$lam/gromacs ;
+
+# echo "heat"
+# gmx grompp -f heat/lambda_$lam/gromacs.mdp -c min2/lambda_$lam/gromacs.gro -p heat/lambda_$lam/gromacs.top -o heat/lambda_$lam/gromacs.tpr
+# gmx mdrun -ntmpi 1 -deffnm heat/lambda_$lam/gromacs ;
 
 echo "eq"
 gmx grompp -f eq/lambda_$lam/gromacs.mdp -c heat/lambda_$lam/gromacs.gro -p eq/lambda_$lam/gromacs.top -t heat/lambda_$lam/gromacs.cpt  -o eq/lambda_$lam/gromacs.tpr

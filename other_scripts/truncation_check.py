@@ -44,41 +44,43 @@ def truncation_check(path_to_dir, estimator):
 
     return results_dict, bound_dict, free_dict
 
-def plot_truncated(pert_dict, file_path=None):
+def plot_truncated(pert_dict, file_path=None, plot_error = False):
 
     df = pd.DataFrame.from_dict(pert_dict)
     perts = list(df.columns)
     df = df.reset_index().dropna()
 
+    include_key = False
+
     for pert in perts:
         x_vals = []
         y_vals = []
+        lines = []
         for a,x in zip(df[pert], df['index']):
-            y_vals.append(a[0])
+            if plot_error:
+                y_vals.append(a[1])
+            else:
+                y_vals.append(a[0])
             x_vals.append(x)
-        plt.scatter(x_vals, y_vals)
+        scatterplot = [plt.scatter(x_vals, y_vals)]   
+        lines += plt.plot(0,0,label=pert)
         plt.errorbar(x_vals, y_vals, ecolor='none')
-        plt.title(f"{file_path.split('/')[-1].split('.')[0]}")
+
+        if include_key:
+            labels = [l.get_label() for l in lines]
+            plt.legend(lines, labels, loc='upper left')
+        
         plt.xlabel('Truncated percentage')
-        plt.ylabel("Computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+        plt.title(f"{file_path.split('/')[-1].split('.')[0].replace('_',' ')}")
+
+        if plot_error:
+            plt.ylabel("Computed Error / kcal$\cdot$mol$^{-1}$")
+        else:
+            plt.ylabel("Computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
 
     if file_path:
         plt.savefig(file_path)
 
-    for pert in perts:
-        x_vals = []
-        yerr = []
-        for a,x in zip(df[pert], df['index']):
-            yerr.append(a[1])
-            x_vals.append(x)
-        plt.scatter(x_vals, yerr)
-        plt.errorbar(x_vals, yerr, ecolor='none')
-        plt.title(f"{file_path.split('/')[-1].split('.')[0]} Error")
-        plt.xlabel('Truncated percentage')
-        plt.ylabel("Computed Error / kcal$\cdot$mol$^{-1}$")
-
-    if file_path:
-        plt.savefig(f"{file_path.replace('.png','_error.png')}")
 
 def check_arguments(args):
 
@@ -148,8 +150,11 @@ def main():
         # plot all the truncated data 
         print("plotting...")
         plot_truncated(pert_results_dict, f"{final_results_folder}/plt_truncated_{engine}.png")
+        plot_truncated(pert_results_dict, f"{final_results_folder}/plt_truncated_error_{engine}.png", plot_error=True)
         plot_truncated(pert_bound_dict, f"{final_results_folder}/plt_truncated_bound_{engine}.png")
+        plot_truncated(pert_bound_dict, f"{final_results_folder}/plt_truncated_bound_error_{engine}.png", plot_error=True)
         plot_truncated(pert_free_dict, f"{final_results_folder}/plt_truncated_free_{engine}.png")
+        plot_truncated(pert_free_dict, f"{final_results_folder}/plt_truncated_free_error_{engine}.png", plot_error=True)
         print(f"saved images in {final_results_folder}.")
 
 if __name__ == "__main__":

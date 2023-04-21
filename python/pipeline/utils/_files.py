@@ -317,7 +317,11 @@ def write_protocol(query_dict, file_path):
     with open(file, "w") as protocol_file:
         writer = csv.writer(protocol_file)
         for query in query_dict.keys():
-            writer.writerow([f"{query} = {query_dict[query]}"])
+            if isinstance(query_dict[query], list):
+                value = ','.join(query_dict[query])
+                writer.writerow([f"{query} = {value}"])
+            else:
+                writer.writerow([f"{query} = {query_dict[query]}"])
 
 
 def write_ligands(ligand_names, file_path):

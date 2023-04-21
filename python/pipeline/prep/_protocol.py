@@ -251,8 +251,9 @@ class pipeline_protocol():
         Returns:
             str: fepprep value.
         """
-
+       
         if value:
+            value = value.lower()
             options_list = ["start","middle","both"]
             if value not in options_list:
                 raise ValueError(f"fepprep option must be in {options_list}")
@@ -312,6 +313,7 @@ class pipeline_protocol():
         """
 
         if value:
+            # TODO make list from csv str
             value = validate.engines(value)
             self._query_dict["engines"] = value
             self._engines = value

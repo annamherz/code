@@ -539,7 +539,7 @@ class analyse():
             except Exception as e:
                 print(e)
                 print(
-                    f'Unable to analyse values for {name}, which is repeat {self._b_folders[b]} in {self._work_dir}.')
+                    f'Unable to analyse values for {name} from pickle, which should be repeat {self._b_folders[b]} in {self._work_dir}.')
 
         for f in self._f_repeats:
             try:
@@ -549,7 +549,7 @@ class analyse():
             except Exception as e:
                 print(e)
                 print(
-                    f'Unable to analyse values for {name}, which is repeat {self._f_folders[f]} in {self._work_dir}.')
+                    f'Unable to analyse values for {name} from pickle, which should be repeat {self._f_folders[f]} in {self._work_dir}.')
 
         freenrg_rel, repeats_tuple_list = analyse._calculate_freenrg(
             self, free_calculated, bound_calculated)

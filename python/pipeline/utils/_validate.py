@@ -372,6 +372,7 @@ class validate():
                 raise TypeError("'time_unit' must be of type 'str' or 'BSS.Types.Time'.")
 
         else:
+            time_unit = time_unit.strip().split(' ')[-1].lower()
             time_unit_list = ["ns", "ps", "fs"]
             if time_unit not in time_unit_list:
                 raise ValueError(f"'time_unit' must be one of {time_unit_list}.")
@@ -406,7 +407,7 @@ class validate():
                 raise TypeError("'box_edges_unit' must be of type 'str' or 'BSS.Types.Length'.")
 
         else:
-            box_edges_unit = box_edges_unit.lower()
+            box_edges_unit = box_edges_unit.strip().split(' ')[-1].lower()
             box_edges_unit_list = ["angstrom", "a", "nanometer", "nm"]
             if box_edges_unit not in box_edges_unit_list:
                 raise ValueError(f"'box_edges_unit' must be one of {box_edges_unit_list}.")
@@ -438,7 +439,7 @@ class validate():
                 raise TypeError("'temperature_unit' must be of type 'str' or 'BSS.Types.Temperature'.")
 
         else:
-            temperature_unit = temperature_unit.lower()
+            temperature_unit = temperature_unit.strip().split(' ')[-1].lower()
             temperature_unit_list = ["kelvin", "k", "celsius", "c"]
             if temperature_unit not in temperature_unit_list:
                 raise ValueError(f"'temperature_unit' must be one of {temperature_unit_list}.")
@@ -470,7 +471,7 @@ class validate():
                 raise TypeError("'pressure_unit' must be of type 'str' or 'BSS.Types.Pressure'.")
 
         else:
-            pressure_unit = pressure_unit.lower()
+            pressure_unit = pressure_unit.strip().split(' ')[-1].lower()
             pressure_unit_list = ["atm", "atmosphere", "bar"]
             if pressure_unit not in pressure_unit_list:
                 raise ValueError(f"'pressure_unit' must be one of {pressure_unit_list}.")
