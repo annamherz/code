@@ -9,7 +9,7 @@
 #SBATCH --time 24:00:00
 
 # sourcing
-export BSS="/home/anna/anaconda3/bin/activate sire22"
+export BSS="/export/users/anna/anaconda3/bin/activate sire22"
 source $BSS
 module load cuda/11.6
 module load amber/22
@@ -92,7 +92,7 @@ gmx mdrun -ntmpi 1 -deffnm heat/lambda_$lam/gromacs ;
 
 else
 echo "heat managed to proceed okay with $min_counter minimisations."
-
+min_counter=5
 fi
 
 done
@@ -290,3 +290,4 @@ done
 fi
 
 echo "Done deleting, keeping $keep_traj trajectories."
+
