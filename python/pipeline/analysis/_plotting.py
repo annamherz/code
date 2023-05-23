@@ -27,7 +27,7 @@ from ._network import *
 
 class plotting_engines():
 
-    def __init__(self, analysis_object=None, output_folder=None):
+    def __init__(self, analysis_object=None, output_folder=None, verbose=False):
         """for plotting analysis network results.
 
         Args:
@@ -38,6 +38,8 @@ class plotting_engines():
             ValueError: must ptovide an analysis network object.
         """
 
+        self.is_verbose(verbose)
+        
         if analysis_object:
             self._analysis_object = analysis_object
             # get info about things for plotting from analysis
@@ -60,6 +62,12 @@ class plotting_engines():
         # convert the dictionaries into dataframes for plotting
         self._analysis_dicts_to_df()
 
+    def is_verbose(self, value):
+
+        verbose = validate.boolean(value)
+        self._is_verbose = verbose
+
+        return verbose
 
     def analysis_obj_into_format(self):
         """turn the passed pipeline.analysis.analysis_network object into format for this class
@@ -87,13 +95,11 @@ class plotting_engines():
             self.calc_val_dict = ana_obj.cinnabar_calc_val_dict
             self.exper_val_dict = ana_obj.cinnabar_exper_val_dict
             self.calc_pert_dict = ana_obj.cinnabar_calc_pert_dict
-            self.exper_pert_dict = ana_obj.cinnabar_exper_pert_dict # TODO is this ever used?
         else:
             print("no cinnabar calculation has been performed. Can only plot 'pert' values.")
             self.calc_val_dict = {}
             self.exper_val_dict = {}
             self.calc_pert_dict = ana_obj.calc_pert_dict
-            self.exper_pert_dict = ana_obj.exper_pert_dict # TODO is this ever used?
 
         # experimental calculated directly from exp values (for bar)
         self.all_exper_pert_dict = ana_obj.exper_pert_dict
@@ -298,7 +304,8 @@ class plotting_engines():
                                                     self.values_dict[name][f"{pv}_results"],
                                                     x_name,
                                                     "calc",
-                                                    self.values_dict[x_name][which_list])
+                                                    self.values_dict[x_name][which_list],
+                                                    verbose=self._is_verbose)
 
                 freenrg_df_dict[name][pv] = freenrg_df
 
@@ -310,7 +317,7 @@ class plotting_engines():
         return freenrg_df_dict
 
     @staticmethod
-    def match_dicts_to_df(dict_x, dict_y, x_name, y_name, values=None):
+    def match_dicts_to_df(dict_x, dict_y, x_name, y_name, values=None, verbose=False):
         """match two dictionaries into one dataframe (to be used for plotting)
 
         Args:
@@ -339,7 +346,8 @@ class plotting_engines():
                 y_err = dict_y[value][1]
                 freenrg_dict[value] = [x_ddG, x_err, y_ddG, y_err]
             except Exception as e:
-                print(f"{value} not in both dicts, {dict_x} and ")
+                if verbose:
+                    print(f"{value} not in both dicts, {x_name} and {y_name}")
         
         freenrg_df = pd.DataFrame(freenrg_dict, index=[f"freenrg_{x_name}", f"err_{x_name}", f"freenrg_{y_name}", f"err_{y_name}"]).transpose()
 
@@ -433,46 +441,47 @@ class plotting_engines():
         """_get the bar spacing based on how many engines.
         """
 
-        bar_spacing, bar_width = plotting_engines.get_bar_spacing(engines=self.engines, experimental=True)
+        bar_spacing, bar_width = plotting_engines.get_bar_spacing(names=self.engines)
 
         self._bar_spacing = bar_spacing
         self._bar_width = bar_width
 
 
     @staticmethod
-    def get_bar_spacing(engines=None, experimental=True):
-        #TODO adjust so based on how many passed ie if also other results are to be plotted
-        # TODO extend so based on no of values and experimetnal is the final one, placement istn a dict but a list and just takes positions?
+    def get_bar_spacing(names=None):
 
-        engines = validate.is_list(engines)
-        experimental = validate.boolean(experimental)
+        names = validate.is_list(names)
+
+        # so experimental is the last thing plotted
+        if "experimental" in names:
+            names.remove("experimental")
+            names.append("experimental")
         
         placement_dict = {}
 
-        if experimental:
-            exp_len = 1
-        else:
-            exp_len = 0
-
-        if (len(engines) + exp_len) == 4:
+        if len(names) == 6:
+            width = 0.12  # set bar width
+            placement = [-width*(5/2), -width*(3/2), -width*(1/2), width*(1/2), width*(3/2), width*(5/2)]
+        elif len(names) == 5:
+            width = 0.14  # set bar width
+            placement = [-width*(4/2), -width*(2/2), 0, width*(2/2), width*(4/2)]
+        elif len(names) == 4:
             width = 0.15  # set bar width
             placement = [-width*(3/2), -width*(1/2), width*(1/2), width*(3/2)]
-        elif (len(engines) + exp_len) == 3:
+        elif len(names) == 3:
             width = 0.23  # set bar width
             placement = [-width*(2/2), 0, width*(2/2)]
-        elif (len(engines) + exp_len) == 2:
+        elif len(names) == 2:
             width = 0.4  # set bar width
             placement = [-width*(1/2), width*(1/2)]
-        elif (len(engines) + exp_len) == 1:
+        elif len(names) == 1:
             width = 0.6  # set bar width
             placement = [0]
         else:
-            raise ValueError("length of the engine list + exp cannot exceed 4? must have atleast 1 engine/exp.")
+            raise ValueError("length of the engine list + exp cannot exceed 6? must have atleast 1 engine/exp.")
 
-        for eng,place in zip(engines, placement):
+        for eng,place in zip(names, placement):
             placement_dict.update({eng:place}) # for each engine
-        if experimental:
-            placement_dict.update({"experimental":placement[-1]}) # add experimental
 
         return placement_dict, width
 
@@ -499,28 +508,25 @@ class plotting_engines():
         
         return engines
 
-    def bar(self, pert_val=None, engines=None, name="experimental", values=None, **kwargs):
+    def bar(self, pert_val=None, names=None, values=None, **kwargs):
         """plot a bar plot of the results
 
         Args:
             pert_val (str, optional): whether plotting 'pert' ie perturbations or 'val' ie values (per ligand result). Defaults to None.
-            engines (list, optional): engines to plot for. Defaults to None.
-            name (str, optional): what to plot against. Defaults to "experimental". #TODO fix so can plot multiple other results
+            names (list, optional): engines and other results and experimental to plot for. Defaults to None.
             values (list, optional): list of values (perturbations or ligands) to plot for. Defaults to None.
         """
 
         pert_val = validate.pert_val(pert_val)
-        name = self._validate_in_names_list(name)
 
-        # TODO so can pick which engines also includes other results?
-        # TODO also changes to get eng name?
-
-        if engines:
-            engines = self._plotting_engines(engines)
-            bar_spacing, width = plotting_engines.get_bar_spacing(engines=engines, experimental=True)
+        if names:
+            names = validate.is_list(names, make_list=True)
+            for eng in names:
+                self._validate_in_names_list(eng)
+            bar_spacing, width = plotting_engines.get_bar_spacing(names=names)
         # if no engines provided, use the defaults that were set based on the analysis object
         else:
-            engines = self.engines
+            names = self.engines
             bar_spacing = self._bar_spacing
             width = self._bar_width
 
@@ -537,12 +543,13 @@ class plotting_engines():
 
         # df_dict = freenrg_df_plotting
 
-        for eng in engines:
+        for eng in names:
 
             col = self.colours[eng]
             space = bar_spacing[eng]
             
-            freenrg_df_plotting = self.freenrg_df_dict[name][eng][pert_val].fillna(0)
+            # just always compare to experimental for this
+            freenrg_df_plotting = self.freenrg_df_dict["experimental"][eng][pert_val].fillna(0)
 
             # prune df to only have perturbations considered
             freenrg_df_plotting = self._prune_perturbations(freenrg_df_plotting, values)
@@ -554,19 +561,11 @@ class plotting_engines():
             ax.bar(x_locs + space, height=freenrg_df_plotting["freenrg_calc"], width=width, yerr=freenrg_df_plotting["err_calc"],
                             label=eng, color=col)
 
-        # plot experimental
-        ax.bar(x_locs + bar_spacing["experimental"],
-                height=freenrg_df_plotting[f"freenrg_{name}"],
-                width=width,
-                yerr=freenrg_df_plotting[f"err_{name}"],
-                label=f"{name}",
-                color=self.colours["experimental"]) # TODO also name, other have a diff colour not used yet (up to three options?)
-
         #plt.xlabel('ΔΔG for experimental (kcal/mol)')
         #plt.ylabel('ΔΔG for calculated (kcal/mol)')
         # format the plot further.
         plt.axhline(color="black")
-        plt.title(f"Computed vs {name} for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}")
+        plt.title(f"Freenrg for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}")
         if pert_val == "pert":
             plt.ylabel("$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
             plt.xlabel("perturbations")
@@ -576,8 +575,8 @@ class plotting_engines():
         plt.xticks(x_locs, freenrg_df_plotting.index, rotation=70, ha="right")
         plt.legend()
 
-        eng_name = self._get_eng_name(engines)
-        plt.savefig(f"{self.graph_folder}/calc_vs_{name}_barplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
+        eng_name = "_".join(str(eng) for eng in names)
+        plt.savefig(f"{self.graph_folder}/barplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight') # TODO fix eng name
         plt.show()
 
 
@@ -617,8 +616,8 @@ class plotting_engines():
             values = validate.is_list(values)
 
         # plot a scatter plot
-        plt.rc('font', size=12)
-        fig, ax = plt.subplots(figsize=(10,10))
+        plt.rc('font', size=20)
+        fig, ax = plt.subplots(figsize=(7,7))
 
         lines = []
 
@@ -726,19 +725,23 @@ class plotting_engines():
                 title = value
             if key == "key":
                 include_key = validate.boolean(value)
+            if key == "save":
+                save_fig_location = validate.string(f"{value}.png")
 
         if include_key:
             labels = [l.get_label() for l in lines]
             plt.legend(lines, labels, loc='upper left')
 
         if title:
-            plt.title(f"{title}")
+            title = title
         else:
             if name:
-                plt.title(f"Computed vs {name}\nfor {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}")
+                title = f"Computed vs {name}\nfor {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}"
             else:
-                plt.title(f"Computed vs Experimental\nfor {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}")
-        
+                title = f"Computed vs Experimental\nfor {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}"
+
+        plt.title(title, fontsize=20)
+
         if y_label:
             plt.ylabel(f"{y_label}")
         else:
@@ -762,7 +765,8 @@ class plotting_engines():
                     plt.xlabel("Experimental $\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
 
         eng_name = self._get_eng_name(engines)
-        plt.savefig(f"{self.graph_folder}/calc_vs_{name}_scatterplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png", dpi=300, bbox_inches='tight')
+        save_fig_location = f"{self.graph_folder}/calc_vs_{name}_scatterplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png"
+        plt.savefig(save_fig_location, dpi=300, bbox_inches='tight')
         plt.show()
 
 

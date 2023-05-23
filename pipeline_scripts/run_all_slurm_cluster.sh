@@ -30,7 +30,7 @@ dos2unix "$ana_file"
 # cd $MAINDIRECTORY
 
 # make sure engines etc are sourced correctly
-export BSS="/home/anna/anaconda3/bin/activate pipeline"
+export BSS="/export/users/anna/anaconda3/bin/activate sire22"
 source $BSS
 module load cuda/11.6
 module load amber/22

@@ -5,6 +5,14 @@
 repeats=$(awk '/repeats/{print $NF}' $prot_file)
 repeats_array=($(seq 0 1 $(($repeats-1))))
 
+# get the name of the run
+nam=$(awk '/name/{print $NF}' $prot_file)
+if [ -z "$nam" ]; then
+name=""
+else
+name="_$nam"
+fi
+
 # keeping the trajectory?
 keep_traj=$(awk '/trajectories/{print $NF}' $prot_file)
 

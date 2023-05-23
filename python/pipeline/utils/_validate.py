@@ -529,16 +529,17 @@ class validate():
                 if not isinstance(boolean, str):
                     raise TypeError(f"{boolean} must be of type 'str' (True or False) or 'bool'.")
                 else:
-                    boolean_list = ["True", "False","1","0"]
-                    if boolean not in boolean_list:
+                    boolean_list = ["TRUE", "FALSE","1","0"]
+                    if boolean.upper() not in boolean_list:
                         raise ValueError(f"{boolean} must be one of {boolean_list}.")
         else:
             boolean = str(boolean)
 
-
-        if boolean == "True" or boolean == "1":
+        boolean = boolean.upper()
+        
+        if boolean == "TRUE" or boolean == "1":
             boolean = True
-        elif boolean == "False" or boolean == "0":
+        elif boolean == "FALSE" or boolean == "0":
             boolean = False
         
         return boolean

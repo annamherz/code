@@ -85,7 +85,9 @@ class pipeline_protocol():
                     'equilibrium runtime': '100',
                     'equilibrium runtime unit': 'ps',
                     'engines':"ALL",
-                    "fepprep":"start"
+                    "fepprep":"start",
+                    "config options":None,
+                    "name": None
                     }
         
         return default_dict
@@ -99,7 +101,7 @@ class pipeline_protocol():
         return self._query_dict
 
 
-    def _read_protocol(self):
+    def _read_protocol(self, file=None):
         """reads the protocol file into a dictionary
 
         Raises:
@@ -112,8 +114,13 @@ class pipeline_protocol():
 
         query_dict = {}
 
+        if file:
+            file = validate.file_path(file)
+        else:
+            file = self._prot_file
+
         # get value regardless of the order of the protocol.dat
-        with open(f"{self._prot_file}", "r") as file:
+        with open(f"{file}", "r") as file:
             for line in file:
                 
                 if "=" not in line:
@@ -136,13 +143,17 @@ class pipeline_protocol():
         
         query_dict = self._query_dict
         default_dict = self.default_dict()
+        kwarg_dict = {}
 
         # remove any unrecognised dictionary entries
         for query in list(query_dict):
             if query not in default_dict.keys():
+                kwarg_dict[query] = query_dict[query]
                 del query_dict[query]
                 if self.verbose:
-                    print(f"{query} removed from the protocol as not recognised.\n please use only:\n {default_dict.keys()}")
+                    print(f"{query} removed from the protocol as not recognised.\n please use only:\n {default_dict.keys()}\n added as a kwarg argument instead.")
+        
+        query_dict["kwargs"] = kwarg_dict
 
         # add any missing protocol entries
         for query in default_dict.keys():
@@ -203,6 +214,9 @@ class pipeline_protocol():
             self.eq_runtime_unit(query_dict['equilibrium runtime unit'])
             self.engines(query_dict['engines'])
             self.fepprep(query_dict['fepprep'])
+            self.config_options(query_dict['config options'])
+            self.kwargs(query_dict["kwargs"])
+            self.name(query_dict["name"])
             
             # choose timestep based on whether HMR is applied or not
             # this is important as BSS hmr mixin considers the timestep for the default auto
@@ -718,8 +732,9 @@ class pipeline_protocol():
             else:
                 print(f"'hmr' must be set to True for a hmr factor to be applied. It will still be set as {value}.")
 
-            if value.lower() == "auto":
-                self._hmr_factor = "auto"
+            if isinstance(value, str):
+                if value.lower() == "auto":
+                    self._hmr_factor = "auto"
             else:
                 try:
                     self._hmr_factor = validate.is_float(value)
@@ -800,6 +815,50 @@ class pipeline_protocol():
 
         return value        
 
+    def config_options(self, value=None):
+
+        if value:
+            try:
+                value = validate.file_path(value)
+                value_dict = self._read_protocol(file=value)
+            except:
+                value_dict = value
+            value = validate.dictionary(value_dict)
+            self._query_dict["config options"] = value
+            self._config_options = value
+        else:
+            try:
+                value = self._config_options
+            except:
+                value = {}
+                self._config_options = value
+
+        return value
+
+    def kwargs(self, value=None):
+
+        if value:
+            value = validate.dictionary(value)
+            self._query_dict["kwargs"] = value
+            self._kwargs = value
+        else:
+            value = self._kwargs
+
+        return value
+
+    def name(self, value=None):
+
+        if value:
+            value = validate.string(value)
+            self._query_dict["name"] = value
+            self._name = value
+        else:
+            try:
+                value = self._name
+            except:
+                self._name = value
+
+        return value
 class analysis_protocol(pipeline_protocol):
 
     def __init__(self, file=None, auto_validate=False, verbose=False):
@@ -822,7 +881,8 @@ class analysis_protocol(pipeline_protocol):
                         "statistical inefficiency": "False",
                         "truncate percentage": "0",
                         "truncate keep":"end",
-                        "mbar method": "None" # robust or default
+                        "mbar method": "None", # robust or default
+                        "name": None
                         }
         
         return default_dict
@@ -845,6 +905,8 @@ class analysis_protocol(pipeline_protocol):
             self.truncate_percentage(query_dict["truncate percentage"])
             self.truncate_keep(query_dict["truncate keep"])
             self.mbar_method(query_dict["mbar method"])
+            self.kwargs(query_dict["kwargs"])
+            self.name(query_dict["name"])
             
             # is now validated
             self._is_validated = True

@@ -32,11 +32,15 @@ def fep_prep(pert, prot_file, num_lambda_query, engine_query, main_dir, prep_dir
     protocol.validate() # validate all the input
     # print("rewriting the protocol file...")
     # protocol.rewrite_protocol() # rewrite protocol file
-    # print("the protocol is now:")
-    # protocol.print_protocol()
     # add the number of lambdas and engine to the protocol
+    protocol.hmr_factor(3)
     protocol.num_lambda(num_lambda_query)
     protocol.engine(engine_query)
+    if protocol.name():
+        workdir += f"_{protocol.name()}"
+
+    print("the protocol is now:")
+    protocol.print_protocol()
 
     # instantiate each system as a fepprep class with the protocol
     fepprep_obj = fepprep(protocol=protocol)

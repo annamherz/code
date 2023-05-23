@@ -24,32 +24,21 @@ from pipeline.analysis import *
 from pipeline.prep import *
 from pipeline.utils import *
 
-bench_folder = f"/home/anna/Documents/benchmark"
-protein = "tyk2"
-main_dir = f"{bench_folder}/extracted/{protein}"
+ligands_folder = "/home/anna/Documents/benchmark/inputs/mcl1/ligands"
+lig_name = "lig_60"
 
-# choose location for the files
-net_file = f"{main_dir}/execution_model/network_lomap.dat"
-ana_file = f"{main_dir}/execution_model/analysis_protocol.dat"
-exp_file = f"{bench_folder}/inputs/experimental/{protein}.yml"
+protocol = pipeline_protocol()
+protocol.ligand_forcefield("sage")
+print(protocol.ligand_forcefield())
+# load ligand, these should already be in the correct position
+try: # sdf first
+    ligand = BSS.IO.readMolecules(f"{ligands_folder}/{lig_name}.sdf")[0]
+except: # mol2 if sdf is not available
+    ligand = BSS.IO.readMolecules(f"{ligands_folder}/{lig_name}.mol2")[0]
 
-if os.path.exists(f"{main_dir}/outputs_extracted/results"):
-    results_folder = f"{main_dir}/outputs_extracted/results"
-elif os.path.exists(f"{main_dir}/outputs/results"):
-    results_folder = f"{main_dir}/outputs/results"
-else:
-    raise ValueError(f"results directory not found in the {main_dir}. please make sure results were written using the analysis script previously in the pipeline")
-
-output_folder = validate.folder_path(f"{main_dir}/analysis", create=True)
-
-all_analysis_object = analysis_network(results_folder,
-                                       exp_file=exp_file,
-                                       net_file=net_file,
-                                       output_folder=output_folder,
-                                       analysis_ext=ana_file
-                                        )
-
-all_analysis_object.compute(cycle_closure=True)
+# paramaterise the ligand
+print(f"Parameterising {lig_name}...")
+lig_p = ligprep.lig_paramaterise(ligand, protocol.ligand_forcefield())
 
 # # fwf exp data
 # print("fwf")
@@ -78,3 +67,10 @@ all_analysis_object.compute(cycle_closure=True)
 # print(x_data)
 
 # print(res_obj.normalised_exper_val_dict["SOMD"])
+
+work_dir = "aa"
+kwargs = {}
+# for presentation
+work_dir = "path/to/perturbation"
+BSS.Relative.FreeEnergy.analyse(work_dir, estimator="MBAR", method="alchemlyb", **kwargs)
+

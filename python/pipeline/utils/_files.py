@@ -18,6 +18,8 @@ def write_analysis_file(analysis, results_dir, method=None):
 
     if not method:
         method = "None"
+        if analysis.name:
+            method = analysis.name
 
     # data point for average
     data_point_avg = [analysis.ligand_0,

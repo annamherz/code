@@ -13,7 +13,7 @@ module load cuda/11.6
 module load amber/22
 module load gromacs/22.2
 source $scripts_dir/extract_execution_model_bash.sh
-export BSS="/home/anna/anaconda3/bin/activate pipeline"
+export BSS="/export/users/anna/anaconda3/bin/activate pipeline"
 source $BSS
 
 date

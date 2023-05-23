@@ -20,7 +20,7 @@ class analysis_network():
     """class to analyse results files and plot
     """
 
-    def __init__(self, results_directory=None, exp_file=None, engines=None, net_file=None, output_folder=None, analysis_ext=None, extra_options=None):
+    def __init__(self, results_directory=None, exp_file=None, engines=None, net_file=None, output_folder=None, analysis_ext=None, extra_options=None, verbose=False):
         """analyses the network for a certain system
 
         Args:
@@ -35,6 +35,9 @@ class analysis_network():
         Raises:
             TypeError: analysis ext must be the correct type.
         """
+
+        self.is_verbose(verbose)
+        
         # get engines for analysis
         if engines:
             self.engines = validate.engines(engines)
@@ -154,6 +157,12 @@ class analysis_network():
         # for stats
         self._stats_object = None
 
+    def is_verbose(self, value):
+
+        verbose = validate.boolean(value)
+        self._is_verbose = verbose
+
+        return verbose
 
     def _get_results_repeat_files(self, leg=None):
         """get the files of all the repeats for a specific leg. Used during init to set free and bound repeat files.
@@ -354,9 +363,14 @@ class analysis_network():
         perts = validate.is_list(pert, make_list=True)
         for pert in perts:
             self.perturbations.remove(pert)
+
+        if self._is_computed:
+            self._compute_dicts(use_cinnabar=True, recompute=True)
         # remove plotting object as needs to be reintialised with new perturbations
         self._plotting_object = None
         self._stats_object = None
+
+    # TODO add perturbation and value ?? someway to add more data?
 
     def compute(self, cycle_closure=True, statistics=True, use_cinnabar=True):
         """compute the dictionaries for analysis and those passed to the plotting object.
@@ -373,7 +387,7 @@ class analysis_network():
         # TODO have these entirely seperate?
         # compute the cycle closure
         if cycle_closure:
-            self._make_graph()
+            self._initialise_graph_object()
             self._compute_cycle_closures()
 
         if statistics:
@@ -385,13 +399,13 @@ class analysis_network():
                 # self.val_statistics.update({eng: self.compute_statistics(pert_val="val", engine=eng)})
         
         # initialise plotting and stats objects
-        self._initalise_plotting_object()
-        self._initalise_stats_object()
+        self._initialise_plotting_object(verbose=self._is_verbose)
+        self._initialise_stats_object()
 
         self._is_computed = True
 
 
-    def _compute_dicts(self, use_cinnabar=True):
+    def _compute_dicts(self, use_cinnabar=True, recompute=False):
         """calculate the perturbation dicts from the previously passed repeat files.
         If use_cinnabar, calculate the the cinnabar network and the computed values.
 
@@ -399,45 +413,56 @@ class analysis_network():
             use_cinnabar (bool, optional): whether to use cinnabar. Defaults to True.
         """
 
-        # compute the experimental for perturbations
-        self.get_experimental() # get experimental val dict and normalised dict
-        self.get_experimental_pert() # from cinnabar expeirmental diff ? make_dict class
-
         use_cinnabar = validate.boolean(use_cinnabar)
-        if use_cinnabar:
-            self._compute_cinnabar_dicts()
+
+        if not recompute:
+            # compute the experimental for perturbations
+            self.get_experimental() # get experimental val dict and normalised dict
+            self.get_experimental_pert() # from cinnabar expeirmental diff ? make_dict class
 
         # for self plotting of per pert
         for eng in self.engines:
-            calc_diff_dict = make_dict.comp_results(self._results_repeat_files[eng], self.perturbations, eng) # older method
-            self.calc_pert_dict.update({eng:calc_diff_dict})
+            if not recompute:
+                calc_diff_dict = make_dict.comp_results(self._results_repeat_files[eng], self.perturbations, eng) # older method
+                self.calc_pert_dict.update({eng:calc_diff_dict})
 
-    def _compute_cinnabar_dicts(self):
+            if use_cinnabar:
+                self._compute_cinnabar_dict(eng, recompute=recompute)
+
+
+    def _compute_cinnabar_dict(self, eng, recompute=False):
         """compute cinnabar and get the dictionaries from it.
         """
-
+        
+        if recompute:
+            perts, ligs = get_info_network_from_dict(self.calc_pert_dict[eng])
+        else:
+            perts = self.perturbations
+        
         # get the files into cinnabar format for analysis
-        for eng in self.engines:
-            file_name = self._results_repeat_files[eng]
-            cinnabar_file_name = f"{self.output_folder}/cinnabar_{eng}_{self.file_ext}_{self.net_ext}"
-            convert.cinnabar_file(file_name, self.exper_val_dict, cinnabar_file_name, perturbations=self.perturbations)
+        file_name = self._results_repeat_files[eng]
+        cinnabar_file_name = f"{self.output_folder}/cinnabar_{eng}_{self.file_ext}_{self.net_ext}"
+        if recompute:
+            cinnabar_file_name = f"{cinnabar_file_name}_recompute"
+        
+        convert.cinnabar_file(file_name, self.exper_val_dict, cinnabar_file_name, perturbations=perts)
 
-            try:
-                # compute the per ligand for the network
-                network = wrangle.FEMap(f"{cinnabar_file_name}.csv")
-                self._cinnabar_networks.update({eng:network})
+        try:
+            # compute the per ligand for the network
+            network = wrangle.FEMap(f"{cinnabar_file_name}.csv")
+            self._cinnabar_networks.update({eng:network})
 
-                # from cinnabar graph
-                self.cinnabar_calc_pert_dict.update({eng: make_dict.from_cinnabar_network_edges(network, "calc", self.perturbations)})
-                self.cinnabar_exper_pert_dict.update({eng: make_dict.from_cinnabar_network_edges(network, "exp", self.perturbations)})      
+            # from cinnabar graph
+            self.cinnabar_calc_pert_dict.update({eng: make_dict.from_cinnabar_network_edges(network, "calc", perts)})
+            self.cinnabar_exper_pert_dict.update({eng: make_dict.from_cinnabar_network_edges(network, "exp", perts)})      
 
-                # for self plotting of per ligand
-                self.cinnabar_calc_val_dict.update({eng: make_dict.from_cinnabar_network_node(network, "calc")})
-                self.cinnabar_exper_val_dict.update({eng: make_dict.from_cinnabar_network_node(network, "exp", normalise=True)})
+            # for self plotting of per ligand
+            self.cinnabar_calc_val_dict.update({eng: make_dict.from_cinnabar_network_node(network, "calc")})
+            self.cinnabar_exper_val_dict.update({eng: make_dict.from_cinnabar_network_node(network, "exp", normalise=True)})
 
-            except Exception as e:
-                print(e)
-                print(f"could not create cinnabar network for {eng}")
+        except Exception as e:
+            print(e)
+            print(f"could not create cinnabar network for {eng}")
 
     def compute_other_results(self, file_names=None, name=None, use_cinnabar=True):
         """compute other results in a similar manner to the engine results.
@@ -467,28 +492,140 @@ class analysis_network():
 
         use_cinnabar = validate.boolean(use_cinnabar)
         if use_cinnabar:
-            # first convert the other results into a value dict, do this using cinnabar but no experimental
-            cinnabar_file_name = f"{self.output_folder}/cinnabar_{name}_{self.file_ext}_{self.net_ext}"
-            convert.cinnabar_file([f"{new_file_path}.csv"], self.exper_val_dict, cinnabar_file_name, perturbations=self.perturbations)
-        
-            # compute the per ligand for the network
-            network = wrangle.FEMap(f"{cinnabar_file_name}.csv")
-            self._cinnabar_networks.update({name:network})
-
-            self.cinnabar_calc_val_dict.update({name: make_dict.from_cinnabar_network_node(network, "calc")})
-            self.cinnabar_calc_pert_dict.update({name: make_dict.from_cinnabar_network_edges(network, "calc", perturbations)})
+            self._compute_cinnabar_dict(name)
 
         # initialise plotting and stats objects again so theyre added
-        self._initalise_plotting_object()
-        self._initalise_stats_object()
+        self._initialise_plotting_object(verbose=self._is_verbose)
+        self._initialise_stats_object()
 
-    def _make_graph(self):
-        """make a network x graph of the ligands and perturbations
+    def successful_runs(self, eng, perts=None):
+        """calculate how many successful runs
+
+        Args:
+            eng (str): the engine to calc for
+            perts (list, optional): The list of perts to use. Defaults to None.
+
+        Returns:
+            tuple: (val, percen, perturbations)
         """
         
-        graph = net_graph(self.ligands, self.perturbations)
-        self.network_graph = graph
-   
+        res_dict = self.calc_pert_dict
+        eng = validate.engine(eng)
+        if perts:
+            perts = validate.is_list(perts)
+        else:
+            perts = res_dict[eng].keys()
+
+        perturbations = []
+        if self._is_computed:
+
+            val = 0
+            for key in res_dict[eng].keys():
+                if key in perts:
+                    if res_dict[eng][key][0]:
+                        val +=1
+                        perturbations.append(key)
+
+            percen = (val/len(perts))*100
+
+            print(f"{val} out of {len(perts)} have results, which is {percen} %.")
+            return (val, percen, perturbations)
+        
+        else:
+            print("please compute results from results files first.")
+            return None
+
+    def failed_runs(self, eng):
+
+        eng = validate.engine(eng)
+
+        val, percen, perturbations = self.successful_runs(eng)
+
+        failed_perts = []
+
+        for pert in self.perturbations:
+            if pert not in perturbations:
+                failed_perts.append(pert)
+
+        return failed_perts
+
+    def draw_failed_perturbations(self, eng):
+        
+        eng = validate.engine(eng)
+
+        val, percen, perturbations = self.successful_runs(eng)
+
+        self._initialise_graph_object(check=True)
+        for pert in perturbations:
+            self.network_graph.draw_perturbation(pert)
+        
+
+    def remove_outliers(self, threshold=10, name=None, verbose=False, use_cinnabar=True):
+        """remove outliers above a certain difference to the experimental.
+
+        Args:
+            threshold (float, optional): difference threshold above which to remove. Defaults to 10.
+            name (str, optional): name of the data (engine or other results). Defaults to None.
+            verbose (bool, optional): whether to verbose output which pert is removed. Defaults to False.
+            use_cinnabar (bool, optional): whether to use cinnabar. This should be consistent with what was used earlier.
+        """
+
+        # can get from dict or dataframe
+        # probably best from plotting object
+
+        plot_obj = self._initialise_plotting_object(check=True, verbose=verbose)
+        threshold = validate.is_float(threshold)
+
+        perts = []
+
+        if name:
+            names = [plot_obj._validate_in_names_list(name)]
+        else:
+            names = self.other_results_names + self.engines
+
+        for name in names:
+            freenrg_df_plotting = plot_obj.freenrg_df_dict["experimental"][name]["pert"].dropna()
+            x = freenrg_df_plotting[f"freenrg_experimental"]
+            y = freenrg_df_plotting["freenrg_calc"]
+            # get an array of the MUE values comparing experimental and FEP values. Take the absolute values.
+            mue_values = abs(x - y)
+
+            # find the n ligand names that are outliers.
+            perts = [key for pert,key in zip(mue_values.gt(threshold), mue_values.gt(threshold).keys()) if pert]
+
+            for pert in perts:
+                del self.calc_pert_dict[name][pert]
+            
+                if verbose:
+                    print(f"removed {pert} for {name}.")
+            
+            self._compute_dicts(use_cinnabar=use_cinnabar, recompute=True)
+
+        # remove plotting object as needs to be reintialised with new perturbations
+        self._plotting_object = None
+        self._stats_object = None
+
+    def _initialise_graph_object(self, check=False):
+        """intialise the graph object
+
+        Args:
+            check (bool, optional): whether to check the plotting object. Defaults to False.
+
+        Returns:
+            pipeline.analysis.plotting_engines: the plotting object.
+        """
+
+        # if not checking, always make
+        if not check:
+            self.network_graph = net_graph(self.ligands, self.perturbations)
+
+        # if checking, first see if it exists and if not make
+        elif check:
+            if not self.network_graph:
+                self.network_graph = net_graph(self.ligands, self.perturbations)
+        
+        return self.network_graph
+  
 
     def draw_graph(self, output_dir=None, use_cinnabar=False, engine=None):
         """draw the network graph.
@@ -513,8 +650,7 @@ class analysis_network():
                 self._cinnabar_networks[eng].draw_graph(file_name=file_name)
 
         else:
-            if not self.network_graph:
-                self._make_graph()
+            self._initialise_graph_object(check=True)
 
             self.network_graph.draw_graph(file_dir=output_dir)
 
@@ -532,8 +668,7 @@ class analysis_network():
 
         # cycle closures
 
-        if not self.network_graph:
-            self._make_graph()
+        self._initialise_graph_object(check=True)
         
         network_graph = self.network_graph
 
@@ -560,7 +695,7 @@ class analysis_network():
         # take data from cycle closure dict and plot
         pass
 
-    def _initalise_plotting_object(self, check=False):
+    def _initialise_plotting_object(self, check=False, verbose=False):
         """intialise the plotting object
 
         Args:
@@ -572,34 +707,38 @@ class analysis_network():
 
         # if not checking, always make
         if not check:
-            self._plotting_object = plotting_engines(analysis_object=self)
+            self._plotting_object = plotting_engines(analysis_object=self, verbose=verbose)
 
         # if checking, first see if it exists and if not make
         elif check:
             if not self._plotting_object:
-                self._plotting_object = plotting_engines(analysis_object=self)
+                self._plotting_object = plotting_engines(analysis_object=self, verbose=verbose)
         
         return self._plotting_object
 
-    def plot_bar_pert(self, engine=None):
+    def plot_bar_pert(self, engine=None, **kwargs):
         """plot the bar plot of the perturbations.
 
         Args:
             engine (str, optional): engine to plot for. Defaults to None, will use all.
         """
+        engine = validate.is_list(engine, make_list=True)
+        engine.append("experimental")
 
-        plot_obj = self._initalise_plotting_object(check=True)
-        plot_obj.bar(pert_val="pert", engines=engine)
+        plot_obj = self._initialise_plotting_object(check=True, verbose=self._is_verbose)
+        plot_obj.bar(pert_val="pert", names=engine, **kwargs)
 
-    def plot_bar_lig(self, engine=None):
+    def plot_bar_lig(self, engine=None, **kwargs):
         """plot the bar plot of the values per ligand.
 
         Args:
             engine (str, optional): engine to plot for. Defaults to None, will use all.
         """
+        engine = validate.is_list(engine, make_list=True)
+        engine.append("experimental")
 
-        plot_obj = self._initalise_plotting_object(check=True)
-        plot_obj.bar(pert_val="val", engines=engine)
+        plot_obj = self._initialise_plotting_object(check=True, verbose=self._is_verbose)
+        plot_obj.bar(pert_val="val", names=engine, **kwargs)
 
 
     def plot_scatter_pert(self, engine=None, use_cinnabar=False):
@@ -629,17 +768,17 @@ class analysis_network():
                                 title=f"DDGs for {eng}, {self.net_ext}") #with {self.file_ext}
 
         else:
-            plot_obj = self._initalise_plotting_object(check=True)
+            plot_obj = self._initialise_plotting_object(check=True, verbose=self._is_verbose)
             plot_obj.scatter(pert_val="pert", engines=engine)
 
-    def plot_scatter_lig(self, engine=None, use_cinnabar=False):
+    def plot_scatter_lig(self, engine=None, use_cinnabar=False, **kwargs):
         """plot the scatter plot of the values per ligand.
 
         Args:
             engine (str, optional): engine to plot for. Defaults to None, will use all.
             use_cinnabar (bool, optional): whether to plot via cinnabar. Defaults to False.
         """  
-
+        
         if use_cinnabar:
             if engine:
                 try:
@@ -656,11 +795,12 @@ class analysis_network():
             for eng in engines:
                 plotting.plot_DGs(self._cinnabar_networks[eng].graph,
                                 filename=f"{self.graph_dir}/DGs_{eng}_{self.file_ext}_{self.net_ext}.png",
-                                title=f"DGs for {eng}, {self.net_ext}") #with {self.file_ext}
+                                title=f"DGs for {eng}, {self.net_ext}",
+                                **{"figsize":5})
 
         else:
-            plot_obj = self._initalise_plotting_object(check=True)
-            plot_obj.scatter(pert_val="val", engines=engine)
+            plot_obj = self._initialise_plotting_object(check=True, verbose=self._is_verbose)
+            plot_obj.scatter(pert_val="val", engines=engine, **kwargs)
 
     def plot_eng_vs_eng(self, engine_a=None, engine_b=None, pert_val="pert"):
         """plot scatter plot of engine_a vs engine_b
@@ -671,7 +811,7 @@ class analysis_network():
             pert_val (str, optional): whether perturbations 'pert' or values per ligand 'val'. Defaults to "pert".
         """
         
-        plot_obj = self._initalise_plotting_object(check=True)
+        plot_obj = self._initialise_plotting_object(check=True, verbose=self._is_verbose)
 
         if pert_val == "pert":
             binding = "$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
@@ -707,7 +847,7 @@ class analysis_network():
         else:
             raise NameError(f"{name} does not exist as an added other results.")
 
-        plot_obj = self._initalise_plotting_object(check=True)
+        plot_obj = self._initialise_plotting_object(check=True, verbose=self._is_verbose)
 
         if outliers:
             plot_obj.outlier(pert_val=pert_val, engines=engine, outliers=outliers, name=name)  
@@ -725,7 +865,7 @@ class analysis_network():
 
         """
 
-        plot_obj = self._initalise_plotting_object(check=True)
+        plot_obj = self._initialise_plotting_object(check=True, verbose=self._is_verbose)
         plot_obj.outlier(pert_val=pert_val, engines=engine, outliers=outliers)  
 
     
@@ -736,7 +876,7 @@ class analysis_network():
             engine (str, optional): engine to plot histogram for. Defaults to None.
         """
         
-        plot_obj = self._initalise_plotting_object(check=True)
+        plot_obj = self._initialise_plotting_object(check=True, verbose=self._is_verbose)
 
         # get list of the errors from the repeat files
         error_dict = {}
@@ -755,7 +895,7 @@ class analysis_network():
             pert_val (str, optional): whether perturbations 'pert' or values per ligand 'val'. Defaults to "val".
         """
 
-        plot_obj = self._initalise_plotting_object(check=True)
+        plot_obj = self._initialise_plotting_object(check=True, verbose=self._is_verbose)
         plot_obj.histogram(engines=engine, pert_val=pert_val)
         
     # TODO histogram plot for the error in the free and the error in the bound legs
@@ -775,7 +915,7 @@ class analysis_network():
         if free_bound.lower() not in ["free","bound"]:
             raise ValueError("free_bound must be either 'free' or 'bound' to denote one of the legs of the run.")
         
-        plot_obj = self._initalise_plotting_object(check=True)
+        plot_obj = self._initialise_plotting_object(check=True, verbose=self._is_verbose)
 
         error_dict = {}
         
@@ -790,7 +930,7 @@ class analysis_network():
 
         plot_obj.histogram(engines=engine, error_dict=error_dict, file_ext=free_bound)
 
-    def _initalise_stats_object(self, check=False):
+    def _initialise_stats_object(self, check=False):
         """intialise the object for statistical analysis.
 
         Args:
@@ -822,7 +962,7 @@ class analysis_network():
             tuple: of dataframe of value and error (mae_pert_df, mae_pert_df_err)
         """
 
-        stats_obj = self._initalise_stats_object(check=True)
+        stats_obj = self._initialise_stats_object(check=True)
 
         pv = validate.pert_val(pert_val)
 
@@ -852,7 +992,7 @@ class analysis_network():
     def compute_mue(self, pert_val=None, engines=None):
         #TODO fix
         
-        stats_obj = self._initalise_stats_object(check=True)
+        stats_obj = self._initialise_stats_object(check=True)
         pert_val = validate.pert_val(pert_val)
 
         if not engines:

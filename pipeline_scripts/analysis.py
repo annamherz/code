@@ -15,13 +15,10 @@ from pipeline.utils import write_analysis_file
 from pipeline.prep import *
 
 
-def analysis(pert, engine, ana_file, main_dir):
+def analysis(pert, engine, ana_file, main_dir, prot_file=None):
 
     # options
     analysis_options = analysis_protocol(ana_file, auto_validate=True)
-    analysis_options.rewrite_protocol()
-
-    # TODO final results folder has a method for the analysis option used?
 
     # find correct path, use extracted if it exists
     if _os.path.exists(f"{main_dir}/outputs_extracted/{engine}/{pert}"):
@@ -34,11 +31,18 @@ def analysis(pert, engine, ana_file, main_dir):
         path_to_dir = f"{main_dir}/outputs/{engine}/{pert}"
         final_results_folder = f"{main_dir}/outputs/results"
 
+    if prot_file:
+        protocol = pipeline_protocol(prot_file) # instantiate the protocol as an object
+        protocol.validate() # validate all the input
+        if protocol.name():
+            path_to_dir += f"_{protocol.name()}"
+            analysis_options.name(protocol.name())
+
     if not _os.path.exists(path_to_dir):
         raise OSError(f"{path_to_dir} does not exist.")
 
     print(f'analysing results for {path_to_dir}')
-    print(f"using {analysis_options} for analysis")
+    print(f"using {analysis_options.print_protocol()} for analysis")
 
     # using the pipeline module for analysis
     analysed_pert = analyse(path_to_dir, analysis_protocol=analysis_options)
@@ -71,7 +75,12 @@ def check_arguments(args):
     else:
         analysis_file = str(input("what is the path to the analysis protocol file?: ").strip())
 
-    return perturbation, engine, analysis_file, main_folder
+    if args.protocol_file:
+        prot_file = args.protocol_file
+    else:
+        prot_file = None
+
+    return perturbation, engine, analysis_file, main_folder, prot_file
 
 def main():
 
@@ -81,15 +90,16 @@ def main():
     parser.add_argument("-eng", "--engine", type=str, default=None, help="engine of the run")
     parser.add_argument("-mf", "--main_folder", type=str, default=None, help="main folder path for all the runs")
     parser.add_argument("-a", "--analysis_file", type=str, default=None, help="path to analysis protocol file")
+    parser.add_argument("-p", "--protocol_file", type=str, default=None, help="path to protocol file")
     args = parser.parse_args()
 
     # check arguments
     print("checking the provided command line arguments...")
-    pert, engine, ana_file, main_dir = check_arguments(args)
+    pert, engine, ana_file, main_dir, prot_file = check_arguments(args)
 
     print(f"analysis for {pert, engine, main_dir}")
 
-    analysis(pert, engine, ana_file, main_dir)
+    analysis(pert, engine, ana_file, main_dir, prot_file)
 
 if __name__ == "__main__":
     main()

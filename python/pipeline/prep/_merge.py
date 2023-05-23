@@ -21,45 +21,72 @@ class merge():
         """
 
         # default ring breaking is not allowed
+        complete_rings = True
         allow_ring_breaking = False
+        allow_ring_size_change = False
         prune_perturbed_constraints=None
         prune_crossing_constraints=None
         align_to = "lig0" 
+        scoring_function = "rmsd_align"
+        prematch = {}
 
         for key,value in kwargs.items():
-            if key == "allow ring breaking":
+            key = key.replace("_","").replace(" ","").upper()
+            if key == "COMPLETERINGSONLY":
+                complete_rings = validate.boolean(value)
+            if key == "ALLOWRINGBREAKING":
                 allow_ring_breaking = validate.boolean(value)
-            if key == "prune perturbed constraints":
+            if key == "ALLOWRINGSIZECHANGE":
+                allow_ring_size_change = validate.boolean(value)
+            if key == "PRUNEPERTURBEDCONSTRAINTS":
                 prune_perturbed_constraints = validate.boolean(value)
-            if key == "prune crossing constraints":
+            if key == "PRUNECROSSINGRESTRAINTS":
                 prune_crossing_constraints = validate.boolean(value)           
-            if key == "align to":
+            if key == "ALIGNTO":
                 align_to = validate.string(value)  
+            if key == "SCORINGFUNCTION":
+                scoring_function = validate.string(value) # rmsd, rmsd_align, rmsd_flex_align
+            if key == "PREMATCH":
+                prematch = validate.dictionary(value)
 
         # Align ligand2 on ligand1
         # get the mapping of ligand0 to atoms in ligand1
         mapping = BSS.Align.matchAtoms(
                                     ligand_0, ligand_1,
-                                    complete_rings_only=True,
+                                    scoring_function=scoring_function,
+                                    complete_rings_only=complete_rings,
+                                    prematch=prematch,
                                     prune_perturbed_constraints=prune_perturbed_constraints,
                                     prune_crossing_constraints=prune_crossing_constraints
                                     )           
         inv_mapping = {v: k for k, v in mapping.items()}
 
+        # function for aligning depends on scoring function
+        func_dict = {"rmsd_align": BSS.Align.rmsdAlign,
+                     "rmsd_flex_align": BSS.Align.flexAlign}
+        
+        align_func = func_dict[scoring_function]
+
         if align_to == "lig0":
             # need inverse mapping to align
             # aligns atoms in first argument to atoms in second argument
-            ligand_1_a = BSS.Align.rmsdAlign(ligand_1, ligand_0, inv_mapping)
+            ligand_1_a = align_func(ligand_1, ligand_0, inv_mapping)
             # Generate merged molecule.
             merged_ligands = BSS.Align.merge(
-                ligand_0, ligand_1_a, mapping, allow_ring_breaking=allow_ring_breaking)
+                ligand_0, ligand_1_a, mapping,
+                allow_ring_breaking=allow_ring_breaking,
+                allow_ring_size_change=allow_ring_size_change
+            )
             
         elif align_to == "lig1":
             # align ligand 0 to ligand 1
-            ligand_0_a = BSS.Align.rmsdAlign(ligand_0, ligand_1, mapping)
+            ligand_0_a = align_func(ligand_0, ligand_1, mapping)
             # Generate merged molecule.
             merged_ligands = BSS.Align.merge(
-                ligand_0_a, ligand_1, mapping, allow_ring_breaking=allow_ring_breaking)
+                ligand_0_a, ligand_1, mapping, 
+                allow_ring_breaking=allow_ring_breaking,
+                allow_ring_size_change=allow_ring_size_change
+            )
             
         else:
             raise ValueError("must align to 'lig0' or 'lig1'")

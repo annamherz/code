@@ -70,6 +70,8 @@ fi
 
 if [ $2 = "GROMACS" ]; then
 
+min_counter=0
+
 while [ $min_counter != 5 ]; do
 
 if [ ! -s heat/lambda_$lam/gromacs.xvg ]; then
@@ -86,7 +88,7 @@ gmx grompp -f heat/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p hea
 gmx mdrun -ntmpi 1 -deffnm heat/lambda_$lam/gromacs ;
 
 else
-echo "heat managed to proceed okay"
+echo "heat managed to proceed okay with $min_counter minimisations."
 min_counter=5
 fi
 

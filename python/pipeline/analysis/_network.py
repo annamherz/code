@@ -8,6 +8,7 @@ import networkx as nx
 from scipy.stats import sem as sem
 from scipy.stats import bootstrap
 from sklearn.metrics import mean_absolute_error as mae
+from rdkit import Chem
 
 import matplotlib.pyplot as plt
 import csv
@@ -15,6 +16,21 @@ import numpy as np
 import pandas as pd 
 
 from ..utils import *
+
+def get_ligands_from_perts(perturbations):
+
+    perturbations = validate.is_list(perturbations)
+    ligands = []
+
+    for pert in perturbations:
+        lig_0 = pert.split("~")[0]
+        lig_1 = pert.split("~")[1]        
+        if lig_0 not in ligands:
+            ligands.append(lig_0)
+        if lig_1 not in ligands:
+            ligands.append(lig_1)
+    
+    return ligands
 
 def get_info_network(net_file=None, results_files=None, extra_options=None):
     """get information about the network from the network file
@@ -70,8 +86,6 @@ def get_info_network(net_file=None, results_files=None, extra_options=None):
     
     # We also want to create a list of the perturbations in our network.
     perturbations = []
-    # create a list of ligands
-    ligands = []
 
     if use_net_file:
         # use the network file to find the ligands and perturbations
@@ -84,12 +98,6 @@ def get_info_network(net_file=None, results_files=None, extra_options=None):
                         pert = f"{lig_0}~{lig_1}"
                         if pert not in perturbations:
                             perturbations.append(pert)
-                        if lig_0 not in ligands:
-                            ligands.append(lig_0)
-                        if lig_1 not in ligands:
-                            ligands.append(lig_1)
-                        else:
-                            pass
     
     else:
         for res_file in results_files:
@@ -105,12 +113,8 @@ def get_info_network(net_file=None, results_files=None, extra_options=None):
                             pert = f"{lig_0}~{lig_1}"
                             if pert not in perturbations:
                                 perturbations.append(pert)
-                            if lig_0 not in ligands:
-                                ligands.append(lig_0)
-                            if lig_1 not in ligands:
-                                ligands.append(lig_1)
-                        else:
-                            pass     
+
+    ligands = get_ligands_from_perts(perturbations)    
 
     return (perturbations, ligands)
 
@@ -129,23 +133,19 @@ def get_info_network_from_dict(res_dict):
     res_dict = validate.dictionary(res_dict)
 
     perturbations = []
-    ligands = []
 
     for key in res_dict.keys():
-        lig_0 = key.split("~")[0]
-        lig_1 = key.split("~")[1]
         if key not in perturbations:
             perturbations.append(key)
-        if lig_0 not in ligands:
-            ligands.append(lig_0)
-        if lig_1 not in ligands:
-            ligands.append(lig_1)
+    
+    ligands = get_ligands_from_perts(perturbations)
 
     return (perturbations, ligands)
 
+
 class net_graph():
     
-    def __init__(self, ligands, perturbations, file_dir=None):
+    def __init__(self, ligands, perturbations, file_dir=None, ligands_folder=None):
         """_summary_
 
         Args:
@@ -162,6 +162,11 @@ class net_graph():
             self._save_image = True
         else:
             self._save_image = False
+
+        if ligands_folder:
+            self.ligands_folder = validate.folder_path(ligands_folder)
+        else:
+            self.ligands_folder = None
 
         net_graph._gen_graph(self)
 
@@ -211,6 +216,43 @@ class net_graph():
 
         plt.show()
 
+    def draw_ligand(self, ligand):
+
+        if not self.ligands_folder:
+            raise ValueError("please provide a ligands dir w the files inside.")
+        
+        m = Chem.SDMolSupplier(f"{self.ligands_folder}/{ligand}.sdf")[0]
+        smi = Chem.MolToSmiles(m)
+        m2 = Chem.MolFromSmiles(smi)
+        img = Chem.Draw.MolToImage(m2)
+
+        return img
+
+    def draw_perturbation(self, pert):
+
+        lig_0 = pert.split("~")[0]
+        lig_1 = pert.split("~")[1]   
+
+        img = self.draw_ligand(lig_0)
+        img2 = self.draw_ligand(lig_1)
+
+        # plt.rcParams['figure.figsize'] = 11 ,8
+        fig, ax = plt.subplots(1,2)
+
+        ax[0].imshow(img)
+        ax[0].title.set_text(f"{lig_0}")
+        ax[0].axis("off")
+        ax[1].imshow(img2)
+        ax[1].title.set_text(f"{lig_1}")
+        ax[1].axis("off")
+
+        return fig
+
+    def disconnected_ligands(self):
+
+        ligs = [lig for lig in nx.isolates(self.graph)]
+
+        return ligs
 
     def cycle_closures(self):
         """get cycle closures in the network

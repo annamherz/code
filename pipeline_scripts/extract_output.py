@@ -26,6 +26,9 @@ def extract_output(folder, prot_file):
         except:
             print(f"could not add the header to simfile in {folder}")
 
+    # TODO fix so also in sh script correctly
+    if protocol.name():
+        folder += protocol.name()
     # extract to output folder
     # initialise
     extraction = extract(folder)

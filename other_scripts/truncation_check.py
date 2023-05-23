@@ -44,39 +44,60 @@ def truncation_check(path_to_dir, estimator):
 
     return results_dict, bound_dict, free_dict
 
-def plot_truncated(pert_dict, file_path=None, plot_error = False):
+def plot_truncated(pert_dict, file_path=None, plot_error=False, plot_difference=False, plot_diff="end"):
 
     df = pd.DataFrame.from_dict(pert_dict)
     perts = list(df.columns)
     df = df.reset_index().dropna()
+    if file_path:
+        df.to_csv(f"{file_path.replace('.png','.csv')}")
 
     include_key = False
 
+    plt.rc('font', size=12)
+    fig, ax = plt.subplots(figsize=(10,10))
+
     for pert in perts:
+        col = next(ax._get_lines.prop_cycler)['color']
         x_vals = []
         y_vals = []
         lines = []
         for a,x in zip(df[pert], df['index']):
             if plot_error:
-                y_vals.append(a[1])
+                if plot_difference:
+                    if plot_diff == "end":
+                        y_vals.append(abs(df.iloc[-1][pert][1] - a[1]))
+                    elif plot_diff == "average":
+                        y_vals.append(df.iloc[-1][pert][1] - a[1])
+                else:
+                    y_vals.append(a[1])
             else:
-                y_vals.append(a[0])
+                if plot_difference:
+                     y_vals.append(df.iloc[-1][pert][0] - a[0])
+                else:
+                    y_vals.append(a[0])
             x_vals.append(x)
-        scatterplot = [plt.scatter(x_vals, y_vals)]   
+        scatterplot = [plt.scatter(x_vals, y_vals, c=col)]   
         lines += plt.plot(0,0,label=pert)
-        plt.errorbar(x_vals, y_vals, ecolor='none')
+        plt.errorbar(x_vals, y_vals, ecolor='none', color=col)
 
         if include_key:
             labels = [l.get_label() for l in lines]
             plt.legend(lines, labels, loc='upper left')
         
-        plt.xlabel('Truncated percentage')
+        plt.xlabel('Percentage of run used (from start)')
         plt.title(f"{file_path.split('/')[-1].split('.')[0].replace('_',' ')}")
 
         if plot_error:
-            plt.ylabel("Computed Error / kcal$\cdot$mol$^{-1}$")
+            if plot_difference:
+                plt.ylabel("Computed Error difference to final / kcal$\cdot$mol$^{-1}$")
+            else:
+                plt.ylabel("Computed Error / kcal$\cdot$mol$^{-1}$")
         else:
-            plt.ylabel("Computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+            if plot_difference:
+                plt.ylabel("difference to final result for computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+            else:
+                plt.ylabel("Computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
 
     if file_path:
         plt.savefig(file_path)
@@ -155,6 +176,14 @@ def main():
         plot_truncated(pert_bound_dict, f"{final_results_folder}/plt_truncated_bound_error_{engine}.png", plot_error=True)
         plot_truncated(pert_free_dict, f"{final_results_folder}/plt_truncated_free_{engine}.png")
         plot_truncated(pert_free_dict, f"{final_results_folder}/plt_truncated_free_error_{engine}.png", plot_error=True)
+        # difference to final result
+        plot_truncated(pert_results_dict, f"{final_results_folder}/plt_truncated_{engine}_difference.png", plot_difference=True)
+        plot_truncated(pert_results_dict, f"{final_results_folder}/plt_truncated_error_{engine}_difference.png", plot_error=True, plot_difference=True)
+        plot_truncated(pert_bound_dict, f"{final_results_folder}/plt_truncated_bound_{engine}_difference.png", plot_difference=True)
+        plot_truncated(pert_bound_dict, f"{final_results_folder}/plt_truncated_bound_error_{engine}_difference.png", plot_error=True, plot_difference=True)
+        plot_truncated(pert_free_dict, f"{final_results_folder}/plt_truncated_free_{engine}_difference.png", plot_difference=True)
+        plot_truncated(pert_free_dict, f"{final_results_folder}/plt_truncated_free_error_{engine}_difference.png", plot_error=True, plot_difference=True)
+        # difference to average
         print(f"saved images in {final_results_folder}.")
 
 if __name__ == "__main__":

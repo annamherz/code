@@ -115,7 +115,8 @@ class analyse():
                     "statistical inefficiency": False,
                     "truncate percentage": 0,
                     "truncate keep":"end",
-                    "mbar method": None # robust or default
+                    "mbar method": None, # robust or default
+                    "name": None
                     }
         
         return options_dict
@@ -275,8 +276,12 @@ class analyse():
 
         if "truncate keep" in options_dict:
             truncate_keep = validate.truncate_keep(options_dict["truncate keep"])
-            options_dict["truncate percentage"] = truncate_percentage
-        
+            options_dict["truncate percentage"] = truncate_keep
+
+        if "name" in options_dict:
+            name = validate.string(options_dict["name"])
+            options_dict["name"] = name
+
         return options_dict
 
 
@@ -305,6 +310,7 @@ class analyse():
         self._statistical_inefficiency = options_dict["statistical inefficiency"]
         self._truncate_percentage = options_dict["truncate percentage"]
         self._truncate_keep = options_dict["truncate keep"]
+        self.name = options_dict["name"]
 
         # set the file extensions
         self._file_ext()

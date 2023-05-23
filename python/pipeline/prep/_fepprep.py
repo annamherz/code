@@ -63,7 +63,7 @@ class fepprep():
             self._bound_system_1 = validate.system(system).copy()
 
 
-    def merge_systems(self, align_to="lig0"):
+    def merge_systems(self, align_to="lig0", **kwargs):
         """merge the systems based on whether aligning to the lambda 0.0 coordinates or the lmabda 1.0 coordinates.
 
         Args:
@@ -72,9 +72,16 @@ class fepprep():
         Returns:
             BioSimSpace._SireWrappers.System: the free system and the bound system
         """
-            
-        free_system = merge.merge_system(self._free_system_0, self._free_system_1, **{"align to": align_to})
-        bound_system = merge.merge_system(self._bound_system_0, self._bound_system_1, **{"align to": align_to})
+
+        kwarg_dict = {"align to": align_to}
+        
+        for key,value in kwargs.items():
+            kwarg_dict[key] = value
+
+        print(kwarg_dict)
+
+        free_system = merge.merge_system(self._free_system_0, self._free_system_1, **kwarg_dict)
+        bound_system = merge.merge_system(self._bound_system_0, self._bound_system_1, **kwarg_dict)
 
         self._merge_free_system = free_system
         self._merge_bound_system = bound_system
@@ -88,14 +95,10 @@ class fepprep():
         protocol = self._pipeline_protocol
 
         if protocol.engine() == 'AMBER' or protocol.engine() == 'GROMACS':
-            
-            if protocol.engine() == "GROMACS":
-                min_steps = validate.integer(protocol.min_steps()/3)
-            elif protocol.engine() == "AMBER":
-                min_steps = protocol.min_steps()
+
             min_protocol = BSS.Protocol.FreeEnergyMinimisation(
                                                             num_lam=protocol.num_lambda(),
-                                                            steps=min_steps,
+                                                            steps=protocol.min_steps(),
                                                             )
             heat_protocol = BSS.Protocol.FreeEnergyEquilibration(timestep=protocol.timestep()*protocol.timestep_unit(),
                                                                 num_lam=protocol.num_lambda(),
@@ -205,41 +208,32 @@ class fepprep():
                         if protocol.engine() == "AMBER":
                             system.repartitionHydrogenMass(factor=3)
                         elif protocol.engine() == "GROMACS":
-                            system.repartitionHydrogenMass(factor=4)
+                            system.repartitionHydrogenMass(factor=3)
                     else:
                         print(f"using {protocol.hmr_factor()} as a factor...")
                         system.repartitionHydrogenMass(factor=protocol.hmr_factor())
                 elif protocol.hmr() == False:
                     pass
 
+                extra_options = {}
+
+                for key,value in protocol.config_options().items():
+                    extra_options[key] = value
+
                 BSS.FreeEnergy.Relative(
                     system,
                     min_protocol,
                     engine=f"{protocol.engine()}",
-                    work_dir=f"{work_dir}/{leg}_0/min"
+                    work_dir=f"{work_dir}/{leg}_0/min",
+                    extra_options=extra_options
                 )
-
-                if protocol.engine() == "GROMACS":
-                    BSS.FreeEnergy.Relative(
-                        system,
-                        min_protocol,
-                        engine=f"{protocol.engine()}",
-                        work_dir=f"{work_dir}/{leg}_0/min1"
-                    )                    
-
-                    BSS.FreeEnergy.Relative(
-                        system,
-                        min_protocol,
-                        engine=f"{protocol.engine()}",
-                        work_dir=f"{work_dir}/{leg}_0/min2"
-                    )  
 
                 BSS.FreeEnergy.Relative(
                     system,
                     heat_protocol,
                     engine=f"{protocol.engine()}",
                     work_dir=f"{work_dir}/{leg}_0/heat",
-                    extra_options={}
+                    extra_options=extra_options
                 )
 
                 BSS.FreeEnergy.Relative(
@@ -247,7 +241,7 @@ class fepprep():
                     eq_protocol,
                     engine=f"{protocol.engine()}",
                     work_dir=f"{work_dir}/{leg}_0/eq",
-                    extra_options={}
+                    extra_options=extra_options
                 )
 
                 BSS.FreeEnergy.Relative(
@@ -255,18 +249,25 @@ class fepprep():
                     freenrg_protocol,
                     engine=f"{protocol.engine()}",
                     work_dir=f"{work_dir}/{leg}_0",
-                    extra_options={}
+                    extra_options=extra_options
                 )
 
         if protocol.engine() == "SOMD":
             for leg, system in zip(["bound", "free"], [system_bound, system_free]):
 
+                eq_extra_options = {'minimise': True, 'minimise maximum iterations': protocol.min_steps(), 'equilibrate': False}
+                prod_extra_options = {'minimise': False, 'equilibrate': False}
+
+                for key,value in protocol.config_options().items():
+                    eq_extra_options[key] = value
+                    prod_extra_options[key] = value
+
                 BSS.FreeEnergy.Relative(
                     system,
                     eq_protocol,
                     engine=f"{protocol.engine()}",
                     work_dir=f"{work_dir}/{leg}_0/eq",
-                    extra_options={'minimise': True, 'minimise maximum iterations': protocol.min_steps(), 'equilibrate': False}
+                    extra_options=eq_extra_options
                 )
 
                 BSS.FreeEnergy.Relative(
@@ -274,11 +275,11 @@ class fepprep():
                     freenrg_protocol,
                     engine=f"{protocol.engine()}",
                     work_dir=f"{work_dir}/{leg}_0",
-                    extra_options={'minimise': False, 'equilibrate': False}
+                    extra_options=prod_extra_options
                 )
 
 
-    def generate_folders(self, work_dir):
+    def generate_folders(self, work_dir, **kwargs):
         """generate the folders for the RBFE run.
 
         Args:
@@ -287,10 +288,15 @@ class fepprep():
 
         work_dir = validate.folder_path(work_dir, create=True)
 
+        kwarg_dict = self._pipeline_protocol.kwargs()
+
+        for key,value in kwargs.items():
+            kwarg_dict[key] = value
+
         if self._pipeline_protocol.fepprep() == "both":
             ligs = ["lig0", "lig1"]
             for lig in ligs:
-                free_system, bound_system = self.merge_systems(align_to=lig)
+                free_system, bound_system = self.merge_systems(align_to=lig, **kwarg_dict)
                 self._generate_folders(free_system, bound_system, f"{work_dir}/{lig}")
 
             # get half of the lambdas
@@ -317,7 +323,7 @@ class fepprep():
         else:
             if not self._merge_free_system or not self._merge_bound_system:
                 print("no merged systems, merging....")
-                self.merge_systems()
+                self.merge_systems(**kwarg_dict)
             self._generate_folders(self._merge_free_system, self._merge_bound_system, work_dir)
 
         # default folder is with no integer.
