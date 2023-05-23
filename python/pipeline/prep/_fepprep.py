@@ -1,7 +1,7 @@
 import BioSimSpace as BSS
 from distutils.dir_util import copy_tree, remove_tree
 
-from ..utils._validate import *
+from ..utils import *
 from ._merge import *
 from ._ligprep import *
 from ._equilibrate import *
@@ -178,7 +178,7 @@ class fepprep():
         
         return self._merge_free_system, self._merge_bound_system 
 
-    def _generate_folders(self, system_free, system_bound, work_dir):
+    def _generate_folders(self, system_free, system_bound, work_dir, rep=0):
         """generating the folders for the free and the bound system
 
         Args:
@@ -224,7 +224,7 @@ class fepprep():
                     system,
                     min_protocol,
                     engine=f"{protocol.engine()}",
-                    work_dir=f"{work_dir}/{leg}_0/min",
+                    work_dir=f"{work_dir}/{leg}_{rep}/min",
                     extra_options=extra_options
                 )
 
@@ -232,7 +232,7 @@ class fepprep():
                     system,
                     heat_protocol,
                     engine=f"{protocol.engine()}",
-                    work_dir=f"{work_dir}/{leg}_0/heat",
+                    work_dir=f"{work_dir}/{leg}_{rep}/heat",
                     extra_options=extra_options
                 )
 
@@ -240,7 +240,7 @@ class fepprep():
                     system,
                     eq_protocol,
                     engine=f"{protocol.engine()}",
-                    work_dir=f"{work_dir}/{leg}_0/eq",
+                    work_dir=f"{work_dir}/{leg}_{rep}/eq",
                     extra_options=extra_options
                 )
 
@@ -248,7 +248,7 @@ class fepprep():
                     system,
                     freenrg_protocol,
                     engine=f"{protocol.engine()}",
-                    work_dir=f"{work_dir}/{leg}_0",
+                    work_dir=f"{work_dir}/{leg}_{rep}",
                     extra_options=extra_options
                 )
 
@@ -266,7 +266,7 @@ class fepprep():
                     system,
                     eq_protocol,
                     engine=f"{protocol.engine()}",
-                    work_dir=f"{work_dir}/{leg}_0/eq",
+                    work_dir=f"{work_dir}/{leg}_{rep}/eq",
                     extra_options=eq_extra_options
                 )
 
@@ -274,7 +274,7 @@ class fepprep():
                     system,
                     freenrg_protocol,
                     engine=f"{protocol.engine()}",
-                    work_dir=f"{work_dir}/{leg}_0",
+                    work_dir=f"{work_dir}/{leg}_{rep}",
                     extra_options=prod_extra_options
                 )
 
@@ -286,7 +286,20 @@ class fepprep():
             work_dir (str): the folder to generate the folders in.
         """
 
-        work_dir = validate.folder_path(work_dir, create=True)
+        if self._pipeline_protocol.rerun():
+            work_dir = validate.folder_path(work_dir, create=False)
+            b_folders, f_folders = get_repeat_folders(work_dir)
+            if len(b_folders) != len(f_folders):
+                raise ValueError("work dir must have same number of free and bound folders for reruns.")
+            # get which repeat on
+            rep = len(b_folders)
+            start_rep = rep + 1
+            if (self._pipeline_protocol.repeats() - rep) <= 0:
+                raise ValueError("all repeats folders already exist.")
+        else:
+            work_dir = validate.folder_path(work_dir, create=True)
+            rep = 0
+            start_rep = 1
 
         kwarg_dict = self._pipeline_protocol.kwargs()
 
@@ -297,7 +310,7 @@ class fepprep():
             ligs = ["lig0", "lig1"]
             for lig in ligs:
                 free_system, bound_system = self.merge_systems(align_to=lig, **kwarg_dict)
-                self._generate_folders(free_system, bound_system, f"{work_dir}/{lig}")
+                self._generate_folders(free_system, bound_system, f"{work_dir}/{lig}", rep=rep)
 
             # get half of the lambdas
             lambdas_list = self._freenrg_protocol.getLambdaValues()
@@ -309,10 +322,10 @@ class fepprep():
             print("copying generated folders for the endstates into a combined folder, so first half is lig0 and second half is lig1")
             for lig, lam_list in zip(ligs, [first_half, sec_half]):
                 for leg in ["bound", "free"]:
-                    for part in ["min/","min1/","min2/","heat/", "eq/", ""]:
+                    for part in ["min/","heat/", "eq/", ""]:
                         try: # so will not copy if folders do not exist
                             for lam in lam_list:
-                                copy_tree(f"{work_dir}/{lig}/{leg}_0/{part}lambda_{lam:.4f}", f"{work_dir}/{leg}_0/{part}lambda_{lam:.4f}")
+                                copy_tree(f"{work_dir}/{lig}/{leg}_{rep}/{part}lambda_{lam:.4f}", f"{work_dir}/{leg}_{rep}/{part}lambda_{lam:.4f}")
                         except:
                             pass
                 
@@ -324,15 +337,15 @@ class fepprep():
             if not self._merge_free_system or not self._merge_bound_system:
                 print("no merged systems, merging....")
                 self.merge_systems(**kwarg_dict)
-            self._generate_folders(self._merge_free_system, self._merge_bound_system, work_dir)
+            self._generate_folders(self._merge_free_system, self._merge_bound_system, work_dir, rep=rep)
 
         # default folder is with no integer.
         # for the sake of analysis , doesnt matter as finds folders w names of leg
-        more_repeats = list(range(1, self._pipeline_protocol.repeats()))
+        more_repeats = list(range(start_rep, self._pipeline_protocol.repeats()))
 
         print(f"there are {self._pipeline_protocol.repeats()} folder(s) being made for each leg...")
         for r in more_repeats:
             for leg in ["bound", "free"]:
-                copy_tree(f"{work_dir}/{leg}_0", f"{work_dir}/{leg}_{r}")
+                copy_tree(f"{work_dir}/{leg}_{rep}", f"{work_dir}/{leg}_{r}")
 
         print("done.")

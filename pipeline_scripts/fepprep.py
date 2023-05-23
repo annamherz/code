@@ -56,11 +56,14 @@ def fep_prep(pert, prot_file, num_lambda_query, engine_query, main_dir, prep_dir
         fepprep_obj.add_system(system_1, free_bound=leg, start_end="start")
         fepprep_obj.add_system(system_2, free_bound=leg, start_end="end")
 
-    # remove any existing files in the workdir
-    try:    
-        remove_tree(workdir)
-    except:
+    # remove any existing files in the workdir if not rerun.
+    if protocol.rerun():
         pass
+    else:
+        try:    
+            remove_tree(workdir)
+        except:
+            pass
     # generate folder based on fepprep protocol (both or start)
     fepprep_obj.generate_folders(workdir)
 

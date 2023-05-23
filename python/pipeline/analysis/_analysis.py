@@ -8,7 +8,6 @@ import numpy as _np
 import math as _math
 from scipy.stats import sem
 import pickle
-import csv
 
 from ..utils import *
 from ..prep import analysis_protocol
@@ -316,38 +315,11 @@ class analyse():
         self._file_ext()
         self._pickle_ext()
 
-
     def _get_repeat_folders(self):
         """how many of each the free and bound repeat folders there are.
-
-        Raises:
-            ValueError: can't find bound folders
-            ValueError: can't find free folders
         """
 
-        self._work_dir = self._work_dir
-        # Read how many repeats are in the direct
-        # ory.
-        folders = (next(_os.walk(self._work_dir))[1])
-        self._b_folders, self._f_folders = [], []
-        for f in folders:
-            if 'bound' in f:
-                self._b_folders.append(f'{f}')
-            elif 'free' in f:
-                self._f_folders.append(f'{f}')
-            else:
-                continue
-
-        # sort the folders
-        self._b_folders.sort()
-        self._f_folders.sort()
-
-        if not self._b_folders:
-            raise ValueError(
-                "Couldn't find any folders with 'bound' in the specified directory?")
-        elif not self._f_folders:
-            raise ValueError(
-                "Couldn't find any folders with 'free' in the specified directory?")
+        self._b_folders, self._f_folders = get_repeat_folders(self._work_dir)
 
         no_of_b_repeats = len(self._b_folders)
         no_of_f_repeats = len(self._f_folders)

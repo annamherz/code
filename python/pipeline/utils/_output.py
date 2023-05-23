@@ -7,6 +7,43 @@ import MDAnalysis.transformations as trans
 
 from ._validate import *
 
+
+def get_repeat_folders(work_dir):
+    """how many of each the free and bound repeat folders there are in work dir.
+
+    Args:
+        work_dir (string): path to work dir.
+    Raises:
+        ValueError: can't find bound folders
+        ValueError: can't find free folders
+    """
+
+    work_dir = validate.folder_path(work_dir)
+
+    # Read how many repeats are in the directory.
+    folders = (next(os.walk(work_dir))[1])
+    b_folders, f_folders = [], []
+    for f in folders:
+        if 'bound' in f:
+            b_folders.append(f'{f}')
+        elif 'free' in f:
+            f_folders.append(f'{f}')
+        else:
+            continue
+
+    # sort the folders
+    b_folders.sort()
+    f_folders.sort()
+
+    if not b_folders:
+        raise ValueError(
+            "Couldn't find any folders with 'bound' in the specified directory?")
+    elif not f_folders:
+        raise ValueError(
+            "Couldn't find any folders with 'free' in the specified directory?")
+    
+    return b_folders, f_folders
+
 def add_header_simfile(trans_dir):
     """Adds header to simfiles if failed to generate.
 

@@ -87,7 +87,8 @@ class pipeline_protocol():
                     'engines':"ALL",
                     "fepprep":"start",
                     "config options":None,
-                    "name": None
+                    "name": None,
+                    "rerun": "False"
                     }
         
         return default_dict
@@ -217,6 +218,7 @@ class pipeline_protocol():
             self.config_options(query_dict['config options'])
             self.kwargs(query_dict["kwargs"])
             self.name(query_dict["name"])
+            self.rerun(query_dict["rerun"])
             
             # choose timestep based on whether HMR is applied or not
             # this is important as BSS hmr mixin considers the timestep for the default auto
@@ -859,6 +861,25 @@ class pipeline_protocol():
                 self._name = value
 
         return value
+
+    def rerun(self, value=None):
+        """set whether its reruns/additional runs or return its value.
+
+        Args:
+            value (boolean, optional): if rerun. Defaults to None.
+
+        Returns:
+            boolean: if it is a rerun
+        """
+
+        if value:
+            value = validate.boolean(value)
+            self._query_dict["rerun"] = value
+            self._rerun = value
+        else:
+            value = self._rerun
+
+        return value  
 class analysis_protocol(pipeline_protocol):
 
     def __init__(self, file=None, auto_validate=False, verbose=False):
@@ -907,7 +928,7 @@ class analysis_protocol(pipeline_protocol):
             self.mbar_method(query_dict["mbar method"])
             self.kwargs(query_dict["kwargs"])
             self.name(query_dict["name"])
-            
+
             # is now validated
             self._is_validated = True
 
