@@ -26,17 +26,20 @@ def extract_output(folder, prot_file):
         except:
             print(f"could not add the header to simfile in {folder}")
 
-    # TODO fix so also in sh script correctly
     if protocol.name():
-        folder += protocol.name()
+        folder += f"_{protocol.name()}"
     # extract to output folder
     # initialise
     extraction = extract(folder)
 
     # get the output from the folder to new folder
-    extraction.extract_output()
-    # get trajectory, will get rmsd by default
-    extraction.extract_frames(traj_lambdas=traj_lambdas, overwrite=True)
+    try: # TODO remove try statement once installed
+        extraction.extract_output()
+        # get trajectory, will get rmsd by default
+        extraction.extract_frames(traj_lambdas=traj_lambdas, overwrite=True)
+        extraction.extract_config()
+    except Exception as e:
+        print(e)
 
 def check_arguments(args):
 

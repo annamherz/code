@@ -141,6 +141,57 @@ class extract():
 
         self.extract_dir = extract_dir
 
+    def extract_config(self):
+        """Extracts sample config files from the directory.
+
+        Args:
+            main_dir (str): Main directory, outputs directory.
+        """
+        extract._extract_config(self.trans_dir, self.extract_dir)
+
+    @staticmethod
+    def _extract_config(folder, extract_dir):
+        """extract sample config files used for run at lambda=0.0000.
+
+        Args:
+            folder (str): folder path to the folder to extract data from
+            extract_dir (str): folder path to the extracted dir
+        """
+
+        dir_list = [dirs[0] for dirs in os.walk(folder)]
+
+        for dirs in dir_list:
+            if "lambda_0.0000" in dirs:
+                file_names = []
+                new_dir = validate.folder_path(f"{extract_dir}{dirs.split(f'{folder}')[1]}", create=True)
+                if "min" in dirs:
+                    if "AMBER" in dirs:
+                        file_names = ["amber.cfg","amber.prm7","initial_amber.rst7"]
+                    elif "GROMACS" in dirs:
+                        file_names = ["gromacs.mdp","initial_gromacs.gro", "gromacs.top"]
+                elif "eq" in dirs:
+                    if "AMBER" in dirs:
+                        file_names = ["amber.cfg"]
+                    elif "GROMACS" in dirs:
+                        file_names = ["gromacs.mdp"]
+                    elif "SOMD" in dirs:
+                        file_names = ["somd.cfg","somd.prm7","initial_somd.rst7"]                    
+                else:
+                    if "AMBER" in dirs:
+                        file_names = ["amber.cfg"]
+                    elif "GROMACS" in dirs:
+                        file_names = ["gromacs.mdp"]
+                    elif "SOMD" in dirs:
+                        file_names = ["somd.cfg"]     
+                if not file_names:
+                     print("no engine found in filepath, will try to extract each engine's input config file format...")
+                     file_names = ["amber.cfg","somd.cfg","gromacs.mdp"]
+
+                for file in file_names:
+                    try:
+                        shutil.copyfile(f"{dirs}/{file}", f"{new_dir}/{file}")
+                    except:
+                        print(f"{dirs} does not have a recognised input file, {str(file)}.")
 
     def extract_output(self):
         """Extracts the output files from the directory.
@@ -149,7 +200,6 @@ class extract():
             main_dir (str): Main directory, outputs directory.
         """
         extract._extract_output(self.trans_dir, self.extract_dir)
-
 
     @staticmethod
     def _extract_output(folder, extract_dir):
