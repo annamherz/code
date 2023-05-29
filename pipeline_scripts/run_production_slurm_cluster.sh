@@ -93,7 +93,6 @@ gmx mdrun -ntmpi 1 -deffnm heat/lambda_$lam/gromacs ;
 else
 echo "heat managed to proceed okay with $min_counter minimisations."
 min_counter=5
-
 fi
 
 done
@@ -291,3 +290,4 @@ done
 fi
 
 echo "Done deleting, keeping $keep_traj trajectories."
+
