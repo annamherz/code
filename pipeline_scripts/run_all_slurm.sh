@@ -72,7 +72,7 @@ echo "FEP prep jobid is $jidfep"
 
 # Production runs and analysis for the transformation
 for i in "${!trans_array[@]}"; do
-jidprod=$(sbatch --dependency=afterany:${jidfep} --parsable --array=0-$((${win_array[i]}-1)) $scripts_dir/run_production_slurm.sh ${trans_array[i]} ${eng_array[i]} ${win_array[i]})
+jidprod=$(sbatch --dependency=afterany:${jidfep} --parsable --array=0-$((${win_array[i]}-1)) $scripts_dir/run_production_slurm.sh ${trans_array[i]}$name ${eng_array[i]} ${win_array[i]})
 echo "Production jobid for ${trans_array[i]}, ${eng_array[i]} is $jidprod"
 jidextract=$(sbatch --dependency=afterany:${jidprod} --parsable $scripts_dir/run_extract_output_slurm.sh ${trans_array[i]} ${eng_array[i]})
 echo "Extraction jobid for ${trans_array[i]}, ${eng_array[i]} is $jidextract"
