@@ -3,7 +3,13 @@
 
 # define the number of repeats in an array
 repeats=$(awk '/repeats/{print $NF}' $prot_file)
+
+re_repeats=$(awk '/rerun start repeat/{print $NF}' $prot_file)
+if [ -z "$re_repeats" ]; then
 repeats_array=($(seq 0 1 $(($repeats-1))))
+else
+repeats_array=($(seq $re_repeats 1 $(($repeats-1))))
+fi
 
 # get the name of the run
 nam=$(awk '/name/{print $NF}' $prot_file)

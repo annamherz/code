@@ -1,22 +1,9 @@
 # import libraries
-import BioSimSpace as BSS
-import os
-import glob
-import csv
 import numpy as np
-import math
 import pandas as pd
-import networkx as nx
-import yaml
-import pickle
-import tempfile
-import itertools as it
 import matplotlib.pyplot as plt
-import matplotlib.mlab as mlab
-import csv
 import numpy as np
 import pandas as pd 
-from rdkit import Chem
 
 from scipy.stats import sem as sem
 from scipy.stats import bootstrap, norm

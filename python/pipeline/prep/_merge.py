@@ -196,7 +196,7 @@ class merge():
         prune_perturbed_constraints=None
         prune_crossing_constraints=None
 
-        for key,value in kwargs.items():
+        for key,value in kwargs.items(): #TODO uppercase
             if key == "prune perturbed constraints":
                 prune_perturbed_constraints = validate.boolean(value)
             if key == "prune crossing constraints":
@@ -224,3 +224,39 @@ class merge():
                                     )      
 
         return (ligand_0.getAtoms(), ligand_1.getAtoms(), mapping)
+
+    @staticmethod
+    def no_perturbing_atoms_average(system0, system1, **kwargs):
+        """rough indication of avg no of perturbing atoms per ligand -
+        avg len of atoms in ligands - mapping
+
+        Args:
+            system0 (BioSimSpace._SireWrappers.System): unmerged system at lambda 0.0
+            system1 (BioSimSpace._SireWrappers.System): unmerged system at lambda 1.0
+
+        Returns:
+            _type_: _description_
+        """
+
+        l0a, l1a, mapping = pipeline.prep.merge.atom_mappings(system0, system1, **kwargs)
+        no_atoms = (len(l0a)+len(l1a))/2 - len(mapping)
+
+        return no_atoms        
+
+    @staticmethod
+    def no_perturbing_atoms(system0, system1, **kwargs):
+        """rough indication of no of perturbing atoms in the system -
+        len of atoms in ligands - mapping*2
+
+        Args:
+            system0 (BioSimSpace._SireWrappers.System): unmerged system at lambda 0.0
+            system1 (BioSimSpace._SireWrappers.System): unmerged system at lambda 1.0
+
+        Returns:
+            _type_: _description_
+        """
+
+        l0a, l1a, mapping = pipeline.prep.merge.atom_mappings(system0, system1, **kwargs)
+        no_atoms = (len(l0a)+len(l1a)) - 2*len(mapping)
+
+        return no_atoms     

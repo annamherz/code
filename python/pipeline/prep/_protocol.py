@@ -1,8 +1,3 @@
-import sys
-import os
-import csv
-import BioSimSpace as BSS
-
 from ..utils._validate import *
 from ..utils._files import *
 
@@ -85,8 +80,9 @@ class pipeline_protocol():
                     'equilibrium runtime': '100',
                     'equilibrium runtime unit': 'ps',
                     'engines':"ALL",
-                    "fepprep":"start",
+                    "fepprep":"both",
                     "config options":None,
+                    "config options file":None,
                     "name": None,
                     "rerun": "False"
                     }
@@ -134,6 +130,40 @@ class pipeline_protocol():
 
         return query_dict
 
+    def _read_config_file(self, file=None):
+        """reads the config file into a dictionary
+
+        Raises:
+            ValueError: if the protocol file does not contain "=" or ";"
+
+        Returns:
+            dict: dictionary of the entries in the protocol file,
+            seperated into key:value pairs by the "=" and into sections by ";"
+        """
+
+        legs = ["min","eq","heat","prod","all"]
+        query_dict = {}
+        for leg in legs:
+            query_dict[leg] = {}
+
+        file = validate.file_path(file)
+        leg = None
+        # get value regardless of the order of the protocol.dat
+        with open(f"{file}", "r") as file:
+            for line in file:
+
+                if ";" in line:
+                    leg = f"{line.split(';')[-1].strip().lower()}"
+                    if leg not in legs:
+                        raise ValueError(f"please seperate config file options using ; and {legs}")
+                elif "=" not in line:
+                    raise ValueError("protocol file may only contain lines with '=', eg 'ligand forcefield = GAFF2'")
+                elif not leg:
+                    query_dict["all"][f"{line.split('=')[0].strip().lower()}"] = line.split('=')[-1].strip()
+                else:
+                    query_dict[leg][f"{line.split('=')[0].strip().lower()}"] = line.split('=')[-1].strip()
+
+        return query_dict
 
     def _check_query(self):
         """fills in any gaps of the dict from the protocol file
@@ -215,7 +245,11 @@ class pipeline_protocol():
             self.eq_runtime_unit(query_dict['equilibrium runtime unit'])
             self.engines(query_dict['engines'])
             self.fepprep(query_dict['fepprep'])
-            self.config_options(query_dict['config options'])
+            self.config_options_file(query_dict['config options file'])
+            if query_dict['config options']:
+                self.config_options(query_dict['config options'])
+            else:
+                self.config_options(query_dict['config options file'])
             self.kwargs(query_dict["kwargs"])
             self.name(query_dict["name"])
             self.rerun(query_dict["rerun"])
@@ -822,7 +856,9 @@ class pipeline_protocol():
         if value:
             try:
                 value = validate.file_path(value)
-                value_dict = self._read_protocol(file=value)
+                value_dict = self._read_config_file(file=value)
+                self._query_dict["config options file"] = value
+                self._config_options_file = value
             except:
                 value_dict = value
             value = validate.dictionary(value_dict)
@@ -837,6 +873,21 @@ class pipeline_protocol():
 
         return value
 
+    def config_options_file(self, value=None):
+
+        if value:
+            value = validate.file_path(value)
+            self._query_dict["config options file"] = value
+            self._config_options_file = value
+        else:
+            try:
+                value = self._config_options_file
+            except:
+                value = None
+                self._config_options_file = value
+        
+        return value
+    
     def kwargs(self, value=None):
 
         if value:
@@ -844,7 +895,11 @@ class pipeline_protocol():
             self._query_dict["kwargs"] = value
             self._kwargs = value
         else:
-            value = self._kwargs
+            try:
+                value = self._kwargs
+            except:
+                value = None
+                self._kwargs = value
 
         return value
 
@@ -864,6 +919,7 @@ class pipeline_protocol():
 
     def rerun(self, value=None):
         """set whether its reruns/additional runs or return its value.
+        This runs so that all the repeats are done.
 
         Args:
             value (boolean, optional): if rerun. Defaults to None.
@@ -880,6 +936,18 @@ class pipeline_protocol():
             value = self._rerun
 
         return value  
+
+    def rerepeat(self, value=None):
+
+        if value:
+            value = validate.integer(value)
+            self._query_dict["rerun start repeat"] = value
+            self._rerepeat = value
+        else:
+            value = self._rerepeat
+
+        return value  
+        
 class analysis_protocol(pipeline_protocol):
 
     def __init__(self, file=None, auto_validate=False, verbose=False):

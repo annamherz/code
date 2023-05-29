@@ -5,6 +5,8 @@ import pandas as pd
 
 from ._validate import *
 
+csv.QUOTE_NONE
+
 def write_analysis_file(analysis, results_dir, method=None):
     """write the analysis file for the analysis object
 
@@ -317,11 +319,16 @@ def write_protocol(query_dict, file_path):
 
     # write in the style needed for the protocol
     with open(file, "w") as protocol_file:
-        writer = csv.writer(protocol_file)
+        writer = csv.writer(protocol_file, delimiter=";")
         for query in query_dict.keys():
-            if isinstance(query_dict[query], list):
+            if query == "config options":
+                pass
+            elif isinstance(query_dict[query], list):
                 value = ','.join(query_dict[query])
                 writer.writerow([f"{query} = {value}"])
+            elif isinstance(query_dict[query], dict):
+                for qu in query_dict[query].keys():
+                    writer.writerow([f"{qu} = {query_dict[query][qu]}"])
             else:
                 writer.writerow([f"{query} = {query_dict[query]}"])
 

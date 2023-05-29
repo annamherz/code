@@ -214,18 +214,32 @@ class fepprep():
                         system.repartitionHydrogenMass(factor=protocol.hmr_factor())
                 elif protocol.hmr() == False:
                     pass
+                
+                min_extra_options = {}
+                heat_extra_options = {}
+                eq_extra_options = {}
+                prod_extra_options = {}
 
-                extra_options = {}
-
-                for key,value in protocol.config_options().items():
-                    extra_options[key] = value
+                for key,value in protocol.config_options()["all"].items():
+                    min_extra_options[key] = value
+                    heat_extra_options[key] = value
+                    eq_extra_options[key] = value
+                    prod_extra_options[key] = value
+                for key,value in protocol.config_options()["min"].items():
+                    min_extra_options[key] = value
+                for key,value in protocol.config_options()["heat"].items():
+                    heat_extra_options[key] = value
+                for key,value in protocol.config_options()["eq"].items():
+                    eq_extra_options[key] = value
+                for key,value in protocol.config_options()["prod"].items():
+                    prod_extra_options[key] = value
 
                 BSS.FreeEnergy.Relative(
                     system,
                     min_protocol,
                     engine=f"{protocol.engine()}",
                     work_dir=f"{work_dir}/{leg}_{rep}/min",
-                    extra_options=extra_options
+                    extra_options=min_extra_options
                 )
 
                 BSS.FreeEnergy.Relative(
@@ -233,15 +247,15 @@ class fepprep():
                     heat_protocol,
                     engine=f"{protocol.engine()}",
                     work_dir=f"{work_dir}/{leg}_{rep}/heat",
-                    extra_options=extra_options
-                )
+                    extra_options=heat_extra_options
+                ) # {"integrator":"md", "tcoupl":"v-rescale", "tau-t":"0.1", "constraints":"h-bonds"}
 
                 BSS.FreeEnergy.Relative(
                     system,
                     eq_protocol,
                     engine=f"{protocol.engine()}",
                     work_dir=f"{work_dir}/{leg}_{rep}/eq",
-                    extra_options=extra_options
+                    extra_options=eq_extra_options
                 )
 
                 BSS.FreeEnergy.Relative(
@@ -249,7 +263,7 @@ class fepprep():
                     freenrg_protocol,
                     engine=f"{protocol.engine()}",
                     work_dir=f"{work_dir}/{leg}_{rep}",
-                    extra_options=extra_options
+                    extra_options=prod_extra_options
                 )
 
         if protocol.engine() == "SOMD":
@@ -258,8 +272,12 @@ class fepprep():
                 eq_extra_options = {'minimise': True, 'minimise maximum iterations': protocol.min_steps(), 'equilibrate': False}
                 prod_extra_options = {'minimise': False, 'equilibrate': False}
 
-                for key,value in protocol.config_options().items():
+                for key,value in protocol.config_options()["all"].items():
                     eq_extra_options[key] = value
+                    prod_extra_options[key] = value
+                for key,value in protocol.config_options()["eq"].items():
+                    eq_extra_options[key] = value
+                for key,value in protocol.config_options()["prod"].items():
                     prod_extra_options[key] = value
 
                 BSS.FreeEnergy.Relative(
@@ -296,6 +314,9 @@ class fepprep():
             start_rep = rep + 1
             if (self._pipeline_protocol.repeats() - rep) <= 0:
                 raise ValueError("all repeats folders already exist.")
+            else:
+                self._pipeline_protocol.rerepeat(start_rep)
+                self._pipeline_protocol.rewrite_protocol()
         else:
             work_dir = validate.folder_path(work_dir, create=True)
             rep = 0

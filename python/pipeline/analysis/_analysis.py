@@ -275,11 +275,14 @@ class analyse():
 
         if "truncate keep" in options_dict:
             truncate_keep = validate.truncate_keep(options_dict["truncate keep"])
-            options_dict["truncate percentage"] = truncate_keep
+            options_dict["truncate keep"] = truncate_keep
 
         if "name" in options_dict:
-            name = validate.string(options_dict["name"])
-            options_dict["name"] = name
+            if options_dict["name"]:
+                name = validate.string(options_dict["name"])
+                options_dict["name"] = name
+            else:
+                pass
 
         return options_dict
 
@@ -709,15 +712,24 @@ class analyse():
         if not self.is_analysed:
             warnings.warn(
                 "can't check overlap, not all repeats have been analysed. please self.analyse_all_repeats() first!")
+            
+            return None
 
         else:
             # check overlap matrix if okay
+            okay = 0
+            no_overlaps = 0
+            too_smalls = 0
             for b in self._b_repeats:
                 try:
                     name = str(b) + '_bound'
                     overlap = self._bound_matrix_dict[name]
-                    overlap_okay = BSS.FreeEnergy.Relative.checkOverlap(
+                    overlap_okay, too_small = BSS.FreeEnergy.Relative.checkOverlap(
                         overlap, estimator=self.estimator)
+                    no_overlaps += 1
+                    too_smalls += too_small
+                    if overlap_okay:
+                        okay += 1
                 except Exception as e:
                     print(e)
                     print(f"could not check overlap matrix for {name}")
@@ -726,11 +738,25 @@ class analyse():
                 try:
                     name = str(f) + '_free'
                     overlap = self._free_matrix_dict[name]
-                    overlap_okay = BSS.FreeEnergy.Relative.checkOverlap(
+                    overlap_okay, too_small = BSS.FreeEnergy.Relative.checkOverlap(
                         overlap, estimator=self.estimator)
+                    no_overlaps += 1
+                    too_smalls += too_small
+                    if overlap_okay:
+                        okay += 1
                 except Exception as e:
                     print(e)
                     print(f"could not check overlap matrix for {name}")
+            
+            if no_overlaps:
+                percen_okay = (okay/no_overlaps)*100
+                too_smalls_avg = too_smalls/no_overlaps
+            else:
+                percen_okay = None
+                too_smalls_avg = None
+            
+        
+            return percen_okay, too_smalls_avg
 
 
     def plot_graphs(self):
