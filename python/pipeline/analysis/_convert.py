@@ -127,7 +127,7 @@ class convert:
         return exper_val_dict
 
     @staticmethod
-    def cinnabar_file(results_files, exper_val, output_file, perturbations=None):
+    def cinnabar_file(results_files, exper_val, output_file, perturbations=None, name=None):
         """convert results files into format needed for cinnabar. If multiple results files, uses the average of a perturbation.
 
         Args:
@@ -135,9 +135,10 @@ class convert:
             exper_val (dict or str): dict of experimental values or yml file of experimental values.
             output_file (str): output file path
             perturbations (list, optional): list of perturbations to include. Defaults to None.
+            name (str, optional): name of the method to consider.
         """
         # files is a list of files
-        results_files = validate.is_list(results_files)
+        results_files = validate.is_list(results_files, make_list=True)
         # output file
 
         if exper_val:
@@ -177,7 +178,7 @@ class convert:
             writer.writerow(["# Ligand1","Ligand2","calc_DDG","calc_dDDG(MBAR)", "calc_dDDG(additional)"])
 
             # need to write the average of the data, otherwise cinnabar just uses the last entry
-            comp_diff_dict = make_dict.comp_results(results_files, perturbations=perturbations)
+            comp_diff_dict = make_dict.comp_results(results_files, perturbations=perturbations, name=name)
 
             # write to file
             for key in comp_diff_dict:

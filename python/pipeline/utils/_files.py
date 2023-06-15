@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from ._validate import *
+from ..analysis._network import get_info_network
 
 csv.QUOTE_NONE
 
@@ -53,7 +54,7 @@ def write_analysis_file(analysis, results_dir, method=None):
     # check if our data entry is not already in the results file. Raise an error if is.
     if data_point_avg in data_entries:
         warnings.warn(
-            f"Results for in {analysis.perturbation}, {analysis.engine} "+
+            f"Results for in {analysis.perturbation}, {analysis.engine} ({str(analysis.freenrg)} +/- {str(analysis.error)})"+
             f"are already in {final_summary_file} .")
 
     else:
@@ -224,15 +225,16 @@ def write_atom_mappings(lig_0, lig_1, ligand_0, ligand_1, mapping, output_file):
             writer.writerow(data_point)
 
 
-def write_modified_results_files(results_files, perturbations, output_folder=None, extra_options=None):
+def write_modified_results_files(results_files, perturbations=None, name=None, output_folder=None, **kwargs):
     """write modified results files that contain only specific perturbations.
     In the extra options, can specify 'engine' or 'engines'.
 
     Args:
         results_files (list): list of results files that are to be modified
         perturbations (list): list of perturbations to include
+        name (str): name of the method to rewrite files for
         output_folder (str, optional): output folder for new files. Defaults to None. Uses folder of passed results files.
-        extra_options (dict, optional): dictionary of extra options, such as 'engine' or 'engines'. Defaults to None.
+        kwargs (dict, optional): dictionary of extra options, such as 'engine' or 'engines'. Defaults to None.
 
     Returns:
         list: list of the modified results files
@@ -246,6 +248,15 @@ def write_modified_results_files(results_files, perturbations, output_folder=Non
         validate.file_path(file)
         len_results_files += 1
 
+    # if not perturbations, use all in the file for that name
+    if perturbations:
+        perturbations = validate.is_list(perturbations)
+    else:
+        perturbations, ligands = get_info_network(results_files=results_files)
+    
+    if name:
+        name = validate.string(name)
+
     if not output_folder:
         # will write as folder of first results file
         output_folder = validate.folder_path(results_files[0].replace(results_files[0].split("/")[-1], "")[:-1])
@@ -254,13 +265,13 @@ def write_modified_results_files(results_files, perturbations, output_folder=Non
     # set extra_options variables as defaults
     engines = [eng.upper() for eng in BSS.FreeEnergy.engines()] # use all
 
-    if extra_options:
-        extra_options = validate.dictionary(extra_options)
+    for key,value in kwargs.items():
 
-        if "engine" in extra_options.keys():
-            engines = [validate.engine(extra_options["engine"])]
-        if "engines" in extra_options.keys():
-            engines = validate.is_list(extra_options["engines"])
+        if key == "engine":
+            engine = validate.engine(value)
+            engines = [engine]
+        if key == "engines":
+            engines = validate.is_list(value)
             for engine in engines:
                 engine_val = validate.engine(engine)
                 engines = [engine_val if i == engine else i for i in engines]
@@ -270,34 +281,42 @@ def write_modified_results_files(results_files, perturbations, output_folder=Non
 
     # write the new files
     for file in results_files:
-        new_file_name = f"{output_folder}/results_{results_files.index(file)}_{'_'.join(engines)}.csv"
+        if name:
+            new_file_name = f"{output_folder}/results_{results_files.index(file)}_{'_'.join(engines)}_{name}.csv"
+        else:
+            new_file_name = f"{output_folder}/results_{results_files.index(file)}_{'_'.join(engines)}.csv"
         with open(new_file_name, "w") as result_file:
 
             writer = csv.writer(result_file, delimiter=",")
             writer.writerow(["lig_0","lig_1","freenrg","error","engine","analysis","method"])
 
             # read the file as a csv, should have the same headings as well
-            for row, index in pd.read_csv(file).iterrows():
-                pert = f"{index['lig_0']}~{index['lig_1']}"
-                if pert in perturbations and index['engine'].strip() in engines:
+            for index,row in pd.read_csv(file).iterrows():
+                pert = f"{row['lig_0']}~{row['lig_1']}"
+                if pert in perturbations and row['engine'].strip() in engines:
                         
+                        if name:
+                            if name.lower() == row['method'].strip().lower(): 
+                                pass
+                            else:
+                                continue
                         # check if have analysis and method in it 
                         try:
-                            ana_str = index['analysis']
+                            ana_str = row['analysis']
                         except:
                             ana_str = "not specified"
                         
                         try:
-                            method_str = index['method']
+                            method_str = row['method']
                         except:
                             method_str = "None"
                         
                         # write the row
-                        writer.writerow([index['lig_0'],
-                                         index['lig_1'], 
-                                         index['freenrg'],
-                                         index['error'],
-                                         index['engine'],
+                        writer.writerow([row['lig_0'],
+                                         row['lig_1'], 
+                                         row['freenrg'],
+                                         row['error'],
+                                         row['engine'],
                                          ana_str,
                                          method_str])    
 

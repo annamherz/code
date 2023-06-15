@@ -32,13 +32,14 @@ class make_dict():
 
     
     @staticmethod
-    def comp_results(results_files=None, perturbations=None, engine=None, output_file=None):
+    def comp_results(results_files=None, perturbations=None, engine=None, name=None, source=None, output_file=None):
         """write results files into different file or dictionary for certain perturbations.
 
         Args:
             results_files (list, optional): list of results files (for the repeats). Defaults to None.
             perturbations (list, optional): list of perturbations to use. Defaults to None.
-            engine (str, optional): engine to use. Defaults to None.
+            engine (str, optional): engine to use. Defaults to None. Else will get average result for all entries regardless of engine.
+                                    Can also be used for the other results names.
             output_file (str, optional): output file to write. Defaults to None.
 
         Returns:
@@ -57,17 +58,43 @@ class make_dict():
             make_pert_list = True
             perturbations = []
 
-        # TODO some way to get engine from results files? - or only read for certain engines
+        if name:
+            name = validate.string(name)
+
+        if source:
+            source = validate.string(source)
+
+        if engine:
+            try:
+                engine = validate.engine(engine)
+            except:
+                engine = validate.string(engine)
+
+        if engine and source:
+            raise ValueError("can only have engine or source currently for nameing")
+
+        # TODO get analysis method and method from file or from extra options. engine in extra options.
         # make a dictionary with the results of the files
         comp_dict_list = {}
         comp_err_dict_list = {}
-
-        # TODO get analysis method and method from file or from extra options. engine in extra options.
 
         # append for results file
         for res_file in results_files:
             res_df = pd.read_csv(res_file)
             for index,row in res_df.iterrows():
+
+                if name:
+                    if name.lower() == row['method'].strip().lower(): 
+                        pass
+                    else:
+                        continue
+
+                if engine:
+                    if engine == row['engine'].strip(): 
+                        pass
+                    else:
+                        continue
+
                 lig_0 = row[0]
                 lig_1 = row[1]
                 pert = f"{lig_0}~{lig_1}"
@@ -109,46 +136,6 @@ class make_dict():
         # put these into a dictionary
         comp_diff_dict = {}
 
-        # TODO combine this with file writer for network in _files. modified results files writing?
-        if output_file:
-            # write these to a csv file
-            with open(f"{output_file}.csv", "w+") as comp_pert_file:
-                writer = csv.writer(comp_pert_file, delimiter=",")
-                writer.writerow(["lig_1","lig_2","freenrg","error","engine","analysis","method"])
-
-                for pert in perturbations:
-                    lig_0 = pert.split("~")[0]
-                    lig_1 = pert.split("~")[1]
-                    
-                    # check if the perturbations calculated are also those in the network file and if any are missing
-                    try:
-                        # find the values in the dictionary
-                        ddGs = comp_dict_list[pert]
-                        ddGs_error = comp_err_dict_list[pert]
-                        # calculate the average and the error
-                        comp_ddG = np.average(ddGs)
-                        # comp_ddG = np.average([ddG.value() for ddG in ddGs])
-                        if len(ddGs) == 1:
-                            # comp_err = ddGs_error.value()
-                            comp_err = ddGs_error[0]
-                        else:
-                            comp_err = sem(ddGs)
-                            # comp_err = sem([ddG.value() for ddG in ddGs])
-                
-                    # if unable to calculate one of the perturbations, this is a None value.
-                    except:
-                        comp_ddG = None
-                        comp_err = None
-
-                    #update the dictionary for plotting later
-                    comp_diff_dict.update({pert:(comp_ddG, comp_err)})
-
-                    if engine:
-                        writer.writerow([lig_0, lig_1, comp_ddG, comp_err, engine, "not specified", "None"])
-                    else:
-                        writer.writerow([lig_0, lig_1, comp_ddG, comp_err, "source", "not specified", "None"])
-
-
         for pert in perturbations:
             lig_0 = pert.split("~")[0]
             lig_1 = pert.split("~")[1]
@@ -175,8 +162,25 @@ class make_dict():
 
             #update the dictionary for plotting later
             comp_diff_dict.update({pert:(comp_ddG, comp_err)})
-        
 
+        if output_file:
+
+            # write these to a csv file
+            with open(f"{output_file}.csv", "w+") as comp_pert_file:
+                writer = csv.writer(comp_pert_file, delimiter=",")
+                writer.writerow(["lig_0","lig_1","freenrg","error","engine","analysis","method"])
+
+                for key,value in comp_diff_dict.items():
+                    lig_0 = key.split("~")[0]
+                    lig_1 = key.split("~")[1]
+                    comp_ddG = value[0]
+                    comp_err = value[1]
+
+                    if engine:
+                        writer.writerow([lig_0, lig_1, comp_ddG, comp_err, engine, "not specified", str(name)])
+                    elif source:
+                        writer.writerow([lig_0, lig_1, comp_ddG, comp_err, source, "not specified", str(name)])
+        
         return comp_diff_dict
 
     @staticmethod

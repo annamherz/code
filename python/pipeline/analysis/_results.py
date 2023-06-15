@@ -16,11 +16,13 @@ from ._convert import *
 import cinnabar
 from cinnabar import wrangle,plotting,stats
 
+from math import isnan
+
 class analysis_network():
     """class to analyse results files and plot
     """
 
-    def __init__(self, results_directory=None, exp_file=None, engines=None, net_file=None, output_folder=None, analysis_ext=None, extra_options=None, verbose=False):
+    def __init__(self, results_directory=None, exp_file=None, engines=None, net_file=None, output_folder=None, analysis_ext=None, name=None, extra_options=None, verbose=False):
         """analyses the network for a certain system
 
         Args:
@@ -37,6 +39,11 @@ class analysis_network():
         """
 
         self.is_verbose(verbose)
+
+        if name:
+            self.name = validate.string(name)
+        else:
+            self.name = None
         
         # get engines for analysis
         if engines:
@@ -61,16 +68,12 @@ class analysis_network():
         if not analysis_ext:
             self.file_ext = ".+" # wildcard, all files in the folder included
         else:
+            # read in a dictionary or analysis protocol file
             try:
-                # see if it is just a file extension name
-                self.file_ext = validate.string(file_ext)
+                analysis_options = analysis_protocol(analysis_ext, auto_validate=True)
+                self.file_ext = analyse.file_ext(analysis_options)
             except:
-                # read in a dictionary or analysis protocol file
-                try:
-                    analysis_options = analysis_protocol(analysis_ext, auto_validate=True)
-                    self.file_ext = analyse.file_ext(analysis_options)
-                except:
-                    raise TypeError(f"{analysis_ext} analysis ext must be either a string or an analysis protocol file/dictionary")
+                raise TypeError(f"{analysis_ext} analysis ext must be either a string or an analysis protocol file/dictionary")
 
         if results_directory:
             self._results_directory = validate.folder_path(results_directory)
@@ -241,14 +244,14 @@ class analysis_network():
                 print("As there is no provided results directory or network file, please set perturbations and ligands manually.")
                 return
             else:
-                file_name = None
+                file_names = None
         
         else:
             # get results files from dict into a list, flatten the list
             results_lists = list(self._results_files.values()) + list(self._results_repeat_files.values())
-            file_name = [res_file for sublist in results_lists for res_file in sublist]
+            file_names = [res_file for sublist in results_lists for res_file in sublist]
 
-        values = get_info_network(results_files=file_name,
+        values = get_info_network(results_files=file_names,
                                 net_file=self._net_file,
                                 extra_options = {"engines":self.engines}
                                 )
@@ -353,22 +356,45 @@ class analysis_network():
 
         return pert_dict
 
-    def remove_perturbations(self, pert):
+    def remove_perturbations(self, perts):
         """remove perturbations from the network used.
 
         Args:
-            pert (list): list of perturbations to remove.
+            perts (list): list of perturbations to remove.
         """
         
-        perts = validate.is_list(pert, make_list=True)
+        perts = validate.is_list(perts, make_list=True)
+
         for pert in perts:
             self.perturbations.remove(pert)
 
         if self._is_computed:
-            self._compute_dicts(use_cinnabar=True, recompute=True)
+            self._compute_dicts(use_cinnabar=True)
         # remove plotting object as needs to be reintialised with new perturbations
         self._plotting_object = None
         self._stats_object = None
+    
+    def remove_ligands(self, ligs):
+        """remove ligand and assosciated perturbations from the network used.
+
+        Args:
+            ligs (list): list of ligands to remove.
+        """
+
+        ligs = validate.is_list(ligs, make_list=True)
+
+        for lig in ligs:
+            self.ligands.remove(lig)
+
+            for pert in self.perturbations:
+                if lig in pert:
+                    self.perturbations.remove(pert)
+
+        if self._is_computed:
+            self._compute_dicts(use_cinnabar=True)
+        # remove plotting object as needs to be reintialised with new perturbations
+        self._plotting_object = None
+        self._stats_object = None        
 
     # TODO add perturbation and value ?? someway to add more data?
 
@@ -405,7 +431,7 @@ class analysis_network():
         self._is_computed = True
 
 
-    def _compute_dicts(self, use_cinnabar=True, recompute=False):
+    def _compute_dicts(self, use_cinnabar=True):
         """calculate the perturbation dicts from the previously passed repeat files.
         If use_cinnabar, calculate the the cinnabar network and the computed values.
 
@@ -415,37 +441,35 @@ class analysis_network():
 
         use_cinnabar = validate.boolean(use_cinnabar)
 
-        if not recompute:
-            # compute the experimental for perturbations
-            self.get_experimental() # get experimental val dict and normalised dict
-            self.get_experimental_pert() # from cinnabar expeirmental diff ? make_dict class
+        # compute the experimental for perturbations
+        self.get_experimental() # get experimental val dict and normalised dict
+        self.get_experimental_pert() # from cinnabar expeirmental diff ? make_dict class
 
         # for self plotting of per pert
-        for eng in self.engines:
-            if not recompute:
-                calc_diff_dict = make_dict.comp_results(self._results_repeat_files[eng], self.perturbations, eng) # older method
-                self.calc_pert_dict.update({eng:calc_diff_dict})
+        for eng in self.engines + self.other_results_names: # other results will only be added after already computed once in function below
+
+            if not self._results_files[eng]:
+                files = self._results_repeat_files[eng]
+            else:
+                files = self._results_files[eng]
+
+            calc_diff_dict = make_dict.comp_results(files, self.perturbations, eng, name=self.name) # older method
+            self.calc_pert_dict.update({eng:calc_diff_dict})
 
             if use_cinnabar:
-                self._compute_cinnabar_dict(eng, recompute=recompute)
+                self._compute_cinnabar_dict(files, eng, name=self.name)
 
 
-    def _compute_cinnabar_dict(self, eng, recompute=False):
+    def _compute_cinnabar_dict(self, files, eng, name=None):
         """compute cinnabar and get the dictionaries from it.
         """
-        
-        if recompute:
-            perts, ligs = get_info_network_from_dict(self.calc_pert_dict[eng])
-        else:
-            perts = self.perturbations
+
+        perts, ligs = get_info_network_from_dict(self.calc_pert_dict[eng])
         
         # get the files into cinnabar format for analysis
-        file_name = self._results_repeat_files[eng]
         cinnabar_file_name = f"{self.output_folder}/cinnabar_{eng}_{self.file_ext}_{self.net_ext}"
-        if recompute:
-            cinnabar_file_name = f"{cinnabar_file_name}_recompute"
         
-        convert.cinnabar_file(file_name, self.exper_val_dict, cinnabar_file_name, perturbations=perts)
+        convert.cinnabar_file(files, self.exper_val_dict, cinnabar_file_name, perturbations=perts, name=name)
 
         try:
             # compute the per ligand for the network
@@ -487,12 +511,13 @@ class analysis_network():
         new_file_path = f"{file_names[0].replace(file_names[0].split('/')[-1], '')[:-1]}/{name}_results_file"
 
         # for self plotting of per pert
-        calc_diff_dict = make_dict.comp_results(file_names, perturbations=None, engine=None, output_file=new_file_path)
+        calc_diff_dict = make_dict.comp_results(file_names, perturbations=None, engine=None, source=name, output_file=new_file_path)
         self.calc_pert_dict.update({name:calc_diff_dict})
+        self._results_files[name] = f"{new_file_path}.csv"
 
         use_cinnabar = validate.boolean(use_cinnabar)
         if use_cinnabar:
-            self._compute_cinnabar_dict(name)
+            self._compute_cinnabar_dict(files=f"{new_file_path}.csv", eng=name)
 
         # initialise plotting and stats objects again so theyre added
         self._initialise_plotting_object(verbose=self._is_verbose)
@@ -509,20 +534,20 @@ class analysis_network():
             tuple: (val, percen, perturbations)
         """
         
-        res_dict = self.calc_pert_dict
+        res_dict = self.calc_pert_dict[eng]
         eng = validate.engine(eng)
         if perts:
             perts = validate.is_list(perts)
         else:
-            perts = res_dict[eng].keys()
+            perts = res_dict.keys()
 
         perturbations = []
         if self._is_computed:
 
             val = 0
-            for key in res_dict[eng].keys():
+            for key in res_dict.keys():
                 if key in perts:
-                    if res_dict[eng][key][0]:
+                    if not isnan(res_dict[key][0]):
                         val +=1
                         perturbations.append(key)
 
@@ -548,6 +573,15 @@ class analysis_network():
                 failed_perts.append(pert)
 
         return failed_perts
+    
+    def disconnected_ligands(self, eng):
+
+        eng = validate.engine(eng)
+
+        self._initialise_graph_object(check=True)
+        ligs = self.network_graph.disconnected_ligands()
+
+        return ligs
 
     def draw_failed_perturbations(self, eng):
         

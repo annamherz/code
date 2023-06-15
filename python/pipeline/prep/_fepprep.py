@@ -1,10 +1,123 @@
 import BioSimSpace as BSS
 from distutils.dir_util import copy_tree, remove_tree
+import warnings as _warnings
 
 from ..utils import *
 from ._merge import *
 from ._ligprep import *
 from ._equilibrate import *
+
+from pytest import approx
+from scipy.constants import proton_mass
+from scipy.constants import physical_constants
+
+hydrogen_amu = proton_mass/(physical_constants["atomic mass constant"][0])
+
+def check_hmr(system, protocol, engine):
+    # from bss code 
+
+    system = validate.system(system)
+    protocol = validate.bss_protocol(protocol)
+    engine = validate.engine(engine)
+    property_map = {}
+
+    # HMR check
+    # by default, if the timestep is greater than 4 fs this should be true.
+    if protocol.getHmr():
+
+        # Set the expected HMR factor.
+        hmr_factor = protocol.getHmrFactor()
+        if hmr_factor == "auto":
+            if engine == "AMBER" or engine == "GROMACS":
+                hmr_factor = 3
+        # TODO someway to check somd also as extra option
+        #     elif engine == "SOMD":
+        #         self._extra_options["hydrogen mass repartitioning factor"] = "1.5"
+        # else:
+        #     if self._engine == "SOMD":
+        #         self._extra_options["hydrogen mass repartitioning factor"] = str(
+        #             hmr_factor)
+
+        # Extract the molecules to which HMR applies.
+        # set auto based on engine
+        if protocol.getHmrWater() == "auto" or protocol.getHmrWater() == False:
+            water = "no"
+            # water_mols = system.getWaterMolecules()
+            # molecules = system - water_mols
+            molecules = system.search("not water", property_map)
+        elif protocol.getHmrWater() == True:
+            water = "yes"
+            molecules = self._system.getMolecules()
+
+        for mol in molecules:
+            try:
+                h = mol.search("{element H}[0]")
+                # mass = h._sire_object.property(mass_prop).value()
+                mass = h[0]._sire_object.evaluate().mass(
+                    property_map).value()
+                found_h = True
+            except:
+                found_h = False
+            if found_h:
+                break
+
+        if not found_h:
+            # in some cases, may not be able to find the mass based on element
+            # if the only molecule is perturbable. Search for atom name with H.
+            # need mass0 as this is one of the perturbable molecule properties.
+            mass_prop = property_map.get("mass0", "mass0")
+            molecule = system.getPerturbableMolecules()[0]
+            for atom in molecule.getAtoms():
+                # check if the atom is a H atom
+                if atom.name().startswith("H"):
+                    mass = atom._sire_object.property(mass_prop).value()
+                    # check in case the mass at 0 is 0 as perturbable molecule.
+                    if mass > 1:
+                        found_h = True
+                if found_h:
+                    break
+
+        # error if cant find a H mass
+        if not found_h:
+            raise TypeError(
+                "Can't find the mass of a H in the system.")
+
+        # Check that the mass matches what is expected.
+        if engine == "SOMD":
+            # values should be in amu
+            if mass == approx(hydrogen_amu, rel=1e-2):
+                repartition = False
+            else:
+                raise TypeError(
+                    "Please do not pass an already repartitioned system in for use with SOMD.")
+
+        # check for amber or gromacs repartitioning
+        elif engine == "AMBER" or engine == "GROMACS":
+            # check if the system has been repartitioned at all. If not, repartition.
+            if mass == approx(hydrogen_amu, rel=1e-2):
+                repartition = True
+            # check if system as been repartitioned with the decided factor.
+            elif mass == approx(hmr_factor * hydrogen_amu, rel=1e-2):
+                repartition = False
+            # finally, check if the system is repartitioned with the wrong factor.
+            elif mass != approx(hmr_factor * hydrogen_amu, rel=1e-2):
+                raise TypeError("""
+                The system is repartitioned at a factor different from that specified in 'hmr_factor'
+                or at the auto default for this engine (3 for AMBER and GROMACS, None for SOMD (as this is specified in the cfg file)).
+                Please pass a correctly partitioned or entirely unpartitioned system.""")
+
+        # Repartition if necessary.
+        if repartition:
+            _warnings.warn(
+                f"The passed system is being repartitioned according to a factor of '{hmr_factor}'.")
+            system.repartitionHydrogenMass(
+                factor=hmr_factor, water=water, property_map=property_map)
+        else:
+            if engine != "SOMD":
+                _warnings.warn(
+                    "The passed system is already repartitioned. Proceeding without additional repartitioning.")
+        
+        return system
 
 class fepprep():
     """class for fepprep
@@ -106,6 +219,7 @@ class fepprep():
                                                                 pressure=None,
                                                                 temperature_start=protocol.start_temperature()*protocol.temperature_unit(),
                                                                 temperature_end=protocol.end_temperature()*protocol.temperature_unit(),
+                                                                restart_interval=10000,
                                                                 hmr_factor=protocol.hmr_factor()
                                                                 )
             eq_protocol = BSS.Protocol.FreeEnergyEquilibration(timestep=protocol.timestep()*protocol.timestep_unit(),
@@ -113,7 +227,7 @@ class fepprep():
                                                             runtime=protocol.eq_runtime()*protocol.eq_runtime_unit(),
                                                             temperature=protocol.temperature()*protocol.temperature_unit(),
                                                             pressure=protocol.pressure()*protocol.pressure_unit(),
-                                                            restart=True,
+                                                            restart=True, restart_interval=10000,
                                                             hmr_factor=protocol.hmr_factor()
                                                             )
             freenrg_protocol = BSS.Protocol.FreeEnergy(timestep=protocol.timestep()*protocol.timestep_unit(),
@@ -121,7 +235,7 @@ class fepprep():
                                                         runtime=protocol.sampling()*protocol.sampling_unit(),
                                                         temperature=protocol.temperature()*protocol.temperature_unit(),
                                                         pressure=protocol.pressure()*protocol.pressure_unit(),
-                                                        restart=True,
+                                                        restart=True, restart_interval=10000,
                                                         hmr_factor=protocol.hmr_factor()
                                                     )
 
@@ -135,6 +249,7 @@ class fepprep():
                                                 temperature=protocol.temperature()*protocol.temperature_unit(),
                                                 runtime=(protocol.eq_runtime()*2)*protocol.eq_runtime_unit(),
                                                 pressure=protocol.pressure()*protocol.pressure_unit(),
+                                                restart_interval=10000,
                                                 hmr_factor=protocol.hmr_factor()
                                                 )
             freenrg_protocol = BSS.Protocol.FreeEnergy(timestep=protocol.timestep()*protocol.timestep_unit(),
@@ -142,6 +257,7 @@ class fepprep():
                                                         runtime=protocol.sampling()*protocol.sampling_unit(),
                                                         temperature=protocol.temperature()*protocol.temperature_unit(),
                                                         pressure=protocol.pressure()*protocol.pressure_unit(),
+                                                        restart_interval=10000,
                                                         hmr_factor=protocol.hmr_factor()
                                                        )
 
@@ -202,16 +318,8 @@ class fepprep():
 
                 # repartition the hydrogen masses, so only needs to be done once during the setup
                 if protocol.hmr() == True:
-                    print(f"repartitioning hydrogen masses for 4fs timestep for {leg}...")
-                    if protocol.hmr_factor() == "auto":
-                        print("using default factors...")
-                        if protocol.engine() == "AMBER":
-                            system.repartitionHydrogenMass(factor=3)
-                        elif protocol.engine() == "GROMACS":
-                            system.repartitionHydrogenMass(factor=3)
-                    else:
-                        print(f"using {protocol.hmr_factor()} as a factor...")
-                        system.repartitionHydrogenMass(factor=protocol.hmr_factor())
+                    print(f"checking and maybe repartitioning hydrogen masses for 4fs timestep for {leg}...")
+                    system = check_hmr(system, freenrg_protocol, protocol.engine())
                 elif protocol.hmr() == False:
                     pass
                 
@@ -335,6 +443,8 @@ class fepprep():
 
             # get half of the lambdas
             lambdas_list = self._freenrg_protocol.getLambdaValues()
+            print(lambdas_list)
+            print(self._min_protocol.getLambdaValues())
             middle_index=len(lambdas_list)//2        
             first_half=lambdas_list[:middle_index]
             sec_half=lambdas_list[middle_index:]

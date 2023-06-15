@@ -20,46 +20,27 @@ class merge():
             BioSimSpace._SireWrappers._molecule.Molecule: merged ligands as BSS object
         """
 
+        # Align ligand2 on ligand1
+        # get the mapping of ligand0 to atoms in ligand1
+        l0a, l1a, mapping = pipeline.prep.merge.atom_mappings(ligand_0, ligand_1, **kwargs)
+        inv_mapping = {v: k for k, v in mapping.items()}
+
         # default ring breaking is not allowed
-        complete_rings = True
         allow_ring_breaking = False
         allow_ring_size_change = False
-        prune_perturbed_constraints=None
-        prune_crossing_constraints=None
         align_to = "lig0" 
         scoring_function = "rmsd_align"
-        prematch = {}
 
         for key,value in kwargs.items():
             key = key.replace("_","").replace(" ","").upper()
-            if key == "COMPLETERINGSONLY":
-                complete_rings = validate.boolean(value)
             if key == "ALLOWRINGBREAKING":
                 allow_ring_breaking = validate.boolean(value)
             if key == "ALLOWRINGSIZECHANGE":
-                allow_ring_size_change = validate.boolean(value)
-            if key == "PRUNEPERTURBEDCONSTRAINTS":
-                prune_perturbed_constraints = validate.boolean(value)
-            if key == "PRUNECROSSINGRESTRAINTS":
-                prune_crossing_constraints = validate.boolean(value)           
+                allow_ring_size_change = validate.boolean(value)     
             if key == "ALIGNTO":
                 align_to = validate.string(value)  
             if key == "SCORINGFUNCTION":
                 scoring_function = validate.string(value) # rmsd, rmsd_align, rmsd_flex_align
-            if key == "PREMATCH":
-                prematch = validate.dictionary(value)
-
-        # Align ligand2 on ligand1
-        # get the mapping of ligand0 to atoms in ligand1
-        mapping = BSS.Align.matchAtoms(
-                                    ligand_0, ligand_1,
-                                    scoring_function=scoring_function,
-                                    complete_rings_only=complete_rings,
-                                    prematch=prematch,
-                                    prune_perturbed_constraints=prune_perturbed_constraints,
-                                    prune_crossing_constraints=prune_crossing_constraints
-                                    )           
-        inv_mapping = {v: k for k, v in mapping.items()}
 
         # function for aligning depends on scoring function
         func_dict = {"rmsd_align": BSS.Align.rmsdAlign,
@@ -183,8 +164,8 @@ class merge():
         """get the atoms and mappings for ligands in two systems
 
         Args:
-            system0 (BioSimSpace._SireWrappers.System): unmerged system at lambda 0.0
-            system1 (BioSimSpace._SireWrappers.System): unmerged system at lambda 1.0
+            system0 (BioSimSpace._SireWrappers.System): unmerged system at lambda 0.0. Can also be the ligand.
+            system1 (BioSimSpace._SireWrappers.System): unmerged system at lambda 1.0. Can also be the ligand.
 
         Raises:
             _Exceptions.AlignmentError: can't extract ligands from input system
@@ -193,20 +174,34 @@ class merge():
             dict: ligand_0 atoms, ligand_1 atoms, mapping dictionary)
         """
 
+        complete_rings = True
         prune_perturbed_constraints=None
         prune_crossing_constraints=None
+        scoring_function = "rmsd_align"
+        prematch = {}
 
-        for key,value in kwargs.items(): #TODO uppercase
-            if key == "prune perturbed constraints":
+        for key,value in kwargs.items():
+            key = key.replace("_","").replace(" ","").upper()
+            if key == "COMPLETERINGSONLY":
+                complete_rings = validate.boolean(value)
+            if key == "PRUNEPERTURBEDCONSTRAINTS":
                 prune_perturbed_constraints = validate.boolean(value)
-            if key == "prune crossing constraints":
+            if key == "PRUNECROSSINGRESTRAINTS":
                 prune_crossing_constraints = validate.boolean(value)           
+            if key == "SCORINGFUNCTION":
+                scoring_function = validate.string(value) # rmsd, rmsd_align, rmsd_flex_align
+            if key == "PREMATCH":
+                prematch = validate.dictionary(value)        
 
-        system_0 = validate.system(system0)
-        system_1 = validate.system(system1)
+        try:
+            system_0 = validate.system(system0)
+            system_1 = validate.system(system1)
 
-        ligand_0 = merge.extract_ligand(system_0)
-        ligand_1 = merge.extract_ligand(system_1)
+            ligand_0 = merge.extract_ligand(system_0)
+            ligand_1 = merge.extract_ligand(system_1)
+        except:
+            ligand_0 = validate.molecule(system0)
+            ligand_1 = validate.molecule(system1)
 
         if ligand_0 and ligand_1:
             pass
@@ -215,10 +210,13 @@ class merge():
                 "Could not extract ligands from input systems. Check that your ligands/proteins are properly prepared!")
 
 
-        # Align ligand1 on ligand0
+        # Align ligand2 on ligand1
+        # get the mapping of ligand0 to atoms in ligand1
         mapping = BSS.Align.matchAtoms(
                                     ligand_0, ligand_1,
-                                    complete_rings_only=True,
+                                    scoring_function=scoring_function,
+                                    complete_rings_only=complete_rings,
+                                    prematch=prematch,
                                     prune_perturbed_constraints=prune_perturbed_constraints,
                                     prune_crossing_constraints=prune_crossing_constraints
                                     )      

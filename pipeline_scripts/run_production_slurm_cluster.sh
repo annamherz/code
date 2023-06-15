@@ -80,8 +80,6 @@ if [ ! -s heat/lambda_$lam/gromacs.xvg ]; then
 echo "min attempt $min_counter"
 min_counter=$((min_counter+1))
 
-sed -i 's/3333/10000/g' min/lambda_$lam/gromacs.mdp
-
 echo "min"
 gmx grompp -f min/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p min/lambda_$lam/gromacs.top -o min/lambda_$lam/gromacs.tpr
 gmx mdrun -ntmpi 1 -deffnm min/lambda_$lam/gromacs ;

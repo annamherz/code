@@ -380,6 +380,8 @@ class extract():
                     extract._write_traj_frames(u, traj_extract_dir)
                     if rmsd:
                         extract._rmsd_trajectory(u, traj_extract_dir)
+                    
+                    del u
             
                 else:
                     pass
@@ -403,7 +405,7 @@ class extract():
         molecules = u.select_atoms(f'{selection}')
         not_molecules = u.select_atoms(f'not {selection}')
         transforms = [trans.unwrap(molecules),
-                    trans.center_in_box(molecules, wrap=True),
+                    trans.center_in_box(molecules), # , wrap=True, center="mass"
                     trans.wrap(not_molecules)]
         u.trajectory.add_transformations(*transforms)
 

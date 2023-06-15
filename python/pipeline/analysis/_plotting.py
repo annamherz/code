@@ -356,21 +356,32 @@ class plotting_engines():
         remove = validate.boolean(remove)
         perturbations = validate.is_list(perturbations, make_list=True)
 
+        to_del = []
+        to_keep = []
+
         if remove:
-            # keep only specified perturbations in the dataframe
-            to_del = []
+            # delete specified perturbations from the dataframe
             for pert in df.index:
                 if pert in perturbations:
                     to_del.append(pert)
+                else:
+                    to_keep.append(pert)
         else:
             # keep only specified perturbations in the dataframe
-            to_del = []
             for pert in df.index:
                 if pert not in perturbations:
                     to_del.append(pert)
+            for pert in perturbations:
+                if pert not in df.index:
+                    to_keep.append(pert)
 
         for pert in to_del:
             df = df.drop(index=[pert])
+        
+        # fill in with none values for consistent plotting if to keep
+        for pert in to_keep:
+            if pert not in df.index:
+                df.loc[pert] = [0,0,0,0]
 
         return df
 
@@ -392,7 +403,22 @@ class plotting_engines():
         Returns:
             dict: dictionary of new colours
         """
-        
+
+        if colour_dict:
+            colour_dict = validate.dictionary(colour_dict)
+        else:
+            colour_dict = {}
+
+        other_colours = ["limegreen","gold","mediumpurple","darkred","papayawhip"]
+        other_res_list = []
+
+        for res in self.other_results_names:
+            if res not in colour_dict.keys():
+                other_res_list.append(res)
+
+        for res,col in zip(other_res_list, other_colours):
+            colour_dict[res] = col
+
         set_colour_dict = self._set_colours(colour_dict)
         self.colours = set_colour_dict
 
@@ -529,6 +555,7 @@ class plotting_engines():
         fig, ax = plt.subplots(figsize=(15,8))
 
         # df_dict = freenrg_df_plotting
+        exp_df_len = len(self._prune_perturbations(self.freenrg_df_dict["experimental"]["experimental"][pert_val].fillna(0), values))
 
         for eng in names:
 
@@ -539,7 +566,12 @@ class plotting_engines():
             freenrg_df_plotting = self.freenrg_df_dict["experimental"][eng][pert_val].fillna(0)
 
             # prune df to only have perturbations considered
-            freenrg_df_plotting = self._prune_perturbations(freenrg_df_plotting, values)
+            # sort so they are all in the same order
+            freenrg_df_plotting = self._prune_perturbations(freenrg_df_plotting, values).sort_index()
+
+            if len(freenrg_df_plotting) != exp_df_len:
+                raise ValueError("for bar plotting, the length of the used dataframes must be the same. Please pass 'values',\
+                                 ie the perts or ligs to plot for, as neccessary to ensure this.")
 
             # determine positions for X axis labels.
             x_locs = np.arange(len(freenrg_df_plotting))

@@ -1,5 +1,4 @@
-from ..utils._validate import *
-from ..utils._files import *
+from ..utils import *
 
 class pipeline_protocol():
 
@@ -130,6 +129,15 @@ class pipeline_protocol():
 
         return query_dict
 
+    def _config_dict(self):
+
+        legs = ["min","eq","heat","prod","all"]
+        query_dict = {}
+        for leg in legs:
+            query_dict[leg] = {}
+        
+        return query_dict
+
     def _read_config_file(self, file=None):
         """reads the config file into a dictionary
 
@@ -141,10 +149,7 @@ class pipeline_protocol():
             seperated into key:value pairs by the "=" and into sections by ";"
         """
 
-        legs = ["min","eq","heat","prod","all"]
-        query_dict = {}
-        for leg in legs:
-            query_dict[leg] = {}
+        query_dict = self._config_dict()
 
         file = validate.file_path(file)
         leg = None
@@ -154,8 +159,8 @@ class pipeline_protocol():
 
                 if ";" in line:
                     leg = f"{line.split(';')[-1].strip().lower()}"
-                    if leg not in legs:
-                        raise ValueError(f"please seperate config file options using ; and {legs}")
+                    if leg not in query_dict.keys():
+                        raise ValueError(f"please seperate config file options using ; and {query_dict.keys()}")
                 elif "=" not in line:
                     raise ValueError("protocol file may only contain lines with '=', eg 'ligand forcefield = GAFF2'")
                 elif not leg:
@@ -213,7 +218,7 @@ class pipeline_protocol():
             else:
                 raise ValueError("there is no file to overwrite, please provide a 'file_path'")
 
-        write_protocol(self._query_dict, new_file)
+        pipeline.utils.write_protocol(self._query_dict, new_file)
 
 
     def validate(self):
@@ -768,15 +773,22 @@ class pipeline_protocol():
             else:
                 print(f"'hmr' must be set to True for a hmr factor to be applied. It will still be set as {value}.")
 
+            try_float = True
+            
             if isinstance(value, str):
                 if value.lower() == "auto":
-                    self._hmr_factor = "auto"
-            else:
+                    value = "auto"
+                    try_float = False
+                else:
+                    try_float = True
+            
+            if try_float:
                 try:
-                    self._hmr_factor = validate.is_float(value)
+                    value = validate.is_float(value)
                 except:
                     raise ValueError("hmr_factor must be 'auto' or a integer/float")
             
+            self._hmr_factor = value
             self._query_dict['hmr factor'] = value
 
         else:
@@ -868,7 +880,7 @@ class pipeline_protocol():
             try:
                 value = self._config_options
             except:
-                value = {}
+                value = self._config_dict()
                 self._config_options = value
 
         return value
@@ -1074,7 +1086,10 @@ class analysis_protocol(pipeline_protocol):
             self._query_dict["try pickle"] = value
             self._try_pickle = value
         else:
-            value = self._try_pickle
+            try:
+                value = self._try_pickle
+            except:
+                self._try_pickle = value
 
         return value
 
@@ -1093,7 +1108,10 @@ class analysis_protocol(pipeline_protocol):
             self._query_dict["save pickle"] = value
             self._save_pickle = value
         else:
-            value = self._save_pickle
+            try:
+                value = self._save_pickle
+            except:
+                self._save_pickle = value
 
         return value
     
@@ -1112,7 +1130,10 @@ class analysis_protocol(pipeline_protocol):
             self._query_dict["auto equilibration"] = value
             self._auto_equilibration = value
         else:
-            value = self._auto_equilibration
+            try:
+                value = self._auto_equilibration
+            except:
+                self._auto_equilibration = value
 
         return value
 
@@ -1131,7 +1152,10 @@ class analysis_protocol(pipeline_protocol):
             self._query_dict["statistical inefficiency"] = value
             self._statistical_inefficiency = value
         else:
-            value = self._statistical_inefficiency
+            try:
+                value = self._statistical_inefficiency
+            except:
+                self._statistical_inefficiency = value
 
         return value
 

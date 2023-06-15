@@ -13,7 +13,7 @@ from pipeline.utils import *
 from pipeline.prep import *
 
 
-def lig_prep(main_dir, protocol_file, protein_file, ligands_folder, lig_name, engine, pmemd_path, work_dir=None):
+def lig_prep(main_dir, protocol_file, protein_file, ligands_folder, lig_name, engine, work_dir=None):
     # Exit if prep files are already available for ligand and protein
     if os.path.exists(f"{main_dir}/prep/{lig_name}_sys_equil_solv.prm7"):
         if os.path.exists(f"{main_dir}/prep/{lig_name}_lig_equil_solv.prm7"):
@@ -70,7 +70,7 @@ def lig_prep(main_dir, protocol_file, protein_file, ligands_folder, lig_name, en
 
         # minimise and eqiulibrate these
         print(f"minimising and equilibrating for {leg} and {lig_name}")
-        leg_equil_final = minimise_equilibrate_leg(leg_mol_solvated, engine, pmemd_path, work_dir=work_dir)
+        leg_equil_final = minimise_equilibrate_leg(leg_mol_solvated, engine, work_dir=work_dir)
 
         # finally, save last snapshot
         print(f"Saving solvated/equilibrated for {leg} and {lig_name}")
@@ -107,7 +107,12 @@ def check_arguments(args):
     else:
         protocol_file = str(input("what is the path to the protocol file?: ").strip())
 
-    return main_folder, protocol_file, protein_path, ligands_folder, lig_name
+    if args.work_dir:
+        workdir = args.work_dir
+    else:
+        workdir = None
+
+    return main_folder, protocol_file, protein_path, ligands_folder, lig_name, workdir
 
 def main():
 
@@ -123,20 +128,13 @@ def main():
 
     # check arguments
     print("checking the provided command line arguments...")
-    main_dir, protocol_file, protein_file, ligands_folder, lig_name = check_arguments(args)
+    main_dir, protocol_file, protein_file, ligands_folder, lig_name, workdir = check_arguments(args)
 
     print(f"prep for {lig_name}")
 
     engine = "AMBER"
-    try:
-        pmemd_path = os.environ["amber"] + "/bin/pmemd.cuda"
-    except:
-        try:
-            pmemd_path = os.environ["$AMBERHOME"] + "/bin/pmemd.cuda"
-        except:
-            raise IOError("please have either 'amber' or 'AMBERHOME' set in the environment.")
 
-    lig_prep(main_dir, protocol_file, protein_file, ligands_folder, lig_name, engine, pmemd_path, args.work_dir)
+    lig_prep(main_dir, protocol_file, protein_file, ligands_folder, lig_name, engine, workdir)
 
 if __name__ == "__main__":
     main()

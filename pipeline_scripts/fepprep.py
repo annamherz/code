@@ -27,10 +27,7 @@ def fep_prep(pert, prot_file, num_lambda_query, engine_query, main_dir, prep_dir
     protocol = pipeline_protocol(prot_file) # instantiate the protocol as an object
     print("validating the protocol file...")
     protocol.validate() # validate all the input
-    # print("rewriting the protocol file...")
-    # protocol.rewrite_protocol() # rewrite protocol file
     # add the number of lambdas and engine to the protocol
-    protocol.hmr_factor(3)
     protocol.num_lambda(num_lambda_query)
     protocol.engine(engine_query)
     if protocol.name():

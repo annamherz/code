@@ -4,7 +4,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --job-name=extr
-#SBATCH --time=01:00:00
+#SBATCH --time=021:00:00
 #SBATCH -o ../slurm_logs/extr_%A.out
 #SBATCH -e ../slurm_logs/extr_%A.err
 

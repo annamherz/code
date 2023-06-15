@@ -43,6 +43,7 @@ class stats_engines(plotting_engines):
             data_x = self._validate_in_names_list(data_x)
             data_y = self._validate_in_names_list(data_y)
             df = self.freenrg_df_dict[data_x][data_y][pv]
+            df = df.dropna()
 
             x = df[f"freenrg_{data_x}"]
             y = df[f"freenrg_calc"]

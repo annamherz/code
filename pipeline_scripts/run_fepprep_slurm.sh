@@ -3,7 +3,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=5
 #SBATCH --job-name=fepprep
-#SBATCH --time=05:00:00
+#SBATCH --time=03:00:00
 #SBATCH -o ../slurm_logs/fepprep_%A_%a.out
 #SBATCH -e ../slurm_logs/fepprep_%A_%a.err
 
@@ -24,6 +24,7 @@ eng=${eng_array[$SLURM_ARRAY_TASK_ID]}
 win=${win_array[$SLURM_ARRAY_TASK_ID]}
 
 echo "fepprep for $trans using $eng"
+echo $scripts_dir/fepprep.py -pert $trans -eng $eng -lam $win -mf $MAINDIRECTORY -p $prot_file -prep $prep_folder
 python $scripts_dir/fepprep.py -pert $trans -eng $eng -lam $win -mf $MAINDIRECTORY -p $prot_file -prep $prep_folder
 
 end=`date +%s`

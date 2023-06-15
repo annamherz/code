@@ -1,4 +1,5 @@
 import BioSimSpace as BSS
+from BioSimSpace import Protocol as _Protocol
 from BioSimSpace._SireWrappers import System as _System
 from BioSimSpace._SireWrappers import Molecule as _Molecule
 import os
@@ -793,6 +794,30 @@ class validate():
 
         return system
 
+
+    @staticmethod
+    def bss_protocol(protocol):
+        """checks if it is a BSS protocol
+
+        Args:
+            system (BioSimSpace.Protocol): the protocol
+
+        Raises:
+            TypeError: if not in BioSimSpace.Protocol.protocols()
+
+        Returns:
+            BioSimSpace.Protocol: the BSS protocol.
+        """
+
+        # TODO this is a very hacky way and not ideal 
+        
+        ty = type(protocol)
+
+        if "BioSimSpace.Protocol" not in str(ty):
+            raise TypeError("'protocol' must be a BSS protocol!.")
+
+        return protocol
+    
     @staticmethod
     def molecule(molecule):
         """Check if BSS molecule

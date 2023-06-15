@@ -5,7 +5,7 @@ from BioSimSpace.Units.Length import angstrom as _angstrom
 from ..utils._validate import *
 
 
-def run_process(system, protocol, engine="AMBER", pmemd_path=None, work_dir=None):
+def run_process(system, protocol, engine="AMBER", exe=None, work_dir=None):
     """    Given a solvated system (BSS object) and BSS protocol, run a process workflow with either 
     AMBER or GROMACS. Returns the processed system.
 
@@ -13,7 +13,7 @@ def run_process(system, protocol, engine="AMBER", pmemd_path=None, work_dir=None
         system (BioSimSpace._SireWrappers.System): a BSS system
         protocol (pipeline.prep.pipeline_protocol): a pipeline protocol
         engine (str, optional): engine used for the process. Defaults to "AMBER".
-        pmemd_path (str, optional): path to pmemd for amber. Defaults to None.
+        exe (str, optional): path to executable to run. Defaults to None.
         work_dir (str, optional): work dir for the BSS process. Defaults to None.
 
     Raises:
@@ -23,20 +23,29 @@ def run_process(system, protocol, engine="AMBER", pmemd_path=None, work_dir=None
         BioSimSpace._SireWrappers.System: the system after the process is completed.
     """
 
-    # TODO fix so always runs pmemd
+    eng_proc_dict = {"AMBER":BSS.Process.Amber,
+                     "GROMACS":BSS.Process.Gromacs,
+                     "SOMD":BSS.Process.Somd,
+                     }
+    
+    func = eng_proc_dict[validate.engine(engine)]
 
+    if exe:
+        pass
+    elif not exe and engine == "AMBER":
+        try:
+            exe = os.environ["$AMBERHOME"] + "/bin/pmemd.cuda"
+        except:
+            raise IOError("please have either 'amber' or 'AMBERHOME' set in the environment.")
+    
     # Create the process passing a working directory.
-    if engine == "AMBER":
-        if pmemd_path:
-            process = BSS.Process.Amber(
-                system, protocol, work_dir=work_dir, exe=pmemd_path)
-        else:
-            process = BSS.Process.Amber(
-                system, protocol, work_dir=work_dir)
-
-    elif engine == "GROMACS":
-        process = BSS.Process.Gromacs(
+    if exe:
+        process = func(
+            system, protocol, work_dir=work_dir, exe=exe)
+    else:
+        process = func(
             system, protocol, work_dir=work_dir)
+  
 
     # Start the process, wait for it to exit
     process.start()
@@ -102,16 +111,16 @@ def nvt_prots(lig_fep):
     # NVTs
     # NVT restraining all non solvent atoms
     protocol_nvt_sol = func(
-        runtime=400*BSS.Units.Time.picosecond,
+        runtime=1000*BSS.Units.Time.picosecond,
         temperature=300*BSS.Units.Temperature.kelvin,
         restraint="all",
-        restart=True,
+        restart=False,
         **args
     )
 
     # NVT restraining all backbone/heavy atoms
     protocol_nvt_heavy = func(
-        runtime=400*BSS.Units.Time.picosecond,
+        runtime=1000*BSS.Units.Time.picosecond,
         temperature=300*BSS.Units.Temperature.kelvin,
         restraint="heavy",
         restart=True,
@@ -119,7 +128,7 @@ def nvt_prots(lig_fep):
     )
     # NVT no restraints
     protocol_nvt = func(
-        runtime=400*BSS.Units.Time.picosecond,
+        runtime=1000*BSS.Units.Time.picosecond,
         temperature_start=0*BSS.Units.Temperature.kelvin,
         temperature_end=300*BSS.Units.Temperature.kelvin,
         restart=True,
@@ -147,7 +156,7 @@ def npt_prots(lig_fep):
     # NPTs
     # NPT restraining all non solvent heavy atoms
     protocol_npt_heavy = func(
-        runtime=400*BSS.Units.Time.picosecond,
+        runtime=1000*BSS.Units.Time.picosecond,
         pressure=1*BSS.Units.Pressure.atm,
         temperature=300*BSS.Units.Temperature.kelvin,
         restraint="heavy",
@@ -156,7 +165,7 @@ def npt_prots(lig_fep):
     )
     # NPT with gradual release of restraints
     protocol_npt_heavy_lighter = func(
-        runtime=400*BSS.Units.Time.picosecond,
+        runtime=1000*BSS.Units.Time.picosecond,
         pressure=1*BSS.Units.Pressure.atm,
         temperature=300*BSS.Units.Temperature.kelvin,
         restraint="heavy",
@@ -166,7 +175,7 @@ def npt_prots(lig_fep):
     )
     # NPT no restraints
     protocol_npt = func(
-        runtime=1000*BSS.Units.Time.picosecond,
+        runtime=3000*BSS.Units.Time.picosecond,
         pressure=1*BSS.Units.Pressure.atm,
         temperature=300*BSS.Units.Temperature.kelvin,
         restart=True,
@@ -175,7 +184,37 @@ def npt_prots(lig_fep):
 
     return protocol_npt_heavy, protocol_npt_heavy_lighter, protocol_npt
 
-def minimise_equilibrate_leg(system_solvated, engine="AMBER", pmemd=None, lig_fep="ligprep", work_dir=None):  # times at the top
+
+def md_prots(runtime, **kwargs):
+    """define the npt protocols for the MD. Equilibrate before.
+
+    Args:
+        runtime (int): runtime of the MD simulation in nanoseconds.
+
+    Returns:
+        BSS.Protocol: MD protocol.
+    """
+
+    runtime = validate.integer(runtime)
+
+    prot_dict = {"ligprep": (BSS.Protocol.Equilibration, {}),
+                 "fepprep": (BSS.Protocol.FreeEnergyEquilibration, {"lam_vals":[0.5], "lam":0.5})}
+    
+    func = BSS.Protocol.Production
+    args = kwargs
+
+    # NPT no restraints
+    protocol_md = func(
+        runtime=runtime*BSS.Units.Time.nanosecond,
+        pressure=1*BSS.Units.Pressure.atm,
+        temperature=300*BSS.Units.Temperature.kelvin,
+        restart=True,
+        **args
+    )
+
+    return protocol_md
+
+def minimise_equilibrate_leg(system_solvated, engine="AMBER", pmemd=None, lig_fep="ligprep", work_dir=None, timestep=2):  # times at the top
     """minimse and equilibrate for the given leg of the pipeline
 
     Args:
@@ -203,6 +242,13 @@ def minimise_equilibrate_leg(system_solvated, engine="AMBER", pmemd=None, lig_fe
     # NPTs
     protocol_npt_heavy, protocol_npt_heavy_lighter, protocol_npt = npt_prots(lig_fep)
 
+    protocol_nvt_sol.setTimeStep(timestep*BSS.Units.Time.femtosecond)
+    protocol_nvt_heavy.setTimeStep(timestep*BSS.Units.Time.femtosecond)
+    protocol_nvt.setTimeStep(timestep*BSS.Units.Time.femtosecond)
+    protocol_npt_heavy.setTimeStep(timestep*BSS.Units.Time.femtosecond)
+    protocol_npt_heavy_lighter.setTimeStep(timestep*BSS.Units.Time.femtosecond)
+    protocol_npt.setTimeStep(timestep*BSS.Units.Time.femtosecond)
+
     # run all the protocols
     if lig_fep == "ligprep":
         print("minimising...")
@@ -227,3 +273,31 @@ def minimise_equilibrate_leg(system_solvated, engine="AMBER", pmemd=None, lig_fe
         sys_equil_fin = run_process(equil_nvt, protocol_npt, engine, pmemd)
 
     return sys_equil_fin
+
+
+def md_leg(system_equil, engine="AMBER", pmemd=None, runtime=10, work_dir=None, timestep=2):  # times at the top
+    """minimse and equilibrate for the given leg of the pipeline
+
+    Args:
+        system_equil (BioSimSpace._SireWrappers.System): the equilibrated BSS system .
+        engine (str, optional): engine used for the process. Defaults to "AMBER".
+        pmemd (str, optional): pmemd path for use with AMBER. Defaults to None.
+        runtime (int, optional): Runtime of the MD simulation. Defaults to 10.
+        work_dir (str, optional): location for the runs. Defaults to None.
+
+    Returns:
+        BioSimSpace._SireWrappers.System: the final system
+    """
+
+    if work_dir:
+        work_dir = validate.folder_path(work_dir, create=True)
+
+    # define all the protocols
+
+    # MD
+    protocol_md = md_prots(runtime)
+    protocol_md.setTimeStep(timestep*BSS.Units.Time.femtosecond)
+
+    sys_md_fin = run_process(system_equil, protocol_md, engine, pmemd, work_dir=work_dir)
+
+    return sys_md_fin
