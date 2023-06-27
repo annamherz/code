@@ -22,7 +22,7 @@ class analysis_network():
     """class to analyse results files and plot
     """
 
-    def __init__(self, results_directory=None, exp_file=None, engines=None, net_file=None, output_folder=None, analysis_ext=None, name=None, extra_options=None, verbose=False):
+    def __init__(self, results_directory=None, exp_file=None, engines=None, net_file=None, output_folder=None, analysis_prot=None, name=None, extra_options=None, verbose=False):
         """analyses the network for a certain system
 
         Args:
@@ -31,7 +31,7 @@ class analysis_network():
             engines (list, optional): engines to consider (to comapre multiple). Defaults to None.
             net_file (str, optional): file path to the network of perturbations to analyse. Defaults to None.
             output_folder (str, optional): folder path to where to save all the outputs of the analysis. Defaults to None.
-            analysis_ext (str or pipeline.protocol.analysis_protocol, optional): file extension to look for for the results. Defaults to None.
+            analysis_prot (pipeline.protocol.analysis_protocol, optional): analysis protocol to make file extension to look for for the results. Defaults to None.
             extra_options (dict, optional): extra options (eg temperature). Defaults to None.
 
         Raises:
@@ -65,15 +65,15 @@ class analysis_network():
             self._net_file = validate.file_path(net_file)
             self.net_ext = validate.string(f"{net_file.split('/')[-1].split('.')[0]}")
 
-        if not analysis_ext:
+        if not analysis_prot:
             self.file_ext = ".+" # wildcard, all files in the folder included
         else:
             # read in a dictionary or analysis protocol file
             try:
-                analysis_options = analysis_protocol(analysis_ext, auto_validate=True)
+                analysis_options = analysis_protocol(analysis_prot, auto_validate=True)
                 self.file_ext = analyse.file_ext(analysis_options)
             except:
-                raise TypeError(f"{analysis_ext} analysis ext must be either a string or an analysis protocol file/dictionary")
+                raise TypeError(f"{analysis_prot} analysis protocol must be an analysis protocol file/dictionary")
 
         if results_directory:
             self._results_directory = validate.folder_path(results_directory)
@@ -969,6 +969,9 @@ class analysis_network():
 
         plot_obj.histogram(engines=engine, error_dict=error_dict, file_ext=free_bound)
 
+    def plot_convergence(self):
+        pass
+
     def _initialise_stats_object(self, check=False):
         """intialise the object for statistical analysis.
 
@@ -1174,11 +1177,3 @@ class analysis_network():
         print ("Tau confidence is: %.2f < %.2f < %.2f" %(tau_confidence[1], tau_confidence[0], tau_confidence[2]))
 
         return r_confidence, tau_confidence, mue_confidence 
-
-
-
-# TODO new class that inherits from above, so can compare different methods
-
-# for analysis between diff engines
-#         # stat compare convergence
-#         # compare how fast reach concurrent results for length of runs?

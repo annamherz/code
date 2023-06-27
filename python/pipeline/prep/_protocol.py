@@ -44,8 +44,11 @@ class protocol():
                         prot = validate.analysis_protocol(file)
                     else:
                         raise TypeError("protocol must be either a pipeline or analysis protocol.")
-                    self._query_dict(prot.dictionary())
-                    self._prot_file(validate.file_path(prot._prot_file))
+                    self._query_dict = prot.dictionary()
+                    try:
+                        self._prot_file = validate.file_path(prot._prot_file)
+                    except:
+                        self._prot_file = None
                 except Exception as e:
                     print(e)
                     raise ValueError(f"input was not recognised as a file/dictionary/protocol object.")

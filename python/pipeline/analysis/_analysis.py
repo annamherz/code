@@ -11,13 +11,14 @@ import pickle
 
 from ..utils import *
 from ..prep import analysis_protocol
+from ._convergence import plot_convergence_single
 
 
 class analyse():
     """class to analyse a work dir 
     """
 
-    def __init__(self, work_dir, pert=None, engine=None, analysis_protocol=None):
+    def __init__(self, work_dir, pert=None, engine=None, analysis_prot=None):
         """class for analysing results in a directory for a single perturbation
 
         Args:
@@ -93,10 +94,9 @@ class analyse():
         self.freenrg_val = None
         self.freenrg_err = None
 
-        # TODO cna also read in analysis file and validate ?
-        if analysis_protocol:
-            analysis_protocol = validate.analysis_protocol(analysis_protocol)
-            self.set_options(analysis_protocol)
+        if analysis_prot:
+            analysis_prot = analysis_protocol(analysis_prot, auto_validate=True)
+            self.set_options(analysis_prot)
 
     @staticmethod
     def _default_analysis_options_dict():
@@ -814,3 +814,19 @@ class analyse():
                     except Exception as e:
                         print(e)
                         print(f"could not plt dhdl for {name}")
+
+
+    def plot_convergence(self):
+
+        """plot convergence for the analysed run. This will calculated the truncated data.
+        """
+
+        if not self.is_analysed:
+            warnings.warn(
+                "can't plot, not all repeats have been analysed. please self.analyse_all_repeats() first!")
+
+        else:
+            graph_dir = validate.folder_path(self._work_dir + '/graphs', create=True)
+
+
+
