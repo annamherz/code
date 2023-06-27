@@ -81,7 +81,6 @@ def add_header_simfile(trans_dir):
             # only check the first few lines
             with open(f"{direc}/simfile.dat") as sfile:
                 for line in sfile.readlines():
-                    line_counter += 1
                     if (line.startswith('#')):
                         hash_counter += 1
                         if hash_counter == 8:
@@ -127,7 +126,7 @@ def add_header_simfile(trans_dir):
                 file.write("#General information on simulation parameters: \n")
                 file.write("#Simulation used 250000 moves, 4 cycles and 4000 ps of simulation time \n")
                 file.write(f"#Generating lambda is		 {lam}\n")
-                file.write("#Alchemical array is		 (0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)\n")
+                file.write(f"#Alchemical array is		 {(', ').join(lambdas)}\n")
                 file.write("#Generating temperature is 	300 t\n")
                 file.write("#Energy was saved every 200 steps \n")
                 file.write("#\n")
@@ -248,13 +247,15 @@ class extract():
         """
 
         dir_list = [dirs[0] for dirs in os.walk(folder)]
+        dirs_found = 0
 
         # exclude the min, heat, eq directories from extraction.
         for dirs in dir_list:
             if not "min" in dirs:
                 if not "heat" in dirs:
                     if not "eq" in dirs:
-                        if "lambda" in dirs:      
+                        dirs_found += 1
+                        if "lambda" in dirs:   
                             new_dir = validate.folder_path(f"{extract_dir}{dirs.split(f'{folder}')[1]}", create=True)                  
                             if "AMBER" in dirs:
                                 file_names = ["amber.out"]
@@ -275,6 +276,8 @@ class extract():
                                 except:
                                     print(f"{dirs} does not have a recognised input file, {str(file)}.")
         
+        if dirs_found == 0:
+            raise ValueError("no directories were found to extract from! make sure there is not min/heat/eq in the main folder path as these will be excluded.")
         
     def extract_frames(self, traj_lambdas=None, rmsd=True, overwrite=False):
         """extract the rmsd and/or frames for certain lambda windows.

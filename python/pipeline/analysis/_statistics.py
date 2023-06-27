@@ -19,15 +19,21 @@ class stats_engines(plotting_engines):
 
         self._set_statistic_dicts()
     
+    @staticmethod
+    def available_statistics():
+
+        available_statistics = ['RMSE', 'MUE', 'R2', 'rho','RAE','KTAU']
+
+        return available_statistics
+    
     def _set_statistic_dicts(self):
 
-        self.statistics  = ['RMSE', 'MUE', 'R2', 'rho','RAE','KTAU']
+        self.statistics  = stats_engines.available_statistics()
 
         # for statistics compared to experimental value
         self.statistics_dict_exper = {}
         for statistic in self.statistics:
             self.statistics_dict_exper[statistic] ={}
-
 
     def _get_x_y(self, pert_val=None, data_x=None, data_y=None, x=None, y=None, xerr=None, yerr=None):
 
@@ -62,15 +68,14 @@ class stats_engines(plotting_engines):
         
         return x,y,xerr,yerr
 
+    @staticmethod
+    def compute_stats(x=None, y=None, xerr=None, yerr=None, statistic=None):
 
-    def _compute_stats(self, pert_val=None, data_x=None, data_y=None, statistic=None, x=None, y=None, xerr=None, yerr=None):
+        statistic = validate.string(statistic).upper()
 
-        if statistic not in self.statistics:
-            raise ValueError(f"please use one of the statistics in {self.statistics}")
-
-        # get the x y values from the dictionaries, also validates pert val and engine
-        x,y,xerr,yerr = self._get_x_y(pert_val, data_x, data_y, x, y, xerr, yerr)
-
+        if statistic not in stats_engines.available_statistics():
+            raise ValueError(f"please use one of the statistics in {stats_engines.available_statistics()}")
+        
         # using cinnabar function
         s = stats.bootstrap_statistic(x, y, xerr, yerr, nbootstrap=10000, statistic=statistic)
         values = (s['mle'], s['stderr'])
@@ -78,11 +83,20 @@ class stats_engines(plotting_engines):
             
         return values
 
+    def _compute_stats(self, pert_val=None, data_x=None, data_y=None, statistic=None, x=None, y=None, xerr=None, yerr=None):
+
+        # get the x y values from the dictionaries, also validates pert val and engine
+        x,y,xerr,yerr = self._get_x_y(pert_val, data_x, data_y, x, y, xerr, yerr)
+
+        values = stats_engines.compute_stats(x, y, xerr, yerr, statistic)
+            
+        return values
+
     def compute_statistics(self):
 
         for pv in ["pert","val"]:
             self.compute_mue(pv, self.engines)
-            # all compute functions
+            # TODO all compute functions
 
     def _compute_base(self, pert_val=None, y=None, x=None, statistic=None):
 

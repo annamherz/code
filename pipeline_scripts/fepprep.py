@@ -11,6 +11,7 @@
 import BioSimSpace as BSS
 from distutils.dir_util import remove_tree
 from argparse import ArgumentParser
+import pickle
 
 from pipeline.prep import *
 from pipeline.utils import *
@@ -58,8 +59,18 @@ def fep_prep(pert, prot_file, num_lambda_query, engine_query, main_dir, prep_dir
             remove_tree(workdir)
         except:
             pass
+    
+    kwargs = {}
+
+    # load in any predefined mapping
+    if os.path.exists(f"/home/anna/Documents/benchmark/new_files/mapping/{lig_1}~{lig_2}_mapping_dict.pickle"):
+        with open(f"/home/anna/Documents/benchmark/new_files/mapping/{lig_1}~{lig_2}_mapping_dict.pickle", "rb") as handle:
+            mapping_dict = pickle.load(handle)
+            kwargs = {"mapping":mapping_dict}
+            print(f"using {mapping_dict} as the mapping...")
+
     # generate folder based on fepprep protocol (both or start)
-    fepprep_obj.generate_folders(workdir)
+    fepprep_obj.generate_folders(workdir, **kwargs)
 
 def check_arguments(args):
 

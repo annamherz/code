@@ -19,6 +19,7 @@ start=`date +%s`
 echo "Folder for these runs is : $MAINDIRECTORY"
 echo "Analysis for the transformation $1, $2."
 
+echo $scripts_dir/analysis.py -pert $1 -eng $2 -mf $MAINDIRECTORY -a $ana_file -p $prot_file
 python $scripts_dir/analysis.py -pert $1 -eng $2 -mf $MAINDIRECTORY -a $ana_file -p $prot_file
 
 end=`date +%s`

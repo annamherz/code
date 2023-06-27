@@ -20,19 +20,19 @@ class merge():
             BioSimSpace._SireWrappers._molecule.Molecule: merged ligands as BSS object
         """
 
-        # Align ligand2 on ligand1
-        # get the mapping of ligand0 to atoms in ligand1
-        l0a, l1a, mapping = pipeline.prep.merge.atom_mappings(ligand_0, ligand_1, **kwargs)
-        inv_mapping = {v: k for k, v in mapping.items()}
-
+        ligand_0 = validate.molecule(ligand_0)
+        ligand_1 = validate.molecule(ligand_1)
+        
         # default ring breaking is not allowed
         allow_ring_breaking = False
         allow_ring_size_change = False
         align_to = "lig0" 
         scoring_function = "rmsd_align"
+        mapping = None
+        inv_mapping = None
 
         for key,value in kwargs.items():
-            key = key.replace("_","").replace(" ","").upper()
+            key = key.upper().replace(" ","").replace("_","").strip()
             if key == "ALLOWRINGBREAKING":
                 allow_ring_breaking = validate.boolean(value)
             if key == "ALLOWRINGSIZECHANGE":
@@ -41,12 +41,32 @@ class merge():
                 align_to = validate.string(value)  
             if key == "SCORINGFUNCTION":
                 scoring_function = validate.string(value) # rmsd, rmsd_align, rmsd_flex_align
+            if key == "MAPPING":
+                mapping = validate.dictionary(value) 
 
         # function for aligning depends on scoring function
         func_dict = {"rmsd_align": BSS.Align.rmsdAlign,
                      "rmsd_flex_align": BSS.Align.flexAlign}
         
         align_func = func_dict[scoring_function]
+
+        if not mapping:
+            print("mapping ligands...")
+            # Align ligand2 on ligand1
+            # get the mapping of ligand0 to atoms in ligand1
+            l0a, l1a, mapping = pipeline.prep.merge.atom_mappings(ligand_0, ligand_1, **kwargs)
+        else:
+            print("using provided mapping...")
+            l0a = ligand_0.getAtoms()
+            l1a = ligand_1.getAtoms()
+
+        # check no of perturbing atoms in each molecule on average
+        no_atoms = (len(l0a)+len(l1a))/2 - len(mapping)
+        if no_atoms > 25:
+            raise ValueError(f"the mapping results in more than 25 perturbable atoms per molecule on average, which is not ideal.\
+                             check if mapping is reasonable?")
+
+        inv_mapping = {v: k for k, v in mapping.items()}
 
         if align_to == "lig0":
             # need inverse mapping to align
@@ -181,7 +201,7 @@ class merge():
         prematch = {}
 
         for key,value in kwargs.items():
-            key = key.replace("_","").replace(" ","").upper()
+            key = key.upper().replace(" ","").replace("_","").strip()
             if key == "COMPLETERINGSONLY":
                 complete_rings = validate.boolean(value)
             if key == "PRUNEPERTURBEDCONSTRAINTS":
@@ -209,6 +229,12 @@ class merge():
             raise _Exceptions.AlignmentError(
                 "Could not extract ligands from input systems. Check that your ligands/proteins are properly prepared!")
 
+        # del as issue if passed twice
+        for name in ["prematch", "scoring_function", "complete_rings_only","prune_perturbed_constraints", "prune_crossing_constraints"]:
+            try:
+                del kwargs[name]
+            except:
+                pass
 
         # Align ligand2 on ligand1
         # get the mapping of ligand0 to atoms in ligand1
@@ -218,7 +244,8 @@ class merge():
                                     complete_rings_only=complete_rings,
                                     prematch=prematch,
                                     prune_perturbed_constraints=prune_perturbed_constraints,
-                                    prune_crossing_constraints=prune_crossing_constraints
+                                    prune_crossing_constraints=prune_crossing_constraints,
+                                    **kwargs
                                     )      
 
         return (ligand_0.getAtoms(), ligand_1.getAtoms(), mapping)

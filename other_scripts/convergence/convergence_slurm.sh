@@ -18,6 +18,10 @@ python truncation_check.py -mf /home/anna/Documents/benchmark/extracted/tyk2 -n 
 python truncation_check.py -mf /home/anna/Documents/benchmark/extracted/mcl1 -n /home/anna/Documents/benchmark/extracted/mcl1/execution_model/network_lomap.dat -e MBAR
 python truncation_check.py -mf /home/anna/Documents/benchmark/extracted/p38 -n /home/anna/Documents/benchmark/extracted/p38/execution_model/network_lomap.dat -e MBAR
 
+python truncation_check.py -mf /home/anna/Documents/benchmark/extracted/tyk2 -n /home/anna/Documents/benchmark/extracted/tyk2/execution_model/network_lomap.dat -e MBAR -eq False -s True
+python truncation_check.py -mf /home/anna/Documents/benchmark/extracted/mcl1 -n /home/anna/Documents/benchmark/extracted/mcl1/execution_model/network_lomap.dat -e MBAR -eq False -s True
+python truncation_check.py -mf /home/anna/Documents/benchmark/extracted/p38 -n /home/anna/Documents/benchmark/extracted/p38/execution_model/network_lomap.dat -e MBAR -eq False -s True
+
 python truncation_check.py -mf /home/anna/Documents/benchmark/extracted/tyk2 -n /home/anna/Documents/benchmark/extracted/tyk2/execution_model/network_lomap.dat -e MBAR -eq True -s True
 python truncation_check.py -mf /home/anna/Documents/benchmark/extracted/mcl1 -n /home/anna/Documents/benchmark/extracted/mcl1/execution_model/network_lomap.dat -e MBAR -eq True -s True
 python truncation_check.py -mf /home/anna/Documents/benchmark/extracted/p38 -n /home/anna/Documents/benchmark/extracted/p38/execution_model/network_lomap.dat -e MBAR -eq True -s True

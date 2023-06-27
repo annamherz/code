@@ -1053,7 +1053,7 @@ class plotting_engines():
             if error_dict:
                 x = error_dict[eng] 
             else:
-                freenrg_df_plotting = [self.freenrg_df_dict][name][eng][pert_val].dropna()
+                freenrg_df_plotting = self.freenrg_df_dict[name][eng][pert_val].dropna()
                 freenrg_df_plotting = self._prune_perturbations(freenrg_df_plotting, perturbations)
                 x = freenrg_df_plotting["err_calc"]   
 

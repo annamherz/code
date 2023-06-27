@@ -80,10 +80,11 @@ class pipeline_protocol():
                     'equilibrium runtime unit': 'ps',
                     'engines':"ALL",
                     "fepprep":"both",
+                    "rerun": "False",
                     "config options":None,
                     "config options file":None,
                     "name": None,
-                    "rerun": "False"
+                    "kwargs": {}
                     }
         
         return default_dict
@@ -910,7 +911,7 @@ class pipeline_protocol():
             try:
                 value = self._kwargs
             except:
-                value = None
+                value = {}
                 self._kwargs = value
 
         return value
@@ -983,7 +984,8 @@ class analysis_protocol(pipeline_protocol):
                         "truncate percentage": "0",
                         "truncate keep":"end",
                         "mbar method": "None", # robust or default
-                        "name": None
+                        "name": None,
+                        "kwargs": {}
                         }
         
         return default_dict

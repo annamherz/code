@@ -16,6 +16,7 @@ start=`date +%s`
 folder=$MAINDIRECTORY/outputs/$2/$1
 
 echo "extracting output for $folder"
+echo $scripts_dir/extract_output.py -f $folder -p $prot_file
 python $scripts_dir/extract_output.py -f $folder -p $prot_file
 
 echo "done."

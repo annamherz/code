@@ -903,7 +903,7 @@ class analysis_network():
         plot_obj.outlier(pert_val=pert_val, engines=engine, outliers=outliers)  
 
     
-    def plot_histogram_runs(self, engine=None):
+    def plot_histogram_runs(self, engine=None, per_repeat=False):
         """plot histograms for the individual runs (ie per repeats)
 
         Args:
@@ -919,7 +919,10 @@ class analysis_network():
             error_list = make_dict.error_list_from_files(self._results_repeat_files[eng])
             error_dict.update({eng:error_list})
 
-        plot_obj.histogram(engines=engine, error_dict=error_dict)
+        # if per_repeat:
+
+
+        plot_obj.histogram(engines=engine, error_dict=error_dict, file_ext="individual_runs")
 
     def plot_histogram_sem(self, engine=None, pert_val="val"):
         """plot histograms for the sem of the result (either pert or val).
@@ -930,6 +933,8 @@ class analysis_network():
         """
 
         plot_obj = self._initialise_plotting_object(check=True, verbose=self._is_verbose)
+        if not engine:
+            engine = self.engines
         plot_obj.histogram(engines=engine, pert_val=pert_val)
         
     # TODO histogram plot for the error in the free and the error in the bound legs

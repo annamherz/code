@@ -19,24 +19,29 @@ def analysis(pert, engine, ana_file, main_dir, prot_file=None):
 
     # options
     analysis_options = analysis_protocol(ana_file, auto_validate=True)
-
-    # find correct path, use extracted if it exists
-    if _os.path.exists(f"{main_dir}/outputs_extracted/{engine}/{pert}"):
-        path_to_dir = f"{main_dir}/outputs_extracted/{engine}/{pert}"
-        final_results_folder = f"{main_dir}/outputs_extracted/results"
-    elif _os.path.exists(f"{main_dir}/outputs/{engine}_extracted/{pert}"):
-        path_to_dir = f"{main_dir}/outputs/{engine}_extracted/{pert}"
-        final_results_folder = f"{main_dir}/outputs/results"
-    else:
-        path_to_dir = f"{main_dir}/outputs/{engine}/{pert}"
-        final_results_folder = f"{main_dir}/outputs/results"
+    pert_name = None
 
     if prot_file:
         protocol = pipeline_protocol(prot_file) # instantiate the protocol as an object
         protocol.validate() # validate all the input
+
         if protocol.name():
-            path_to_dir += f"_{protocol.name()}"
+            pert_name = f"{pert}_{protocol.name()}"
             analysis_options.name(protocol.name())
+    
+    if not pert_name:
+        pert_name = pert
+
+    # find correct path, use extracted if it exists
+    if _os.path.exists(f"{main_dir}/outputs_extracted/{engine}/{pert_name}"):
+        path_to_dir = f"{main_dir}/outputs_extracted/{engine}/{pert_name}"
+        final_results_folder = f"{main_dir}/outputs_extracted/results"
+    elif _os.path.exists(f"{main_dir}/outputs/{engine}_extracted/{pert_name}"):
+        path_to_dir = f"{main_dir}/outputs/{engine}_extracted/{pert_name}"
+        final_results_folder = f"{main_dir}/outputs/results"
+    else:
+        path_to_dir = f"{main_dir}/outputs/{engine}/{pert_name}"
+        final_results_folder = f"{main_dir}/outputs/results"
 
     if not _os.path.exists(path_to_dir):
         raise OSError(f"{path_to_dir} does not exist.")
@@ -52,9 +57,43 @@ def analysis(pert, engine, ana_file, main_dir, prot_file=None):
     # write the final result
     write_analysis_file(analysed_pert, final_results_folder)
 
+def analysis_work_dir(work_dir, pert, engine, ana_file):
+
+    if ana_file:
+        analysis_options = analysis_protocol(ana_file, auto_validate=True)
+    else:
+        analysis_options = None
+
+    analysed_pert = analyse(work_dir, pert, engine, analysis_options)
+    avg, error, repeats_tuple_list = analysed_pert.analyse_all_repeats()
+    analysed_pert.plot_graphs()
+
+    print(avg, error, repeats_tuple_list)
+
 def check_arguments(args):
 
     # pass the checks to the other check functions
+
+    if args.work_dir:
+        work_dir = args.work_dir
+        perturbation = None
+        engine = None
+        main_folder = None
+        analysis_file = None
+        prot_file = None
+    else:
+        work_dir = None
+            
+        if args.main_folder:
+            main_folder = args.main_folder
+        else:
+            main_folder = str(input("what is the main folder of the run?: ")).strip()
+
+        if args.protocol_file:
+            prot_file = args.protocol_file
+        else:
+            prot_file = None
+
     if args.perturbation:
         perturbation = args.perturbation
     else:
@@ -65,22 +104,15 @@ def check_arguments(args):
     else:
         engine = str(input("what is the engine?: ").strip())
 
-    if args.main_folder:
-        main_folder = args.main_folder
-    else:
-        main_folder = str(input("what is the main folder of the run?: ")).strip()
-
     if args.analysis_file:
         analysis_file = args.analysis_file
     else:
-        analysis_file = str(input("what is the path to the analysis protocol file?: ").strip())
+        if work_dir:
+            analysis_file = None
+        else:
+            analysis_file = str(input("what is the path to the analysis protocol file?: ").strip())
 
-    if args.protocol_file:
-        prot_file = args.protocol_file
-    else:
-        prot_file = None
-
-    return perturbation, engine, analysis_file, main_folder, prot_file
+    return perturbation, engine, analysis_file, main_folder, prot_file, work_dir
 
 def main():
 
@@ -91,15 +123,18 @@ def main():
     parser.add_argument("-mf", "--main_folder", type=str, default=None, help="main folder path for all the runs")
     parser.add_argument("-a", "--analysis_file", type=str, default=None, help="path to analysis protocol file")
     parser.add_argument("-p", "--protocol_file", type=str, default=None, help="path to protocol file")
+    parser.add_argument("-wd", "--work_dir", type=str, default=None, help="work dir of run, will ignore mf and protocol and ana args.")
     args = parser.parse_args()
 
     # check arguments
     print("checking the provided command line arguments...")
-    pert, engine, ana_file, main_dir, prot_file = check_arguments(args)
+    pert, engine, ana_file, main_dir, prot_file, work_dir = check_arguments(args)
 
-    print(f"analysis for {pert, engine, main_dir}")
-
-    analysis(pert, engine, ana_file, main_dir, prot_file)
+    if work_dir:
+        analysis_work_dir(work_dir, pert, engine, ana_file)
+    else:
+        print(f"analysis for {pert, engine, main_dir}")
+        analysis(pert, engine, ana_file, main_dir, prot_file)
 
 if __name__ == "__main__":
     main()

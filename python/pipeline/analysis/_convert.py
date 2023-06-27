@@ -169,7 +169,7 @@ class convert:
 
                 # TODO calc exp from yml, follwed by conversion into dict
                 for lig in exper_val_dict.keys():
-                    writer.writerow([lig,f"{exper_val[lig][0]}",f"{exper_val[lig][1]}"])
+                    writer.writerow([lig,f"{exper_val_dict[lig][0]}",f"{exper_val_dict[lig][1]}"])
 
 
             # second write the perturbation data

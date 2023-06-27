@@ -131,6 +131,7 @@ fi
 if [ $2 = "SOMD" ]; then
 echo "min + eq"
 cd eq/lambda_$lam
+sed '/gpu/d' -i somd.cfg
 somd-freenrg -c somd.rst7 -t somd.prm7 -m somd.pert -C somd.cfg -p CUDA
 
 cd $repeat_dir
@@ -142,6 +143,7 @@ cp eq/lambda_$lam/SYSTEM.s3 lambda_$lam/SYSTEM.s3
 
 echo "prod"
 cd lambda_$lam
+sed '/gpu/d' -i somd.cfg
 somd-freenrg -c somd.rst7 -t somd.prm7 -m somd.pert -C somd.cfg -p CUDA
 cd $repeat_dir
 

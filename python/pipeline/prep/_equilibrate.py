@@ -34,7 +34,7 @@ def run_process(system, protocol, engine="AMBER", exe=None, work_dir=None):
         pass
     elif not exe and engine == "AMBER":
         try:
-            exe = os.environ["$AMBERHOME"] + "/bin/pmemd.cuda"
+            exe = os.environ["AMBERHOME"] + "/bin/pmemd.cuda"
         except:
             raise IOError("please have either 'amber' or 'AMBERHOME' set in the environment.")
     

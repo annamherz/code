@@ -93,6 +93,7 @@ class analyse():
         self.freenrg_val = None
         self.freenrg_err = None
 
+        # TODO cna also read in analysis file and validate ?
         if analysis_protocol:
             analysis_protocol = validate.analysis_protocol(analysis_protocol)
             self.set_options(analysis_protocol)

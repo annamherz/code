@@ -71,7 +71,7 @@ fi
 if [ $2 = "GROMACS" ]; then
 
 min_counter=0
-# cp min/lambda_$lam/gromacs.gro min/lambda_$lam/initial_gromacs.gro
+cp min/lambda_$lam/gromacs.gro min/lambda_$lam/initial_gromacs.gro
 
 # sed -i 's/rlist = 2.0/rlist = 1.6/g' min/lambda_$lam/gromacs.mdp
 
@@ -116,6 +116,7 @@ if [ $2 = "SOMD" ]; then
 echo "min + eq"
 cd eq/lambda_$lam
 cp somd.rst7 initial_somd.rst7
+sed '/gpu/d' -i somd.cfg
 somd-freenrg -c somd.rst7 -t somd.prm7 -m somd.pert -C somd.cfg -p CUDA
 
 cd $repeat_dir
@@ -127,6 +128,7 @@ cp eq/lambda_$lam/SYSTEM.s3 lambda_$lam/SYSTEM.s3
 
 echo "prod"
 cd lambda_$lam
+sed '/gpu/d' -i somd.cfg
 somd-freenrg -c somd.rst7 -t somd.prm7 -m somd.pert -C somd.cfg -p CUDA
 cd $repeat_dir
 

@@ -116,8 +116,11 @@ def check_hmr(system, protocol, engine):
             if engine != "SOMD":
                 _warnings.warn(
                     "The passed system is already repartitioned. Proceeding without additional repartitioning.")
-        
-        return system
+    
+    else:
+        pass
+
+    return system
 
 class fepprep():
     """class for fepprep
@@ -186,12 +189,17 @@ class fepprep():
             BioSimSpace._SireWrappers.System: the free system and the bound system
         """
 
-        kwarg_dict = {"align to": align_to}
+        kwarg_dict = {"ALIGNTO": align_to}
         
         for key,value in kwargs.items():
-            kwarg_dict[key] = value
+            kwarg_dict[key.upper().replace(" ","").replace("_","").strip()] = value
 
-        print(kwarg_dict)
+        print(f"merging using {kwarg_dict} ...")
+
+        self._free_system_0 = check_hmr(self._free_system_0, self._freenrg_protocol, self._pipeline_protocol.engine())
+        self._free_system_1 = check_hmr(self._free_system_1, self._freenrg_protocol, self._pipeline_protocol.engine())
+        self._bound_system_0 = check_hmr(self._bound_system_0, self._freenrg_protocol, self._pipeline_protocol.engine())
+        self._bound_system_1 = check_hmr(self._bound_system_1, self._freenrg_protocol, self._pipeline_protocol.engine())
 
         free_system = merge.merge_system(self._free_system_0, self._free_system_1, **kwarg_dict)
         bound_system = merge.merge_system(self._bound_system_0, self._bound_system_1, **kwarg_dict)
@@ -316,12 +324,12 @@ class fepprep():
             # set up for each the bound and the free leg
             for leg, system in zip(["bound", "free"], [system_bound, system_free]):
 
-                # repartition the hydrogen masses, so only needs to be done once during the setup
-                if protocol.hmr() == True:
-                    print(f"checking and maybe repartitioning hydrogen masses for 4fs timestep for {leg}...")
-                    system = check_hmr(system, freenrg_protocol, protocol.engine())
-                elif protocol.hmr() == False:
-                    pass
+                # # repartition the hydrogen masses, so only needs to be done once during the setup
+                # if protocol.hmr() == True:
+                #     print(f"checking and maybe repartitioning hydrogen masses for 4fs timestep for {leg}...")
+                #     system = check_hmr(system, freenrg_protocol, protocol.engine())
+                # elif protocol.hmr() == False:
+                #     pass
                 
                 min_extra_options = {}
                 heat_extra_options = {}
@@ -430,10 +438,19 @@ class fepprep():
             rep = 0
             start_rep = 1
 
-        kwarg_dict = self._pipeline_protocol.kwargs()
+        # default options based on engine
+        if self._pipeline_protocol.engine() == "AMBER" or self._pipeline_protocol.engine() == "GROMACS":
+            kwarg_dict = {"PRUNEPERTURBEDCONSTRAINTS":True}
+        else:
+            kwarg_dict = {}
+        
+        # any pipeline kwargs overwrite this
+        for key,value in self._pipeline_protocol.kwargs().items():
+            kwarg_dict[key.upper().replace(" ","").replace("_","").strip()] = value
 
+        # any final passed arguments in the script overwrite this
         for key,value in kwargs.items():
-            kwarg_dict[key] = value
+            kwarg_dict[key.upper().replace(" ","").replace("_","").strip()] = value
 
         if self._pipeline_protocol.fepprep() == "both":
             ligs = ["lig0", "lig1"]
@@ -443,8 +460,6 @@ class fepprep():
 
             # get half of the lambdas
             lambdas_list = self._freenrg_protocol.getLambdaValues()
-            print(lambdas_list)
-            print(self._min_protocol.getLambdaValues())
             middle_index=len(lambdas_list)//2        
             first_half=lambdas_list[:middle_index]
             sec_half=lambdas_list[middle_index:]

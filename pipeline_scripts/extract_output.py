@@ -19,27 +19,33 @@ def extract_output(folder, prot_file):
         # TODO get lambda windows from network file
         traj_lambdas = ["0.0000","0.5000","1.0000"]
 
+    # so can pass with name, but will also append if not there
+    if protocol.name():
+        if protocol.name() != str(folder).split("_")[-1]:
+            folder += f"_{protocol.name()}"
+            print(f"name of the protocol ({protocol.name()}) is not in the folder path, will use:\n"
+                    f"{folder} as folder path for this run...")
+
     # simfile header
     if "SOMD" in folder:
         try:
+            print("adding header to simfile for SOMD...")
             add_header_simfile(folder)
         except:
             print(f"could not add the header to simfile in {folder}")
 
-    if protocol.name():
-        folder += f"_{protocol.name()}"
     # extract to output folder
     # initialise
     extraction = extract(folder)
 
     # get the output from the folder to new folder
-    try: # TODO remove try statement once installed
-        extraction.extract_output()
-        # get trajectory, will get rmsd by default
-        extraction.extract_frames(traj_lambdas=traj_lambdas, overwrite=True)
-        extraction.extract_config()
-    except Exception as e:
-        print(e)
+    print("extracting output files...")
+    extraction.extract_output()
+    # # get trajectory, will get rmsd by default
+    print("extracting trajectory files...")
+    extraction.extract_frames(traj_lambdas=traj_lambdas, overwrite=True)
+    print("extracting sample config files...")
+    extraction.extract_config()
 
 def check_arguments(args):
 
