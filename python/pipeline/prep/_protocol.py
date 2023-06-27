@@ -1,8 +1,10 @@
+import inspect
 from ..utils import *
 
-class pipeline_protocol():
 
-    def __init__(self, file=None, auto_validate=False, verbose=True):
+class protocol():
+        
+    def __init__(self, file=None, auto_validate=False, verbose=True, protocol_type=None):
         """class for storing and validating protocol options from files or dictionary.
 
         Args:
@@ -28,9 +30,26 @@ class pipeline_protocol():
                 try:
                     self._query_dict = validate.dictionary(file)
                     self._prot_file = None
+                    is_dict = True
                 except Exception as e:
                     print(e)
-                    raise TypeError("dictionary wasn't recognised either.")
+                    print("dictionary wasn't recognised either. trying to read as pipeline protocol...")
+                    is_dict = False
+            
+            if not is_file and not is_dict:
+                try:
+                    if protocol_type == "pipeline":
+                        prot = validate.pipeline_protocol(file)
+                    elif protocol_type == "analysis":
+                        prot = validate.analysis_protocol(file)
+                    else:
+                        raise TypeError("protocol must be either a pipeline or analysis protocol.")
+                    self._query_dict(prot.dictionary())
+                    self._prot_file(validate.file_path(prot._prot_file))
+                except Exception as e:
+                    print(e)
+                    raise ValueError(f"input was not recognised as a file/dictionary/protocol object.")
+
         else:
             print("no file or dict passed, using entirely default values...")
             # set the query dict as the default dict
@@ -48,41 +67,9 @@ class pipeline_protocol():
             self._is_validated = False
 
     def default_dict(self):
-        """the default dictionary for the protocol
 
-        Returns:
-            dict: the default dictionary for the protocol
-        """
 
-        default_dict = {'ligand forcefield': 'gaff2',
-                    'solvent': 'TIP3P',
-                    'box edges': '30',
-                    'box edges unit': 'angstrom',
-                    'box type': 'cubic',
-                    'sampling': '2',
-                    'sampling unit': 'ns',
-                    'hmr': 'False',
-                    'hmr factor': 'auto',
-                    'timestep overwrite': 'True',
-                    'timestep' : "2",
-                    "timestep unit" : "fs",
-                    'repeats': '1',
-                    'trajectories': "None",
-                    'protein forcefield': 'ff14SB',
-                    'start temperature': '0',
-                    'end temperature': '300',
-                    'temperature': '300',
-                    'temperature unit': 'kelvin',
-                    'pressure': '1',
-                    'pressure unit': 'bar',
-                    'minimisation steps': '10000',
-                    'equilibrium runtime': '100',
-                    'equilibrium runtime unit': 'ps',
-                    'engines':"ALL",
-                    "fepprep":"both",
-                    "rerun": "False",
-                    "config options":None,
-                    "config options file":None,
+        default_dict = {
                     "name": None,
                     "kwargs": {}
                     }
@@ -97,6 +84,21 @@ class pipeline_protocol():
         """
         return self._query_dict
 
+
+    def validate(self):
+        """validates all the input from the current query dict (taken from the protocol file or dict).
+        """
+        
+        query_dict = self._query_dict
+
+        try:
+            # validate all the input dict and replace in the query dict, eg:
+            self.kwargs(query_dict["kwargs"])
+            self.name(query_dict["name"])
+            self._is_validated = True
+
+        except ValueError as e:
+            print(f"There is a problem with the input provided in {self._prot_file}.\n Error is:\n {e}")
 
     def _read_protocol(self, file=None):
         """reads the protocol file into a dictionary
@@ -129,47 +131,7 @@ class pipeline_protocol():
                     query_dict[f"{line.split('=')[0].strip().lower()}"] = line.split('=')[-1].strip()
 
         return query_dict
-
-    def _config_dict(self):
-
-        legs = ["min","eq","heat","prod","all"]
-        query_dict = {}
-        for leg in legs:
-            query_dict[leg] = {}
-        
-        return query_dict
-
-    def _read_config_file(self, file=None):
-        """reads the config file into a dictionary
-
-        Raises:
-            ValueError: if the protocol file does not contain "=" or ";"
-
-        Returns:
-            dict: dictionary of the entries in the protocol file,
-            seperated into key:value pairs by the "=" and into sections by ";"
-        """
-
-        query_dict = self._config_dict()
-
-        file = validate.file_path(file)
-        leg = None
-        # get value regardless of the order of the protocol.dat
-        with open(f"{file}", "r") as file:
-            for line in file:
-
-                if ";" in line:
-                    leg = f"{line.split(';')[-1].strip().lower()}"
-                    if leg not in query_dict.keys():
-                        raise ValueError(f"please seperate config file options using ; and {query_dict.keys()}")
-                elif "=" not in line:
-                    raise ValueError("protocol file may only contain lines with '=', eg 'ligand forcefield = GAFF2'")
-                elif not leg:
-                    query_dict["all"][f"{line.split('=')[0].strip().lower()}"] = line.split('=')[-1].strip()
-                else:
-                    query_dict[leg][f"{line.split('=')[0].strip().lower()}"] = line.split('=')[-1].strip()
-
-        return query_dict
+    
 
     def _check_query(self):
         """fills in any gaps of the dict from the protocol file
@@ -220,7 +182,137 @@ class pipeline_protocol():
                 raise ValueError("there is no file to overwrite, please provide a 'file_path'")
 
         pipeline.utils.write_protocol(self._query_dict, new_file)
+    
+    def print_protocol(self):
+        """prints the protocol.
+        """
 
+        if not self._is_validated:
+            print("please validate the protocol first.")
+        
+        else:
+            query_dict = self._query_dict
+
+            for query in query_dict.keys():
+                print(f"{query} : {query_dict[query]}")
+
+    def kwargs(self, value=None):
+
+        if value:
+            value = validate.dictionary(value)
+            self._query_dict["kwargs"] = value
+            self._kwargs = value
+        else:
+            try:
+                value = self._kwargs
+            except:
+                value = {}
+                self._kwargs = value
+
+        return value
+
+    def name(self, value=None):
+
+        if value:
+            value = validate.string(value)
+            self._query_dict["name"] = value
+            self._name = value
+        else:
+            try:
+                value = self._name
+            except:
+                self._name = value
+
+        return value
+    
+class pipeline_protocol(protocol):
+
+    def __init__(self, file=None, auto_validate=False, verbose=False):
+        # inherit the init from other protocol too
+        super().__init__(file, auto_validate, verbose, "pipeline")
+
+    def default_dict(self):
+        """the default dictionary for the protocol
+
+        Returns:
+            dict: the default dictionary for the protocol
+        """
+
+        default_dict = {'ligand forcefield': 'gaff2',
+                    'solvent': 'TIP3P',
+                    'box edges': '30',
+                    'box edges unit': 'angstrom',
+                    'box type': 'cubic',
+                    'sampling': '2',
+                    'sampling unit': 'ns',
+                    'hmr': 'False',
+                    'hmr factor': 'auto',
+                    'timestep overwrite': 'True',
+                    'timestep' : "2",
+                    "timestep unit" : "fs",
+                    'repeats': '1',
+                    'trajectories': "None",
+                    'protein forcefield': 'ff14SB',
+                    'start temperature': '0',
+                    'end temperature': '300',
+                    'temperature': '300',
+                    'temperature unit': 'kelvin',
+                    'pressure': '1',
+                    'pressure unit': 'bar',
+                    'minimisation steps': '10000',
+                    'equilibrium runtime': '100',
+                    'equilibrium runtime unit': 'ps',
+                    'engines':"ALL",
+                    "fepprep":"both",
+                    "rerun": "False",
+                    "config options":None,
+                    "config options file":None,
+                    "name": None,
+                    "kwargs": {}
+                    }
+        
+        return default_dict
+
+    def _config_dict(self):
+
+        legs = ["min","eq","heat","prod","all"]
+        query_dict = {}
+        for leg in legs:
+            query_dict[leg] = {}
+        
+        return query_dict
+
+    def _read_config_file(self, file=None):
+        """reads the config file into a dictionary
+
+        Raises:
+            ValueError: if the protocol file does not contain "=" or ";"
+
+        Returns:
+            dict: dictionary of the entries in the protocol file,
+            seperated into key:value pairs by the "=" and into sections by ";"
+        """
+
+        query_dict = self._config_dict()
+
+        file = validate.file_path(file)
+        leg = None
+        # get value regardless of the order of the protocol.dat
+        with open(f"{file}", "r") as file:
+            for line in file:
+
+                if ";" in line:
+                    leg = f"{line.split(';')[-1].strip().lower()}"
+                    if leg not in query_dict.keys():
+                        raise ValueError(f"please seperate config file options using ; and {query_dict.keys()}")
+                elif "=" not in line:
+                    raise ValueError("protocol file may only contain lines with '=', eg 'ligand forcefield = GAFF2'")
+                elif not leg:
+                    query_dict["all"][f"{line.split('=')[0].strip().lower()}"] = line.split('=')[-1].strip()
+                else:
+                    query_dict[leg][f"{line.split('=')[0].strip().lower()}"] = line.split('=')[-1].strip()
+
+        return query_dict
 
     def validate(self):
         """validates all the input from the current query dict (taken from the protocol file or dict).
@@ -274,24 +366,6 @@ class pipeline_protocol():
 
         except ValueError as e:
             print(f"There is a problem with the input provided in {self._prot_file}.\n Error is:\n {e}")
-
-    
-    def print_protocol(self):
-        """prints the protocol.
-        """
-
-        if not self._is_validated:
-            print("please validate the protocol first.")
-        
-        else:
-            query_dict = self._query_dict
-
-            for query in query_dict.keys():
-                print(f"{query} : {query_dict[query]}")
-
-
-    # changing any protocol settings
-    # validate and update the internal query dictionary
 
     # this is not part of the default protocol and is found in the network file
     # it needs to be allocated before fepprep
@@ -901,35 +975,6 @@ class pipeline_protocol():
         
         return value
     
-    def kwargs(self, value=None):
-
-        if value:
-            value = validate.dictionary(value)
-            self._query_dict["kwargs"] = value
-            self._kwargs = value
-        else:
-            try:
-                value = self._kwargs
-            except:
-                value = {}
-                self._kwargs = value
-
-        return value
-
-    def name(self, value=None):
-
-        if value:
-            value = validate.string(value)
-            self._query_dict["name"] = value
-            self._name = value
-        else:
-            try:
-                value = self._name
-            except:
-                self._name = value
-
-        return value
-
     def rerun(self, value=None):
         """set whether its reruns/additional runs or return its value.
         This runs so that all the repeats are done.
@@ -961,11 +1006,11 @@ class pipeline_protocol():
 
         return value  
         
-class analysis_protocol(pipeline_protocol):
+class analysis_protocol(protocol):
 
     def __init__(self, file=None, auto_validate=False, verbose=False):
         # inherit the init from other protocol too
-        super().__init__(file, auto_validate, verbose)
+        super().__init__(file, auto_validate, verbose, "analysis")
 
     # read protocol inherited
     # rewrite protocol also inherited
