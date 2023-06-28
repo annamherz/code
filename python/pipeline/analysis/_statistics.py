@@ -4,7 +4,6 @@ from ..utils import *
 from ._network import *
 from ._analysis import *
 from ._plotting import *
-from ._convergence import *
 from ._dictionaries import *
 
 import cinnabar

@@ -9,7 +9,6 @@ from ._network import *
 from ._analysis import *
 from ._plotting import *
 from ._statistics import *
-from ._convergence import *
 from ._dictionaries import *
 from ._convert import *
 
@@ -67,11 +66,12 @@ class analysis_network():
 
         if not analysis_prot:
             self.file_ext = ".+" # wildcard, all files in the folder included
+            self.analysis_options = analysis_protocol(file=None, auto_validate=True)
         else:
             # read in a dictionary or analysis protocol file
             try:
-                analysis_options = analysis_protocol(analysis_prot, auto_validate=True)
-                self.file_ext = analyse.file_ext(analysis_options)
+                self.analysis_options = analysis_protocol(analysis_prot, auto_validate=True)
+                self.file_ext = analyse.file_ext(self.analysis_options)
             except:
                 raise TypeError(f"{analysis_prot} analysis protocol must be an analysis protocol file/dictionary")
 
@@ -139,6 +139,14 @@ class analysis_network():
         self.exper_val_dict = None # yml converted into experimental values, actual, for ligands in object
         self.normalised_exper_val_dict = None # yml converted into experimental values, then normalised
         self.exper_pert_dict = None # yml converted into experimental values, actual, for perturbations in object
+
+        # for convergence
+        self.spert_results_dict = {}
+        self.spert_bound_dict = {}
+        self.spert_free_dict = {}
+        self.epert_results_dict = {}
+        self.epert_bound_dict = {}
+        self.epert_free_dict = {}
 
         # storing the nx digraphs, per engine
         self._cinnabar_networks = {}
@@ -523,6 +531,67 @@ class analysis_network():
         self._initialise_plotting_object(verbose=self._is_verbose)
         self._initialise_stats_object()
 
+    def compute_convergence(self, main_dir):
+        
+        main_dir = validate.folder_path(main_dir)
+
+        for engine in self.engines:
+            self.spert_results_dict[engine] = {}
+            self.spert_bound_dict[engine] = {}
+            self.spert_free_dict[engine] = {}
+            self.epert_results_dict[engine] = {}
+            self.epert_bound_dict[engine] = {}
+            self.epert_free_dict[engine] = {}
+
+            for pert in self.perturbations:
+
+                # find correct path, use extracted if it exists
+                if self.name:
+                    name = f"_{self.name}"
+                else:
+                    name = ""
+                path_to_dir = f"{main_dir}/outputs_extracted/{engine}/{pert}{name}/pickle"
+                try:
+                    validate.folder_path(path_to_dir)
+                except:
+                    try:
+                        path_to_dir = f"{main_dir}/outputs/{engine}_extracted/{pert}{name}/pickle"
+                        validate.folder_path(path_to_dir)
+                    except:
+                        try:
+                            path_to_dir = f"{main_dir}/outputs/{engine}/{pert}{name}/pickle"
+                            validate.folder_path(path_to_dir)
+                        except:
+                            print(path_to_dir)
+                            path_to_dir = None
+                            print(f"cannot find pickle directory for {pert} in {engine}, where the pickles saved in a 'pickle' dir in that perturbation folder?")
+
+                try:
+                    pickle_ext = analyse.pickle_ext(self.analysis_options.dictionary(), pert, engine).split('truncate')[0]
+
+                    with open(f"{path_to_dir}/spert_results_dict_{pickle_ext}.pickle", 'rb') as file:
+                        sresults_dict = pickle.load(file)
+                    with open(f"{path_to_dir}/epert_results_dict_{pickle_ext}.pickle", 'rb') as file:
+                        eresults_dict = pickle.load(file)     
+                    with open(f"{path_to_dir}/spert_bound_dict_{pickle_ext}.pickle", 'rb') as file:
+                        sbound_dict = pickle.load(file)
+                    with open(f"{path_to_dir}/epert_bound_dict_{pickle_ext}.pickle", 'rb') as file:
+                        ebound_dict = pickle.load(file)
+                    with open(f"{path_to_dir}/spert_free_dict_{pickle_ext}.pickle", 'rb') as file:
+                        sfree_dict = pickle.load(file)
+                    with open(f"{path_to_dir}/epert_free_dict_{pickle_ext}.pickle", 'rb') as file:
+                        efree_dict = pickle.load(file)
+
+                    self.spert_results_dict[engine][pert] = sresults_dict
+                    self.spert_bound_dict[engine][pert] = sbound_dict
+                    self.spert_free_dict[engine][pert] = sfree_dict
+                    self.epert_results_dict[engine][pert] = eresults_dict
+                    self.epert_bound_dict[engine][pert] = ebound_dict
+                    self.epert_free_dict[engine][pert] = efree_dict
+
+                except:
+                    print(f"could not load pickles for {pert} in {engine}. Was it analysed for convergence?")   
+
     def successful_runs(self, eng, perts=None):
         """calculate how many successful runs
 
@@ -775,7 +844,7 @@ class analysis_network():
         plot_obj.bar(pert_val="val", names=engine, **kwargs)
 
 
-    def plot_scatter_pert(self, engine=None, use_cinnabar=False):
+    def plot_scatter_pert(self, engine=None, use_cinnabar=False, **kwargs):
         """plot the scatter plot of the perturbations.
 
         Args:
@@ -799,11 +868,12 @@ class analysis_network():
             for eng in engines:
                 plotting.plot_DDGs(self._cinnabar_networks[eng].graph,
                                 filename=f"{self.graph_dir}/DDGs_{eng}_{self.file_ext}_{self.net_ext}.png",
-                                title=f"DDGs for {eng}, {self.net_ext}") #with {self.file_ext}
+                                title=f"DDGs for {eng}, {self.net_ext}",
+                                **{"figsize":5}) #with {self.file_ext}
 
         else:
             plot_obj = self._initialise_plotting_object(check=True, verbose=self._is_verbose)
-            plot_obj.scatter(pert_val="pert", engines=engine)
+            plot_obj.scatter(pert_val="pert", engines=engine, **kwargs)
 
     def plot_scatter_lig(self, engine=None, use_cinnabar=False, **kwargs):
         """plot the scatter plot of the values per ligand.
@@ -969,8 +1039,19 @@ class analysis_network():
 
         plot_obj.histogram(engines=engine, error_dict=error_dict, file_ext=free_bound)
 
-    def plot_convergence(self):
-        pass
+    def plot_convergence(self, engine=None):
+
+        if not self.spert_results_dict:
+            raise EnvironmentError(f"please run 'calculate_convergence' first with the main_dir set.")
+
+        else:
+            if not engine:
+                engine = self.engines
+            else:
+                engine = validate.engines(engine)
+
+            plot_obj = self._initialise_plotting_object(check=True, verbose=self._is_verbose)
+            plot_obj.plot_convergence(engines=engine)
 
     def _initialise_stats_object(self, check=False):
         """intialise the object for statistical analysis.

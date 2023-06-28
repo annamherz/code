@@ -39,9 +39,9 @@ class protocol():
             if not is_file and not is_dict:
                 try:
                     if protocol_type == "pipeline":
-                        prot = validate.pipeline_protocol(file)
+                        prot = validate.pipeline_protocol(file, auto_validate=False)
                     elif protocol_type == "analysis":
-                        prot = validate.analysis_protocol(file)
+                        prot = validate.analysis_protocol(file, auto_validate=False)
                     else:
                         raise TypeError("protocol must be either a pipeline or analysis protocol.")
                     self._query_dict = prot.dictionary()
@@ -1224,7 +1224,11 @@ class analysis_protocol(protocol):
             self._query_dict["truncate percentage"] = value
             self._truncate_percentage = value
         else:
-            value = self._truncate_percentage
+            try:
+                value = self._truncate_percentage
+            except:
+                if value == 0:
+                    self._truncate_percentage = validate.integer(value)
 
         return value
 
@@ -1261,6 +1265,10 @@ class analysis_protocol(protocol):
             self._query_dict["mbar method"] = value
             self._mbar_method = value
         else:
-            value = self._mbar_method
+            try:
+                value = self._mbar_method
+            except:
+                value = None
+                self._mbar_method = value
 
         return value

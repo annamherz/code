@@ -11,6 +11,7 @@ from sklearn.metrics import mean_absolute_error as mae
 
 from ..utils import *
 from ._network import *
+from ._analysis import *
 
 class plotting_engines():
 
@@ -91,6 +92,14 @@ class plotting_engines():
         # experimental calculated directly from exp values (for bar)
         self.all_exper_pert_dict = ana_obj.exper_pert_dict
         self.all_exper_val_dict = ana_obj.normalised_exper_val_dict
+
+        # for convergence
+        self.spert_results_dict = ana_obj.spert_results_dict
+        self.spert_bound_dict = ana_obj.spert_bound_dict
+        self.spert_free_dict = ana_obj.spert_free_dict
+        self.epert_results_dict = ana_obj.epert_results_dict
+        self.epert_bound_dict = ana_obj.epert_bound_dict
+        self.epert_free_dict = ana_obj.epert_free_dict
 
     def default_file_ext(self):
         """file extension from the analysis object, if none is provided na.
@@ -1110,3 +1119,63 @@ class plotting_engines():
         histogram_dict.update({"dist": fig})
 
         return histogram_dict
+
+
+    def plot_convergence(self, engines=None):
+
+        engines = validate.engines(engines)
+
+        for engine in engines:
+            print(f"plotting diff to final result for all perturbations in {engine}...")
+            sdf = plotting_engines.pert_dict_into_df(self.spert_results_dict[engine], plot_error=False, plot_difference=True)
+            edf = plotting_engines.pert_dict_into_df(self.epert_results_dict[engine], plot_error=False, plot_difference=True)
+            analyse.plot_truncated(sdf, edf, f"{self.graph_folder}/plt_truncated_{engine}_difference_forward_reverse_{self.file_ext}.png", plot_difference=True)
+            print(f"saved images in {self.graph_folder}.")
+
+    @staticmethod
+    def pert_dict_into_df(pert_dict, plot_error=False, plot_difference=True):
+
+        df = pd.DataFrame.from_dict(pert_dict)
+        perts = list(df.columns)
+        df = df.reset_index().dropna()
+
+        index_dict = {}
+        for x in df['index']:
+            index_dict[x] = []
+
+        for pert in perts:
+            x_vals = []
+            y_vals = []
+            for a,x in zip(df[pert], df['index']):
+                if plot_error:
+                    ind = 1
+                else:
+                    ind = 0
+                if plot_difference:
+                    y_val = (df.iloc[-1][pert][ind] - a[ind])
+                else:
+                    y_val = a[ind]
+                if not index_dict[x]:
+                    index_dict[x] = [y_val]
+                else:
+                    index_dict[x].append(y_val)
+                y_vals.append(y_val)
+                x_vals.append(x)
+
+        for x in df['index']:
+            try:
+                val_list = [x for x in index_dict[x] if pd.notna(x)]
+                avg = np.mean(val_list)
+                min_val = min(val_list)
+                max_val = max(val_list)
+            except:
+                avg = None
+                min_val = None
+                max_val = None
+
+            index_dict[x] = (avg, min_val, max_val)
+
+        df = pd.DataFrame.from_dict(index_dict, orient="index", columns=["avg","min","max"])
+        df = df.dropna()
+        
+        return df

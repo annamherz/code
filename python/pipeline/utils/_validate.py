@@ -721,13 +721,13 @@ class validate():
 
 
     @staticmethod
-    def pipeline_protocol(protocol, fepprep=False):
+    def pipeline_protocol(protocol, auto_validate=True, fepprep=False):
         """check if the passed protocol is a correct pipeline_protocol
 
         Args:
             protocol (pipeline.prep.pipeline_protocol): a previously
             read and validated pipeline protocol
-
+            auto_validate (boolean): whether to validate the protocol. default is 'True'.
             fepprep (bool) : whether it is needed for fep prep stage or not
 
         Returns:
@@ -740,8 +740,11 @@ class validate():
         if not isinstance(fepprep, bool):
             raise TypeError("'fepprep' must be of type 'bool'.")
 
-        # validate incase it wasnt
-        protocol.validate()
+        if auto_validate:
+            # validate incase it wasnt
+            protocol.validate()
+        else:
+            pass
 
         # if fepprep, check that an engine and no of lam was specified
         if fepprep:
@@ -755,12 +758,13 @@ class validate():
         return protocol
 
     @staticmethod
-    def analysis_protocol(protocol):
+    def analysis_protocol(protocol, auto_validate=True):
         """check if the passed protocol is a correct analysis_protocol
 
         Args:
             protocol (pipeline.prep.analysis_protocol): a previously
             read and validated pipeline protocol
+            auto_validate (boolean): whether to validate the protocol. default is 'True'.
 
         Returns:
             pipeline.prep.analysis_protocol: the protocol if it is okay
@@ -769,8 +773,11 @@ class validate():
         if not isinstance(protocol, pipeline.prep.analysis_protocol):
             raise TypeError("'protocol' must be of type 'pipeline.prep.analysis_protocol'.")
 
-        # validate incase it wasnt
-        protocol.validate()
+        if auto_validate:
+            # validate incase it wasnt
+            protocol.validate()
+        else:
+            pass
 
         return protocol
 

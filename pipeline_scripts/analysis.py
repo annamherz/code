@@ -50,12 +50,16 @@ def analysis(pert, engine, ana_file, main_dir, prot_file=None):
     print(f"using {analysis_options.print_protocol()} for analysis")
 
     # using the pipeline module for analysis
-    analysed_pert = analyse(path_to_dir, pert=pert, analysis_protocol=analysis_options)
+    analysed_pert = analyse(path_to_dir, pert=pert, analysis_prot=analysis_options)
     avg, error, repeats_tuple_list = analysed_pert.analyse_all_repeats()
     analysed_pert.plot_graphs()
 
     # write the final result
     write_analysis_file(analysed_pert, final_results_folder)
+
+    # plot the convergence
+    analysed_pert.calculate_convergence()
+    analysed_pert.plot_convergence()
 
 def analysis_work_dir(work_dir, pert, engine, ana_file):
 

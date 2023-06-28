@@ -3,16 +3,15 @@ import warnings
 import BioSimSpace as BSS
 from BioSimSpace import Units as _Units
 import pickle
-import os as _os
 import numpy as _np
 import math as _math
+import pandas as _pd
 from scipy.stats import sem
 import pickle
+import matplotlib.pyplot as plt
 
 from ..utils import *
 from ..prep import analysis_protocol
-from ._convergence import plot_convergence_single
-
 
 class analyse():
     """class to analyse a work dir 
@@ -34,6 +33,7 @@ class analyse():
 
         self._work_dir = validate.folder_path(work_dir)
         self._pickle_dir = validate.folder_path(f"{self._work_dir}/pickle", create=True)
+        self._graph_dir = validate.folder_path(self._work_dir + '/graphs', create=True)
 
         if pert:
             self.perturbation = validate.string(pert)
@@ -79,6 +79,14 @@ class analyse():
         self._bound_err_dict = {}  # for the final error defined
         self._free_err_dict = {}
         self.repeats_tuple_list = []
+
+        # for convergence plotting
+        self.spert_results_dict = {}
+        self.spert_bound_dict = {}
+        self.spert_free_dict = {}
+        self.epert_results_dict = {}
+        self.epert_bound_dict = {}
+        self.epert_free_dict = {}
 
         # intialise other things
         self._get_repeat_folders()
@@ -137,7 +145,7 @@ class analyse():
         """
         
         file_ext = analyse.file_ext(self.options_dict)
-        self.file_ext = file_ext
+        self.file_extension = file_ext
 
         return file_ext
     
@@ -169,13 +177,21 @@ class analyse():
             str: pickle extension
         """
 
-        if not self.file_ext:
-            self._file_ext()
+        pickle_ext = analyse.pickle_ext(self.options_dict, self.perturbation, self.engine)
+        self.pickle_extension = pickle_ext
 
-        pickle_ext = (f"{self.perturbation}_{self.engine}_"+
-                      f"{self.file_ext}")
+        return pickle_ext
 
-        self.pickle_ext = pickle_ext
+    @staticmethod
+    def pickle_ext(options_dict, perturbation, engine):
+
+        # validate any inputs in the dictionary
+        options_dict = analyse._update_options_dict(options_dict)
+
+        file_ext = analyse.file_ext(options_dict)
+
+        pickle_ext = (f"{perturbation}_{engine}_"+
+                      f"{file_ext}")
 
         return pickle_ext
 
@@ -353,7 +369,7 @@ class analyse():
         """
 
         try_pickle = True
-        pickle_ext = self.pickle_ext
+        pickle_ext = self.pickle_extension
 
         # try loading in if previously calculated
         if try_pickle:
@@ -677,7 +693,7 @@ class analyse():
         """
 
         self._pickle_dir = validate.folder_path(self._pickle_dir, create=True)
-        pickle_ext = self.pickle_ext
+        pickle_ext = self.pickle_extension
 
         if not self.is_analysed:
             warnings.warn(
@@ -769,7 +785,7 @@ class analyse():
                 "can't plot, not all repeats have been analysed. please self.analyse_all_repeats() first!")
 
         else:
-            graph_dir = validate.folder_path(self._work_dir + '/graphs', create=True)
+            pass
 
             if self.estimator == "MBAR":
 
@@ -778,7 +794,7 @@ class analyse():
                         name = str(b) + '_bound'
                         overlap = self._bound_matrix_dict[name]
                         ax = BSS.FreeEnergy.Relative.plot(
-                            overlap, work_dir=graph_dir, file_name=f"{name}_overlap_MBAR_{self.pickle_ext}")
+                            overlap, work_dir=self._graph_dir, file_name=f"{name}_overlap_MBAR_{self.pickle_extension}")
                     except Exception as e:
                         print(e)
                         print(f"could not plt overlap matrix for {name}")
@@ -788,7 +804,7 @@ class analyse():
                         name = str(f) + '_free'
                         overlap = self._free_matrix_dict[name]
                         ax = BSS.FreeEnergy.Relative.plot(
-                            overlap, work_dir=graph_dir, file_name=f"{name}_overlap_MBAR_{self.pickle_ext}")
+                            overlap, work_dir=self._graph_dir, file_name=f"{name}_overlap_MBAR_{self.pickle_extension}")
                     except Exception as e:
                         print(e)
                         print(f"could not plt overlap matrix for {name}")
@@ -800,7 +816,7 @@ class analyse():
                     overlap = self._bound_matrix_dict[name]
                     try:
                         ax = BSS.FreeEnergy.Relative.plot(
-                            overlap, work_dir=graph_dir, file_name=f"{name}_dHdl_TI_{self.pickle_ext}")
+                            overlap, work_dir=self._graph_dir, file_name=f"{name}_dHdl_TI_{self.pickle_extension}")
                     except Exception as e:
                         print(e)
                         print(f"could not plt dhdl for {name}")
@@ -810,23 +826,194 @@ class analyse():
                     overlap = self._free_matrix_dict[name]
                     try:
                         ax = BSS.FreeEnergy.Relative.plot(
-                            overlap, work_dir=graph_dir, file_name=f"{name}_dHdl_TI_{self.pickle_ext}")
+                            overlap, work_dir=self._graph_dir, file_name=f"{name}_dHdl_TI_{self.pickle_extension}")
                     except Exception as e:
                         print(e)
                         print(f"could not plt dhdl for {name}")
 
 
-    def plot_convergence(self):
+    def calculate_convergence(self):
 
-        """plot convergence for the analysed run. This will calculated the truncated data.
+        if self._try_pickle:
+            do_pickle = self._check_convergence_pickle()
+        else:
+            do_pickle = False
+        
+        if not do_pickle:
+            # calculate all the truncated data
+            sresults_dict, sbound_dict, sfree_dict = analyse._calculate_truncated(self._work_dir,
+                                                                                            self.estimator, "start",
+                                                                                            self._statistical_inefficiency, self._auto_equilibration)
+            eresults_dict, ebound_dict, efree_dict = analyse._calculate_truncated(self._work_dir,
+                                                                                            self.estimator, "end",
+                                                                                            self._statistical_inefficiency, self._auto_equilibration)
+
+            self.spert_results_dict = sresults_dict
+            self.spert_bound_dict = sbound_dict
+            self.spert_free_dict = sfree_dict
+            self.epert_results_dict = eresults_dict
+            self.epert_bound_dict = ebound_dict
+            self.epert_free_dict = efree_dict
+
+        self.save_convergence_pickle()
+
+
+    def _check_convergence_pickle(self):
+        """check if there are all the pickle files present in the pickle folder.
+
+        Returns:
+            boolean: whether to try pickle when analysing
         """
 
-        if not self.is_analysed:
-            warnings.warn(
-                "can't plot, not all repeats have been analysed. please self.analyse_all_repeats() first!")
+        do_pickle = False
+        pickle_ext = self.pickle_extension.split('truncate')[0]
 
+        # try loading in if previously calculated
+        try:
+            print(
+                f"trying to locate pickles for convergence in default pickle folder, {self._pickle_dir} for {pickle_ext}...")
+            with open(f"{self._pickle_dir}/spert_results_dict_{pickle_ext}.pickle", 'rb') as file:
+                self.spert_results_dict = pickle.load(file)
+            with open(f"{self._pickle_dir}/epert_results_dict_{pickle_ext}.pickle", 'rb') as file:
+                self.epert_results_dict = pickle.load(file)     
+            with open(f"{self._pickle_dir}/spert_bound_dict_{pickle_ext}.pickle", 'rb') as file:
+                self.spert_bound_dict = pickle.load(file)
+            with open(f"{self._pickle_dir}/epert_bound_dict_{pickle_ext}.pickle", 'rb') as file:
+                self.epert_bound_dict = pickle.load(file)
+            with open(f"{self._pickle_dir}/spert_free_dict_{pickle_ext}.pickle", 'rb') as file:
+                self.spert_free_dict = pickle.load(file)
+            with open(f"{self._pickle_dir}/epert_free_dict_{pickle_ext}.pickle", 'rb') as file:
+                self.epert_free_dict = pickle.load(file)
+            print("pickles found!")
+            do_pickle = True
+        except:
+            print("loading pickle failed. Calculating normally.")
+    
+        return do_pickle
+
+    def save_convergence_pickle(self):
+
+        self._pickle_dir = validate.folder_path(self._pickle_dir, create=True)
+        pickle_ext = self.pickle_extension.split('truncate')[0]
+
+        # save pickle
+        if self._save_pickle:
+            print(
+                f"trying to save pickles for convergence in default pickle folder, {self._pickle_dir} for {pickle_ext}...")
+            # write the pmf as a pickle
+            with open(f"{self._pickle_dir}/spert_results_dict_{pickle_ext}.pickle", 'wb') as handle:
+                pickle.dump(self.spert_results_dict, handle)
+            with open(f"{self._pickle_dir}/epert_results_dict_{pickle_ext}.pickle", 'wb') as handle:
+                pickle.dump(self.epert_results_dict, handle)
+            with open(f"{self._pickle_dir}/spert_bound_dict_{pickle_ext}.pickle", 'wb') as handle:
+                pickle.dump(self.spert_bound_dict, handle)
+            with open(f"{self._pickle_dir}/epert_bound_dict_{pickle_ext}.pickle", 'wb') as handle:
+                pickle.dump(self.epert_bound_dict, handle)            
+            with open(f"{self._pickle_dir}/spert_free_dict_{pickle_ext}.pickle", 'wb') as handle:
+                pickle.dump(self.spert_free_dict, handle)
+            with open(f"{self._pickle_dir}/epert_free_dict_{pickle_ext}.pickle", 'wb') as handle:
+                pickle.dump(self.epert_free_dict, handle)
+            print("saved pickles!")
+
+ 
+    def plot_convergence(self):
+
+        try:
+            sdf = analyse.single_pert_dict_into_df(self.spert_results_dict)
+            edf = analyse.single_pert_dict_into_df(self.epert_results_dict)
+            # plot individually for perts
+            print(f"plotting for {self.perturbation}, {self.engine} in {self._graph_dir}/forward_reverse_{self.perturbation}.png...")
+            analyse.plot_truncated(sdf, edf,
+                                file_path=f"{self._graph_dir}/forward_reverse_{self.perturbation}_{self.file_extension.split('truncate')[0]}.png",
+                                plot_difference=False)
+        except Exception as e:
+            print(e)
+            print("failed to plot convergence, please check Exception message.")
+
+    @staticmethod
+    def _calculate_truncated(path_to_dir, estimator, start_end="start", statsineff=False, eq=False):
+
+        start_end = validate.truncate_keep(start_end)
+
+        # analyse the work dir
+        analysed_pert = analyse(path_to_dir)
+
+        truncate_percentage = [5, 10, 15, 20, 25, 30, 40, 50, 60, 80, 100]
+        
+        results_dict = {}
+        bound_dict = {}
+        free_dict = {}
+
+        for trunc_per in truncate_percentage:
+
+            analysed_pert.set_options({ "estimator" : estimator,
+                                        "truncate percentage": trunc_per,
+                                        "try pickle": True,
+                                        "truncate keep":start_end,
+                                        "statistical inefficiency":statsineff,
+                                        "auto equilibration": eq
+                                        })
+
+            analysed_pert.analyse_all_repeats()
+
+            results_dict[trunc_per] = (analysed_pert.freenrg_val, analysed_pert.freenrg_err)
+            bound_dict[trunc_per] = (analysed_pert.bound_val, analysed_pert.bound_err)
+            free_dict[trunc_per] = (analysed_pert.free_val, analysed_pert.free_err)
+
+        return results_dict, bound_dict, free_dict
+
+
+    @staticmethod
+    def single_pert_dict_into_df(pert_dict):
+
+        df = _pd.DataFrame.from_dict(pert_dict)
+        df = df.transpose()
+        df.columns = ["avg","max"]
+        df["min"] = df.loc[:, "max"]*-1
+        
+        return df
+
+    @staticmethod
+    def plot_truncated(sdf, edf, file_path=None, plot_error=False, plot_difference=True):
+
+        include_key = True
+
+        plt.rc('font', size=12)
+        plt.rcParams['axes.xmargin'] = 0 # plt.margins(x=0)
+        fig, ax = plt.subplots(figsize=(10,10))
+        lines = []
+
+        # fill in final value and its error
+        plt.axhline(y=sdf['avg'].iloc[-1], color="c")
+        plt.fill_between(sdf.index, sdf['avg'].iloc[-1]+sdf['min'].iloc[-1], sdf['avg'].iloc[-1]+sdf['max'].iloc[-1],  color="paleturquoise", alpha=.8)
+        lines += plt.plot(0,0,c="c", label="final estimate")
+        scatterplot = [plt.plot(sdf.index, sdf['avg'], c="lightcoral")]
+        plt.fill_between(sdf.index, sdf['avg']+sdf['min'], sdf['avg']+sdf['max'], color="mistyrose", alpha=.4)
+        lines += plt.plot(0,0,c="lightcoral", label="forward")
+        scatterplot = [plt.plot(edf.index, edf['avg'], c="cornflowerblue")]
+        plt.fill_between(edf.index, edf['avg']+edf['min'], edf['avg']+edf['max'], color="lightskyblue", alpha=.3)
+        lines += plt.plot(0,0,c="cornflowerblue", label="reverse")
+
+        if include_key:
+            labels = [l.get_label() for l in lines]
+            plt.legend(lines, labels, loc='upper left')
+        
+        plt.xlabel('Percentage of run used')
+        if file_path:
+            plt.title(f"{file_path.split('/')[-1].split('.')[0].replace('_',' ')}")
         else:
-            graph_dir = validate.folder_path(self._work_dir + '/graphs', create=True)
+            pass
 
+        if plot_error:
+            if plot_difference:
+                plt.ylabel("Computed Error difference to final / kcal$\cdot$mol$^{-1}$")
+            else:
+                plt.ylabel("Computed Error / kcal$\cdot$mol$^{-1}$")
+        else:
+            if plot_difference:
+                plt.ylabel("difference to final result for computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+            else:
+                plt.ylabel("Computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
 
-
+        if file_path:
+            plt.savefig(file_path)
