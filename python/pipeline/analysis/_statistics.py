@@ -6,8 +6,7 @@ from ._analysis import *
 from ._plotting import *
 from ._dictionaries import *
 
-import cinnabar
-from cinnabar import wrangle,plotting,stats
+from cinnabar import stats
 
 class stats_engines(plotting_engines):
 

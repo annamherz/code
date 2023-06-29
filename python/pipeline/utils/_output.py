@@ -1,4 +1,3 @@
-import sys
 import os
 import shutil
 
@@ -484,8 +483,6 @@ class extract():
         """
         # this should be the outputs directory
         main_dir = validate.folder_path(main_dir)
-        if main_dir.split("/")[-1] != "outputs":
-            raise ValueError(f"{main_dir} must be the outputs directory for extract all.")
 
         if not extract_dir:
             extract_dir = f"{main_dir}_extracted"
@@ -494,6 +491,4 @@ class extract():
         extract_dir = validate.folder_path(extract_dir, create=True)
 
         extract._extract_output(main_dir, extract_dir)
-
-        # TODO so does entire extraction for all things, add extract frames
-        #TODO for specific perturbations?
+        extract._extract_config(main_dir, extract_dir)

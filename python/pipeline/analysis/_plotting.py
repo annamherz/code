@@ -7,7 +7,6 @@ import pandas as pd
 
 from scipy.stats import sem as sem
 from scipy.stats import bootstrap, norm
-from sklearn.metrics import mean_absolute_error as mae
 
 from ..utils import *
 from ._network import *

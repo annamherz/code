@@ -1,6 +1,4 @@
-import sys
 import os
-import BioSimSpace as BSS
 
 from ._validate import *
 

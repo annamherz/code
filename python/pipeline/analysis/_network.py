@@ -6,8 +6,6 @@ import numpy as np
 import pandas as pd
 import networkx as nx
 from scipy.stats import sem as sem
-from scipy.stats import bootstrap
-from sklearn.metrics import mean_absolute_error as mae
 from rdkit import Chem
 
 import matplotlib.pyplot as plt

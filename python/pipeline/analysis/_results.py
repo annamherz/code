@@ -1,4 +1,3 @@
-import BioSimSpace as BSS
 import os
 import itertools as it
 import sys

@@ -12,6 +12,15 @@ class ligprep():
 
     @staticmethod
     def lig_paramaterise(molecule, ligff_query):
+        """_summary_
+
+        Args:
+            molecule (_BioSimSpace._SireWrappers.Molecule): unparameterised molecule
+            ligff_query (str): ligand forcefield
+
+        Returns:
+            _BioSimSpace._SireWrappers.Molecule: parameterised molecule
+        """
         # dicitonary of functions available
         validate.lig_ff(ligff_query)
 
@@ -21,9 +30,20 @@ class ligprep():
             
 
     @staticmethod
-    def minimum_solvation(system, solvent, box_type, box_edges, box_edges_unit="angstrom", verbose=True):
-        """
-        Default solvation for minimum size box.
+    def minimum_solvation(system, solvent, box_type, box_edges, box_edges_unit="angstrom", ion_conc=0.15, verbose=True):
+        """minimum solvation
+
+        Args:
+            system (_BioSimSpace._SireWrappers.System): system to be solvated
+            solvent (str): solvent forcefield
+            box_type (str): type of box, eg cubic
+            box_edges (int/float): box edges size added to box size calculated 
+            box_edges_unit (str, optional): unit of box edges. Defaults to "angstrom".
+            ion_conc (float, optional): Ion conc added (NaCl). Defaults to 0.15.
+            verbose (bool, optional): if output should be verbose. Defaults to True.
+
+        Returns:
+            _BioSimSpace._SireWrappers.System: the solvated system
         """
 
         # validate inputs
@@ -32,6 +52,7 @@ class ligprep():
             box_edges = validate.integer(box_edges)
             box_edges_unit = validate.box_edges_unit(box_edges_unit)
             box_type = validate.box_type(box_type)
+            ion_conc = validate.float(ion_conc)
         except Exception as e:
             print(f"The provided arguments could not be validated.\n Exception is:\n {e}")    
                             
@@ -64,7 +85,7 @@ class ligprep():
         boxtype_func = boxtype_dict[box_type]
         box, angles = boxtype_func(max(box_sizes))
         mol_solvated = BSS.Solvent.solvate(solvent, molecule=system,
-                                            box=box, angles=angles, ion_conc=0.15)
+                                            box=box, angles=angles, ion_conc=ion_conc)
 
         nmols = mol_solvated.nMolecules()
 

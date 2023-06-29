@@ -1,5 +1,4 @@
 import BioSimSpace as BSS
-from BioSimSpace import Protocol as _Protocol
 from BioSimSpace._SireWrappers import System as _System
 from BioSimSpace._SireWrappers import Molecule as _Molecule
 import os

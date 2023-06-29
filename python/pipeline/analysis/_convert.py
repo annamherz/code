@@ -3,7 +3,6 @@
 import BioSimSpace as BSS
 
 import yaml
-from scipy.stats import sem as sem
 import csv
 import numpy as np
 

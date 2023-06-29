@@ -1,6 +1,5 @@
 import BioSimSpace as BSS
 from BioSimSpace import _Exceptions
-from BioSimSpace.Units.Length import angstrom as _angstrom
 
 from ..utils._validate import *
 
