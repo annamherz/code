@@ -2,6 +2,7 @@ import os
 
 from ._validate import *
 
+
 def engine_network(engine, file_path):
     """Generate a network file for only the engine specified.
 
@@ -13,7 +14,9 @@ def engine_network(engine, file_path):
     file_path = validate.file_path(file_path)
 
     try:
-        print("using the folder of the file as the location to write the output file...")
+        print(
+            "using the folder of the file as the location to write the output file..."
+        )
         output_file = f"{file_path.rsplit('.',1)[0]}_{engine.lower()}.dat"
 
     except:
@@ -25,7 +28,6 @@ def engine_network(engine, file_path):
 
     with open(file_path, "r") as file:
         with open(output_file, "w") as f:
-                for line in file:
-                        if engine in line:
-                                f.write(f"{line}")
-
+            for line in file:
+                if engine in line:
+                    f.write(f"{line}")

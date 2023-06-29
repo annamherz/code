@@ -20,13 +20,13 @@ def get_repeat_folders(work_dir):
     work_dir = validate.folder_path(work_dir)
 
     # Read how many repeats are in the directory.
-    folders = (next(os.walk(work_dir))[1])
+    folders = next(os.walk(work_dir))[1]
     b_folders, f_folders = [], []
     for f in folders:
-        if 'bound' in f:
-            b_folders.append(f'{f}')
-        elif 'free' in f:
-            f_folders.append(f'{f}')
+        if "bound" in f:
+            b_folders.append(f"{f}")
+        elif "free" in f:
+            f_folders.append(f"{f}")
         else:
             continue
 
@@ -36,12 +36,15 @@ def get_repeat_folders(work_dir):
 
     if not b_folders:
         raise ValueError(
-            "Couldn't find any folders with 'bound' in the specified directory?")
+            "Couldn't find any folders with 'bound' in the specified directory?"
+        )
     elif not f_folders:
         raise ValueError(
-            "Couldn't find any folders with 'free' in the specified directory?")
-    
+            "Couldn't find any folders with 'free' in the specified directory?"
+        )
+
     return b_folders, f_folders
+
 
 def add_header_simfile(trans_dir):
     """Adds header to simfiles if failed to generate.
@@ -64,7 +67,6 @@ def add_header_simfile(trans_dir):
             pass
 
     for leg in legs:
-
         lambdas = []
         for dir in sorted(os.listdir(f"{trans_dir}/{leg}")):
             if "lambda" in dir:
@@ -80,7 +82,7 @@ def add_header_simfile(trans_dir):
             # only check the first few lines
             with open(f"{direc}/simfile.dat") as sfile:
                 for line in sfile.readlines():
-                    if (line.startswith('#')):
+                    if line.startswith("#"):
                         hash_counter += 1
                         if hash_counter == 8:
                             sim_okay = True
@@ -95,18 +97,20 @@ def add_header_simfile(trans_dir):
                         os.rename(f"{direc}/simfile.dat", f"{direc}/old_simfile.dat")
 
                     if not os.path.exists(f"{direc}/old_old_simfile.dat"):
-                        os.rename(f"{direc}/old_simfile.dat", f"{direc}/old_old_simfile.dat")
+                        os.rename(
+                            f"{direc}/old_simfile.dat", f"{direc}/old_old_simfile.dat"
+                        )
 
-                    file1 = open(f"{direc}/old_old_simfile.dat",'r')
-                    file2 = open(f"{direc}/old_simfile.dat",'w')
-                    
+                    file1 = open(f"{direc}/old_old_simfile.dat", "r")
+                    file2 = open(f"{direc}/old_simfile.dat", "w")
+
                     # reading each line from original
                     for line in file1.readlines():
-                        if not (line.startswith('#')):
-                            if not (line.startswith('Simulation')):
-                                if not (line.startswith('Generating')):
+                        if not (line.startswith("#")):
+                            if not (line.startswith("Simulation")):
+                                if not (line.startswith("Generating")):
                                     file2.write(line)
-                    
+
                     # close and save the files
                     file2.close()
                     file1.close()
@@ -119,39 +123,47 @@ def add_header_simfile(trans_dir):
                     file = open(f"{direc}/simfile_header.dat", "a")
                 # TODO fix so get info from simfile if possible eg re length
                 file.write("#This file was generated to fix the header \n")
-                file.write("#Using the somd command, of the molecular library Sire version <2022.3.0> \n")
-                file.write("#For more information visit: https://github.com/michellab/Sire \n")
+                file.write(
+                    "#Using the somd command, of the molecular library Sire version <2022.3.0> \n"
+                )
+                file.write(
+                    "#For more information visit: https://github.com/michellab/Sire \n"
+                )
                 file.write("# \n")
                 file.write("#General information on simulation parameters: \n")
-                file.write("#Simulation used 250000 moves, 4 cycles and 4000 ps of simulation time \n")
+                file.write(
+                    "#Simulation used 250000 moves, 4 cycles and 4000 ps of simulation time \n"
+                )
                 file.write(f"#Generating lambda is		 {lam}\n")
                 file.write(f"#Alchemical array is		 {(', ').join(lambdas)}\n")
                 file.write("#Generating temperature is 	300 t\n")
                 file.write("#Energy was saved every 200 steps \n")
                 file.write("#\n")
                 file.write("#\n")
-                file.write("#   [step]      [potential kcal/mol]       [gradient kcal/mol]      [forward Metropolis]     [backward Metropolis]                   [u_kl] \n")
+                file.write(
+                    "#   [step]      [potential kcal/mol]       [gradient kcal/mol]      [forward Metropolis]     [backward Metropolis]                   [u_kl] \n"
+                )
                 file.close()
 
                 # merge both files
-                simfiles_tomerge = [f"{direc}/simfile_header.dat", f"{direc}/old_simfile.dat"]
+                simfiles_tomerge = [
+                    f"{direc}/simfile_header.dat",
+                    f"{direc}/old_simfile.dat",
+                ]
 
                 with open(f"{direc}/simfile.dat", "w") as outfile:
-
                     for names in simfiles_tomerge:
                         with open(names) as infile:
                             outfile.write(infile.read())
-            
+
             else:
                 pass
 
 
-class extract():
-    """ class for extracting output data
-    """
+class extract:
+    """class for extracting output data"""
 
     def __init__(self, trans_dir, extract_dir=None):
-
         self.trans_dir = validate.folder_path(trans_dir)
         # need to check that the trans directory contains outputs
         if not "outputs" in self.trans_dir:
@@ -161,11 +173,9 @@ class extract():
             self.extract_dir = validate.folder_path(extract_dir, create=True)
         else:
             extract._set_extract_dir(self)
-    
 
     def _set_extract_dir(self):
-        """set the directory for extracted data based on the passed trans_dir
-        """
+        """set the directory for extracted data based on the passed trans_dir"""
 
         # rename so just output_extracted instead of output
         extract_dir = f"{self.trans_dir.split('outputs')[0]}outputs_extracted{self.trans_dir.split('outputs')[1]}"
@@ -198,35 +208,45 @@ class extract():
         for dirs in dir_list:
             if "lambda_0.0000" in dirs:
                 file_names = []
-                new_dir = validate.folder_path(f"{extract_dir}{dirs.split(f'{folder}')[1]}", create=True)
+                new_dir = validate.folder_path(
+                    f"{extract_dir}{dirs.split(f'{folder}')[1]}", create=True
+                )
                 if "min" in dirs:
                     if "AMBER" in dirs:
-                        file_names = ["amber.cfg","amber.prm7","initial_amber.rst7"]
+                        file_names = ["amber.cfg", "amber.prm7", "initial_amber.rst7"]
                     elif "GROMACS" in dirs:
-                        file_names = ["gromacs.mdp","initial_gromacs.gro", "gromacs.top"]
+                        file_names = [
+                            "gromacs.mdp",
+                            "initial_gromacs.gro",
+                            "gromacs.top",
+                        ]
                 elif "eq" in dirs:
                     if "AMBER" in dirs:
                         file_names = ["amber.cfg"]
                     elif "GROMACS" in dirs:
                         file_names = ["gromacs.mdp"]
                     elif "SOMD" in dirs:
-                        file_names = ["somd.cfg","somd.prm7","initial_somd.rst7"]                    
+                        file_names = ["somd.cfg", "somd.prm7", "initial_somd.rst7"]
                 else:
                     if "AMBER" in dirs:
                         file_names = ["amber.cfg"]
                     elif "GROMACS" in dirs:
                         file_names = ["gromacs.mdp"]
                     elif "SOMD" in dirs:
-                        file_names = ["somd.cfg"]     
+                        file_names = ["somd.cfg"]
                 if not file_names:
-                     print("no engine found in filepath, will try to extract each engine's input config file format...")
-                     file_names = ["amber.cfg","somd.cfg","gromacs.mdp"]
+                    print(
+                        "no engine found in filepath, will try to extract each engine's input config file format..."
+                    )
+                    file_names = ["amber.cfg", "somd.cfg", "gromacs.mdp"]
 
                 for file in file_names:
                     try:
                         shutil.copyfile(f"{dirs}/{file}", f"{new_dir}/{file}")
                     except:
-                        print(f"{dirs} does not have a recognised input file, {str(file)}.")
+                        print(
+                            f"{dirs} does not have a recognised input file, {str(file)}."
+                        )
 
     def extract_output(self):
         """Extracts the output files from the directory.
@@ -254,8 +274,11 @@ class extract():
                 if not "heat" in dirs:
                     if not "eq" in dirs:
                         dirs_found += 1
-                        if "lambda" in dirs:   
-                            new_dir = validate.folder_path(f"{extract_dir}{dirs.split(f'{folder}')[1]}", create=True)                  
+                        if "lambda" in dirs:
+                            new_dir = validate.folder_path(
+                                f"{extract_dir}{dirs.split(f'{folder}')[1]}",
+                                create=True,
+                            )
                             if "AMBER" in dirs:
                                 file_names = ["amber.out"]
                             elif "GROMACS" in dirs:
@@ -264,20 +287,30 @@ class extract():
                                 file_names = ["simfile.dat"]
                             # if cant find the engine in the file path try all
                             else:
-                                print("no engine found in filepath, will try to extract each engine's output format...")
-                                file_names = ["amber.out","gromacs.xvg","simfile.dat"]
+                                print(
+                                    "no engine found in filepath, will try to extract each engine's output format..."
+                                )
+                                file_names = ["amber.out", "gromacs.xvg", "simfile.dat"]
 
                             for file in file_names:
                                 try:
-                                    shutil.copyfile(f"{dirs}/{file}", f"{new_dir}/{file}")
+                                    shutil.copyfile(
+                                        f"{dirs}/{file}", f"{new_dir}/{file}"
+                                    )
                                     if os.path.getsize(f"{new_dir}/{file}") == 0:
-                                        print(f"File extracting to '{new_dir}/{file}' is empty!") 
+                                        print(
+                                            f"File extracting to '{new_dir}/{file}' is empty!"
+                                        )
                                 except:
-                                    print(f"{dirs} does not have a recognised input file, {str(file)}.")
-        
+                                    print(
+                                        f"{dirs} does not have a recognised input file, {str(file)}."
+                                    )
+
         if dirs_found == 0:
-            raise ValueError("no directories were found to extract from! make sure there is not min/heat/eq in the main folder path as these will be excluded.")
-        
+            raise ValueError(
+                "no directories were found to extract from! make sure there is not min/heat/eq in the main folder path as these will be excluded."
+            )
+
     def extract_frames(self, traj_lambdas=None, rmsd=True, overwrite=False):
         """extract the rmsd and/or frames for certain lambda windows.
 
@@ -315,7 +348,6 @@ class extract():
                 pass
 
         for leg in legs:
-
             lambdas = []
             for dir in sorted(os.listdir(f"{trans_dir}/{leg}")):
                 if "lambda" in dir:
@@ -324,16 +356,23 @@ class extract():
             for lam in lambdas:
                 # only do it for considered lambdas
                 if lam in traj_lambdas:
-
                     # get target directory for extraction and create
                     direc = f"{trans_dir}/{leg}/lambda_{lam}"
-                    traj_extract_dir = f"{direc.replace(self.trans_dir, self.extract_dir)}"
-                    traj_extract_dir = validate.folder_path(traj_extract_dir, create=True)
+                    traj_extract_dir = (
+                        f"{direc.replace(self.trans_dir, self.extract_dir)}"
+                    )
+                    traj_extract_dir = validate.folder_path(
+                        traj_extract_dir, create=True
+                    )
 
                     # check if the output files already exist in the target directory
                     if not overwrite:
                         file_exists = False
-                        onlyfiles = [f for f in os.listdir(traj_extract_dir) if os.path.isfile(f"{traj_extract_dir}/{f}")]
+                        onlyfiles = [
+                            f
+                            for f in os.listdir(traj_extract_dir)
+                            if os.path.isfile(f"{traj_extract_dir}/{f}")
+                        ]
                         if "system_0.pdb" in onlyfiles:
                             file_exists = True
                         if rmsd:
@@ -343,13 +382,15 @@ class extract():
                                 file_exists = False
 
                         if file_exists:
-                            print("traj extracted already exists, will NOT extract again.")
+                            print(
+                                "traj extracted already exists, will NOT extract again."
+                            )
                             return
-                    
+
                     # create mda universe based on file type
                     if "SOMD" in direc:
                         # must be parm7 for mda
-                        shutil.copy(f"{direc}/somd.prm7",f"{direc}/somd.parm7")
+                        shutil.copy(f"{direc}/somd.prm7", f"{direc}/somd.parm7")
                         coord_file = validate.file_path(f"{direc}/somd.parm7")
 
                         # combine traj files
@@ -358,11 +399,13 @@ class extract():
                             if "dcd" in file:
                                 traj_files.append(validate.file_path(f"{direc}/{file}"))
                         if not traj_files:
-                            raise ValueError("there are no dcd trajectory files for somd in this folder.")
+                            raise ValueError(
+                                "there are no dcd trajectory files for somd in this folder."
+                            )
 
                     elif "AMBER" in direc:
                         # must be parm7 for mda
-                        shutil.copy(f"{direc}/amber.prm7",f"{direc}/amber.parm7")
+                        shutil.copy(f"{direc}/amber.prm7", f"{direc}/amber.parm7")
                         coord_file = validate.file_path(f"{direc}/amber.parm7")
 
                         traj_files = validate.file_path(f"{direc}/amber.nc")
@@ -378,17 +421,16 @@ class extract():
                     elif "bound" in leg:
                         u = extract.centre_molecule(u, "protein")
 
-                    # want to write the frames for the 
+                    # want to write the frames for the
                     extract._write_traj_frames(u, traj_extract_dir)
                     if rmsd:
                         extract._rmsd_trajectory(u, traj_extract_dir)
-                    
+
                     del u
-            
+
                 else:
                     pass
 
-    
     @staticmethod
     def centre_molecule(universe, selection):
         """centre the molecule (eg either 'resname LIG' or 'protein') in the mda universe/
@@ -400,19 +442,20 @@ class extract():
         Returns:
             MDAnalysis.Universe: mda universe centred around the molecule selection
         """
-        
+
         u = universe
 
         # want to centre the protein/ligand
-        molecules = u.select_atoms(f'{selection}')
-        not_molecules = u.select_atoms(f'not {selection}')
-        transforms = [trans.unwrap(molecules),
-                    trans.center_in_box(molecules), # , wrap=True, center="mass"
-                    trans.wrap(not_molecules)]
+        molecules = u.select_atoms(f"{selection}")
+        not_molecules = u.select_atoms(f"not {selection}")
+        transforms = [
+            trans.unwrap(molecules),
+            trans.center_in_box(molecules),  # , wrap=True, center="mass"
+            trans.wrap(not_molecules),
+        ]
         u.trajectory.add_transformations(*transforms)
 
         return u
-
 
     @staticmethod
     def _write_traj_frames(universe, traj_extract_dir):
@@ -428,17 +471,22 @@ class extract():
 
         print("starting to write trajectory frames...")
         timesteps = [u.trajectory.ts for ts in u.trajectory]
-        timestep_freq = int(len(timesteps)/4)
+        timestep_freq = int(len(timesteps) / 4)
         # five frames - if 4 ns, this is every ns
-        timesteps_used = [0, timestep_freq-1, (timestep_freq*2)-1, (timestep_freq*3)-1, int(len(timesteps)-1)]
+        timesteps_used = [
+            0,
+            timestep_freq - 1,
+            (timestep_freq * 2) - 1,
+            (timestep_freq * 3) - 1,
+            int(len(timesteps) - 1),
+        ]
 
         for time in timesteps_used:
             u.trajectory[time]
             with mda.Writer(f"{write_dir}/system_{str(time)}.pdb") as W:
                 W.write(u)
-        
-        print("finished writing 5 frames to pdb.")
 
+        print("finished writing 5 frames to pdb.")
 
     @staticmethod
     def _rmsd_trajectory(universe, traj_extract_dir):
@@ -454,25 +502,30 @@ class extract():
         write_dir = traj_extract_dir
 
         import MDAnalysis.analysis.rms
-        R = MDAnalysis.analysis.rms.RMSD(u, ref,
-                select="resname LIG",
-                groupselections=["resname LIG and resname LIG",
-                                    "backbone and resname LIG"])
+
+        R = MDAnalysis.analysis.rms.RMSD(
+            u,
+            ref,
+            select="resname LIG",
+            groupselections=["resname LIG and resname LIG", "backbone and resname LIG"],
+        )
         R.run()
 
         import matplotlib.pyplot as plt
-        rmsd = R.rmsd.T   # transpose makes it easier for plotting
+
+        rmsd = R.rmsd.T  # transpose makes it easier for plotting
         time = rmsd[1]
-        fig = plt.figure(figsize=(6,6))
+        fig = plt.figure(figsize=(6, 6))
         ax = fig.add_subplot(111)
-        ax.plot(time, rmsd[2], 'k-', color="teal")
+        ax.plot(time, rmsd[2], "k-", color="teal")
         ax.legend(loc="best")
         ax.set_xlabel("time (ps)")
         ax.set_ylabel(r"RMSD of ligand ($\AA$)")
-        fig.savefig(f"{write_dir}/rmsd_ligand.png")  
+        fig.savefig(f"{write_dir}/rmsd_ligand.png")
 
-        print(f"the maximum rmsd of the ligand is {max(rmsd[2])} and the minimum is {min(rmsd[2])}")
-
+        print(
+            f"the maximum rmsd of the ligand is {max(rmsd[2])} and the minimum is {min(rmsd[2])}"
+        )
 
     @staticmethod
     def extract_output_all(main_dir, extract_dir=None):

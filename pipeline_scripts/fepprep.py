@@ -16,18 +16,18 @@ import pickle
 from pipeline.prep import *
 from pipeline.utils import *
 
+
 def fep_prep(pert, prot_file, num_lambda_query, engine_query, main_dir, prep_dir):
+    lig_1 = pert.split("~")[0]
+    lig_2 = pert.split("~")[1]
 
-    lig_1 = pert.split('~')[0]
-    lig_2 = pert.split('~')[1]
-
-    workdir = f"{main_dir}/outputs/{engine_query}/{lig_1}~{lig_2}" # pert dir
+    workdir = f"{main_dir}/outputs/{engine_query}/{lig_1}~{lig_2}"  # pert dir
 
     # parse protocol file
     print("reading in the protocol file...")
-    protocol = pipeline_protocol(prot_file) # instantiate the protocol as an object
+    protocol = pipeline_protocol(prot_file)  # instantiate the protocol as an object
     print("validating the protocol file...")
-    protocol.validate() # validate all the input
+    protocol.validate()  # validate all the input
     # add the number of lambdas and engine to the protocol
     protocol.num_lambda(num_lambda_query)
     protocol.engine(engine_query)
@@ -41,12 +41,19 @@ def fep_prep(pert, prot_file, num_lambda_query, engine_query, main_dir, prep_dir
     fepprep_obj = fepprep(protocol=protocol)
 
     for name, leg in zip(["lig", "sys"], ["free", "bound"]):
-
         # Load equilibrated inputs for both ligands
         system_1 = BSS.IO.readMolecules(
-            [f"{prep_dir}/{lig_1}_{name}_equil_solv.rst7", f"{prep_dir}/{lig_1}_{name}_equil_solv.prm7"])
+            [
+                f"{prep_dir}/{lig_1}_{name}_equil_solv.rst7",
+                f"{prep_dir}/{lig_1}_{name}_equil_solv.prm7",
+            ]
+        )
         system_2 = BSS.IO.readMolecules(
-            [f"{prep_dir}/{lig_2}_{name}_equil_solv.rst7", f"{prep_dir}/{lig_2}_{name}_equil_solv.prm7"])
+            [
+                f"{prep_dir}/{lig_2}_{name}_equil_solv.rst7",
+                f"{prep_dir}/{lig_2}_{name}_equil_solv.prm7",
+            ]
+        )
 
         fepprep_obj.add_system(system_1, free_bound=leg, start_end="start")
         fepprep_obj.add_system(system_2, free_bound=leg, start_end="end")
@@ -55,25 +62,30 @@ def fep_prep(pert, prot_file, num_lambda_query, engine_query, main_dir, prep_dir
     if protocol.rerun():
         pass
     else:
-        try:    
+        try:
             remove_tree(workdir)
         except:
             pass
-    
+
     kwargs = {}
 
     # load in any predefined mapping
-    if os.path.exists(f"/home/anna/Documents/benchmark/new_files/mapping/{lig_1}~{lig_2}_mapping_dict.pickle"):
-        with open(f"/home/anna/Documents/benchmark/new_files/mapping/{lig_1}~{lig_2}_mapping_dict.pickle", "rb") as handle:
+    if os.path.exists(
+        f"/home/anna/Documents/benchmark/new_files/mapping/{lig_1}~{lig_2}_mapping_dict.pickle"
+    ):
+        with open(
+            f"/home/anna/Documents/benchmark/new_files/mapping/{lig_1}~{lig_2}_mapping_dict.pickle",
+            "rb",
+        ) as handle:
             mapping_dict = pickle.load(handle)
-            kwargs = {"mapping":mapping_dict}
+            kwargs = {"mapping": mapping_dict}
             print(f"using {mapping_dict} as the mapping...")
 
     # generate folder based on fepprep protocol (both or start)
     fepprep_obj.generate_folders(workdir, **kwargs)
 
-def check_arguments(args):
 
+def check_arguments(args):
     # pass the checks to the other check functions
     if args.perturbation:
         perturbation = args.perturbation
@@ -107,25 +119,53 @@ def check_arguments(args):
 
     return perturbation, protocol_file, num_lambda, engine, main_folder, prep_folder
 
-def main():
 
+def main():
     # accept all options as arguments
     parser = ArgumentParser(description="run the fepprep")
-    parser.add_argument("-pert", "--perturbation", type=str, default=None, help="name of perturbation")
-    parser.add_argument("-lam", "--num_lambda", type=str, default=None, help="number of lambda windows")
-    parser.add_argument("-eng", "--engine", type=str, default=None, help="engine to be used")
-    parser.add_argument("-mf", "--main_folder", type=str, default=None, help="main folder path to create for all the runs")
-    parser.add_argument("-p", "--protocol_file", type=str, default=None, help="path to protocol file")
-    parser.add_argument("-prep", "--prep_folder", type=str, default=None, help="folder with the prepped ligands")
+    parser.add_argument(
+        "-pert", "--perturbation", type=str, default=None, help="name of perturbation"
+    )
+    parser.add_argument(
+        "-lam", "--num_lambda", type=str, default=None, help="number of lambda windows"
+    )
+    parser.add_argument(
+        "-eng", "--engine", type=str, default=None, help="engine to be used"
+    )
+    parser.add_argument(
+        "-mf",
+        "--main_folder",
+        type=str,
+        default=None,
+        help="main folder path to create for all the runs",
+    )
+    parser.add_argument(
+        "-p", "--protocol_file", type=str, default=None, help="path to protocol file"
+    )
+    parser.add_argument(
+        "-prep",
+        "--prep_folder",
+        type=str,
+        default=None,
+        help="folder with the prepped ligands",
+    )
     args = parser.parse_args()
 
     # check arguments
     print("checking the provided command line arguments...")
-    pert, prot_file, num_lambda_query, engine_query, main_folder, prep_dir = check_arguments(args)
+    (
+        pert,
+        prot_file,
+        num_lambda_query,
+        engine_query,
+        main_folder,
+        prep_dir,
+    ) = check_arguments(args)
 
     print(f"fepprep for {pert, prot_file, num_lambda_query, engine_query, main_folder}")
 
     fep_prep(pert, prot_file, num_lambda_query, engine_query, main_folder, prep_dir)
+
 
 if __name__ == "__main__":
     main()

@@ -6,25 +6,28 @@ from argparse import ArgumentParser
 from pipeline.utils import *
 from pipeline.prep import *
 
+
 def extract_output(folder, prot_file):
     # read in protocol
     protocol = pipeline_protocol(prot_file, auto_validate=True)
     if protocol.trajectories() == "None":
         traj_lambdas = []
     if protocol.trajectories() == "0,0.5,1":
-        traj_lambdas = ["0.0000","0.5000","1.0000"]
+        traj_lambdas = ["0.0000", "0.5000", "1.0000"]
     if protocol.trajectories() == "0,1":
-        traj_lambdas = ["0.0000","1.0000"]
+        traj_lambdas = ["0.0000", "1.0000"]
     if protocol.trajectories() == "All":
         # TODO get lambda windows from network file
-        traj_lambdas = ["0.0000","0.5000","1.0000"]
+        traj_lambdas = ["0.0000", "0.5000", "1.0000"]
 
     # so can pass with name, but will also append if not there
     if protocol.name():
         if protocol.name() != str(folder).split("_")[-1]:
             folder += f"_{protocol.name()}"
-            print(f"name of the protocol ({protocol.name()}) is not in the folder path, will use:\n"
-                    f"{folder} as folder path for this run...")
+            print(
+                f"name of the protocol ({protocol.name()}) is not in the folder path, will use:\n"
+                f"{folder} as folder path for this run..."
+            )
 
     # simfile header
     if "SOMD" in folder:
@@ -47,8 +50,8 @@ def extract_output(folder, prot_file):
     print("extracting sample config files...")
     extraction.extract_config()
 
-def check_arguments(args):
 
+def check_arguments(args):
     # pass the checks to the other check functions
     if args.folder:
         folder = args.folder
@@ -62,12 +65,16 @@ def check_arguments(args):
 
     return folder, protocol_file
 
-def main():
 
+def main():
     # accept all options as arguments
     parser = ArgumentParser(description="extract the output")
-    parser.add_argument("-f", "--folder", type=str, default=None, help="folder to extract")
-    parser.add_argument("-p", "--protocol_file", type=str, default=None, help="path to protocol file")
+    parser.add_argument(
+        "-f", "--folder", type=str, default=None, help="folder to extract"
+    )
+    parser.add_argument(
+        "-p", "--protocol_file", type=str, default=None, help="path to protocol file"
+    )
     args = parser.parse_args()
 
     # check arguments
@@ -75,6 +82,7 @@ def main():
     folder, protocol_file = check_arguments(args)
 
     extract_output(folder, protocol_file)
+
 
 if __name__ == "__main__":
     main()

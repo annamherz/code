@@ -8,6 +8,7 @@ from ..analysis._network import get_info_network
 
 csv.QUOTE_NONE
 
+
 def write_analysis_file(analysis, results_dir, method=None):
     """write the analysis file for the analysis object
 
@@ -25,26 +26,31 @@ def write_analysis_file(analysis, results_dir, method=None):
             method = analysis.name
 
     # data point for average
-    data_point_avg = [analysis.ligand_0,
-                      analysis.ligand_1,
-                      str(analysis.freenrg), # need as string so can compare to existing entries sometimes
-                      str(analysis.error),
-                      analysis.engine,
-                      analysis.file_ext,
-                      method
-                      ]
+    data_point_avg = [
+        analysis.ligand_0,
+        analysis.ligand_1,
+        str(
+            analysis.freenrg
+        ),  # need as string so can compare to existing entries sometimes
+        str(analysis.error),
+        analysis.engine,
+        analysis.file_ext,
+        method,
+    ]
 
     # use csv to open the results file.
-    final_summary_file = f"{results_dir}/final_summary_{analysis.engine.upper()}_{analysis.file_ext}.csv"
+    final_summary_file = (
+        f"{results_dir}/final_summary_{analysis.engine.upper()}_{analysis.file_ext}.csv"
+    )
     with open(final_summary_file, "a") as freenrg_writefile:
         writer = csv.writer(freenrg_writefile)
 
         # first, write a header if the file is created for the first time.
         if os.path.getsize(final_summary_file) == 0:
             print(f"Starting {final_summary_file} file.")
-            writer.writerow(["lig_0", "lig_1", "freenrg",
-                            "error", "engine", "analysis", "method"])
-
+            writer.writerow(
+                ["lig_0", "lig_1", "freenrg", "error", "engine", "analysis", "method"]
+            )
 
     with open(final_summary_file, "r") as freenrg_readfile:
         # then, grab all of the data that is already in the file.
@@ -54,8 +60,9 @@ def write_analysis_file(analysis, results_dir, method=None):
     # check if our data entry is not already in the results file. Raise an error if is.
     if data_point_avg in data_entries:
         warnings.warn(
-            f"Results for in {analysis.perturbation}, {analysis.engine} ({str(analysis.freenrg)} +/- {str(analysis.error)})"+
-            f"are already in {final_summary_file} .")
+            f"Results for in {analysis.perturbation}, {analysis.engine} ({str(analysis.freenrg)} +/- {str(analysis.error)})"
+            + f"are already in {final_summary_file} ."
+        )
 
     else:
         # at this point we know that we are writing a new entry in the results file. Append the line to the file.
@@ -63,23 +70,24 @@ def write_analysis_file(analysis, results_dir, method=None):
         with open(final_summary_file, "a") as freenrg_writefile:
             writer = csv.writer(freenrg_writefile)
             print(
-                f"Writing results. Average free energy of binding is {str(analysis.freenrg)} "+
-                f"and the error is {str(analysis.error)} for {analysis.perturbation}, {analysis.engine}.")
+                f"Writing results. Average free energy of binding is {str(analysis.freenrg)} "
+                + f"and the error is {str(analysis.error)} for {analysis.perturbation}, {analysis.engine}."
+            )
             writer.writerow(data_point_avg)
-
 
     # write results for each calculated repeat
     no_repeats = list(range(len(analysis.repeats_tuple_list)))
     # use csv to open the results file.
     for r in no_repeats:
-        data_point = [analysis.ligand_0,
-                      analysis.ligand_1,
-                      str(analysis.repeats_tuple_list[r][1]),
-                      str(analysis.repeats_tuple_list[r][2]),
-                      analysis.engine,
-                      analysis.file_ext,
-                      method
-                      ]
+        data_point = [
+            analysis.ligand_0,
+            analysis.ligand_1,
+            str(analysis.repeats_tuple_list[r][1]),
+            str(analysis.repeats_tuple_list[r][2]),
+            analysis.engine,
+            analysis.file_ext,
+            method,
+        ]
         results_file_path = f"{results_dir}/freenrg_repeat_{no_repeats.index(r)}_{analysis.engine.upper()}_{analysis.file_ext}.csv"
         with open(results_file_path, "a") as freenrg_writefile:
             writer = csv.writer(freenrg_writefile)
@@ -87,9 +95,17 @@ def write_analysis_file(analysis, results_dir, method=None):
             # first, write a header if the file is created for the first time.
             if os.path.getsize(results_file_path) == 0:
                 print(f"Starting {results_file_path} file.")
-                writer.writerow(["lig_0", "lig_1", "freenrg",
-                                "error", "engine", "analysis", "method"])
-
+                writer.writerow(
+                    [
+                        "lig_0",
+                        "lig_1",
+                        "freenrg",
+                        "error",
+                        "engine",
+                        "analysis",
+                        "method",
+                    ]
+                )
 
         with open(results_file_path, "r") as freenrg_readfile:
             # then, grab all of the data that is already in the file.
@@ -99,7 +115,8 @@ def write_analysis_file(analysis, results_dir, method=None):
         # check if our data entry is not already in the results file. Raise an error if is.
         if data_point in data_entries:
             warnings.warn(
-                f"Results for in {analysis.perturbation}, {analysis.engine} are already in {results_file_path}.")
+                f"Results for in {analysis.perturbation}, {analysis.engine} are already in {results_file_path}."
+            )
 
         else:
             # at this point we know that we are writing a new entry in the results file. Append the line to the file.
@@ -107,14 +124,14 @@ def write_analysis_file(analysis, results_dir, method=None):
             with open(results_file_path, "a") as freenrg_writefile:
                 writer = csv.writer(freenrg_writefile)
                 print(
-                    f"Writing results. For repeat {r}, free energy of binding is "+
-                    f"{str(analysis.repeats_tuple_list[r][1])} and the error is {str(analysis.repeats_tuple_list[r][2])} "+
-                    f"for {analysis.perturbation}, {analysis.engine}.")
+                    f"Writing results. For repeat {r}, free energy of binding is "
+                    + f"{str(analysis.repeats_tuple_list[r][1])} and the error is {str(analysis.repeats_tuple_list[r][2])} "
+                    + f"for {analysis.perturbation}, {analysis.engine}."
+                )
                 writer.writerow(data_point)
-    
+
     # write results for each the bound and the free too
     for bf in ["bound", "free"]:
-
         if bf == "free":
             val_dict = analysis._free_val_dict
             err_dict = analysis._free_err_dict
@@ -126,28 +143,29 @@ def write_analysis_file(analysis, results_dir, method=None):
 
         # use csv to open the results file.
         for key in val_dict.keys():
+            r = key.split("_")[0]
 
-            r= key.split('_')[0]
-            
             try:
-                data_point = [analysis.ligand_0,
-                            analysis.ligand_1,
-                            str(val_dict[f"{key}"]),
-                            str(err_dict[f"{key}"]),
-                            analysis.engine,
-                            analysis.file_ext,
-                            method
-                            ]
+                data_point = [
+                    analysis.ligand_0,
+                    analysis.ligand_1,
+                    str(val_dict[f"{key}"]),
+                    str(err_dict[f"{key}"]),
+                    analysis.engine,
+                    analysis.file_ext,
+                    method,
+                ]
             except:
                 # if that repeat does not have a value, write none in the output file.
-                data_point = [analysis.ligand_0,
-                            analysis.ligand_1,
-                            str(np.nan),
-                            str(np.nan),
-                            analysis.engine,
-                            analysis.file_ext,
-                            method
-                            ]                
+                data_point = [
+                    analysis.ligand_0,
+                    analysis.ligand_1,
+                    str(np.nan),
+                    str(np.nan),
+                    analysis.engine,
+                    analysis.file_ext,
+                    method,
+                ]
             results_file_path = f"{results_dir}/{name}_repeat_{r}_{analysis.engine.upper()}_{analysis.file_ext}.csv"
             with open(results_file_path, "a") as freenrg_writefile:
                 writer = csv.writer(freenrg_writefile)
@@ -155,9 +173,17 @@ def write_analysis_file(analysis, results_dir, method=None):
                 # first, write a header if the file is created for the first time.
                 if os.path.getsize(results_file_path) == 0:
                     print(f"Starting {results_file_path} file.")
-                    writer.writerow(["lig_0", "lig_1", "freenrg",
-                                    "error", "engine", "analysis", "method"])
-
+                    writer.writerow(
+                        [
+                            "lig_0",
+                            "lig_1",
+                            "freenrg",
+                            "error",
+                            "engine",
+                            "analysis",
+                            "method",
+                        ]
+                    )
 
             with open(results_file_path, "r") as freenrg_readfile:
                 # then, grab all of the data that is already in the file.
@@ -167,7 +193,8 @@ def write_analysis_file(analysis, results_dir, method=None):
             # check if our data entry is not already in the results file. Raise an error if is.
             if data_point in data_entries:
                 warnings.warn(
-                    f"Results for {name} in {analysis.perturbation}, {analysis.engine} are already in {results_file_path}.")
+                    f"Results for {name} in {analysis.perturbation}, {analysis.engine} are already in {results_file_path}."
+                )
 
             else:
                 # at this point we know that we are writing a new entry in the results file. Append the line to the file.
@@ -175,9 +202,10 @@ def write_analysis_file(analysis, results_dir, method=None):
                 with open(results_file_path, "a") as freenrg_writefile:
                     writer = csv.writer(freenrg_writefile)
                     print(
-                        f"Writing results. For repeat {name} {r}, free energy of binding is "+
-                        f"{str(val_dict[f'{r}_{name}'])} and the error is {str(err_dict[f'{r}_{name}'])} "+
-                        f"for {analysis.perturbation}, {analysis.engine}.")
+                        f"Writing results. For repeat {name} {r}, free energy of binding is "
+                        + f"{str(val_dict[f'{r}_{name}'])} and the error is {str(err_dict[f'{r}_{name}'])} "
+                        + f"for {analysis.perturbation}, {analysis.engine}."
+                    )
                     writer.writerow(data_point)
 
 
@@ -204,7 +232,6 @@ def write_atom_mappings(lig_0, lig_1, ligand_0, ligand_1, mapping, output_file):
             print(f"Starting {output_file} file.")
             writer.writerow(["lig_0", "lig_1", "lig_0_atoms", "lig_1_atoms", "mapping"])
 
-
     with open(output_file, "r") as readfile:
         # then, grab all of the data that is already in the file.
         reader = csv.reader(readfile)
@@ -212,20 +239,20 @@ def write_atom_mappings(lig_0, lig_1, ligand_0, ligand_1, mapping, output_file):
 
     # check if our data entry is not already in the results file. Raise an error if is.
     if data_point in data_entries:
-        warnings.warn(
-            f"this atom mapping has already been written.")
+        warnings.warn(f"this atom mapping has already been written.")
 
     else:
         # at this point we know that we are writing a new entry in the results file. Append the line to the file.
         # use csv to open the results file.
         with open(output_file, "a") as writefile:
             writer = csv.writer(writefile, delimiter=";")
-            print(
-                f"Writing results.")
+            print(f"Writing results.")
             writer.writerow(data_point)
 
 
-def write_modified_results_files(results_files, perturbations=None, name=None, output_folder=None, **kwargs):
+def write_modified_results_files(
+    results_files, perturbations=None, name=None, output_folder=None, **kwargs
+):
     """write modified results files that contain only specific perturbations.
     In the extra options, can specify 'engine' or 'engines'.
 
@@ -253,20 +280,21 @@ def write_modified_results_files(results_files, perturbations=None, name=None, o
         perturbations = validate.is_list(perturbations)
     else:
         perturbations, ligands = get_info_network(results_files=results_files)
-    
+
     if name:
         name = validate.string(name)
 
     if not output_folder:
         # will write as folder of first results file
-        output_folder = validate.folder_path(results_files[0].replace(results_files[0].split("/")[-1], "")[:-1])
+        output_folder = validate.folder_path(
+            results_files[0].replace(results_files[0].split("/")[-1], "")[:-1]
+        )
         print(f"using {output_folder} to write the results as none specified...")
-    
+
     # set extra_options variables as defaults
-    engines = [eng.upper() for eng in BSS.FreeEnergy.engines()] # use all
+    engines = [eng.upper() for eng in BSS.FreeEnergy.engines()]  # use all
 
-    for key,value in kwargs.items():
-
+    for key, value in kwargs.items():
         if key == "engine":
             engine = validate.engine(value)
             engines = [engine]
@@ -286,42 +314,46 @@ def write_modified_results_files(results_files, perturbations=None, name=None, o
         else:
             new_file_name = f"{output_folder}/results_{results_files.index(file)}_{'_'.join(engines)}.csv"
         with open(new_file_name, "w") as result_file:
-
             writer = csv.writer(result_file, delimiter=",")
-            writer.writerow(["lig_0","lig_1","freenrg","error","engine","analysis","method"])
+            writer.writerow(
+                ["lig_0", "lig_1", "freenrg", "error", "engine", "analysis", "method"]
+            )
 
             # read the file as a csv, should have the same headings as well
-            for index,row in pd.read_csv(file).iterrows():
+            for index, row in pd.read_csv(file).iterrows():
                 pert = f"{row['lig_0']}~{row['lig_1']}"
-                if pert in perturbations and row['engine'].strip() in engines:
-                        
-                        if name:
-                            if name.lower() == row['method'].strip().lower(): 
-                                pass
-                            else:
-                                continue
-                        # check if have analysis and method in it 
-                        try:
-                            ana_str = row['analysis']
-                        except:
-                            ana_str = "not specified"
-                        
-                        try:
-                            method_str = row['method']
-                        except:
-                            method_str = "None"
-                        
-                        # write the row
-                        writer.writerow([row['lig_0'],
-                                         row['lig_1'], 
-                                         row['freenrg'],
-                                         row['error'],
-                                         row['engine'],
-                                         ana_str,
-                                         method_str])    
+                if pert in perturbations and row["engine"].strip() in engines:
+                    if name:
+                        if name.lower() == row["method"].strip().lower():
+                            pass
+                        else:
+                            continue
+                    # check if have analysis and method in it
+                    try:
+                        ana_str = row["analysis"]
+                    except:
+                        ana_str = "not specified"
+
+                    try:
+                        method_str = row["method"]
+                    except:
+                        method_str = "None"
+
+                    # write the row
+                    writer.writerow(
+                        [
+                            row["lig_0"],
+                            row["lig_1"],
+                            row["freenrg"],
+                            row["error"],
+                            row["engine"],
+                            ana_str,
+                            method_str,
+                        ]
+                    )
 
             mod_results_files.append(new_file_name)
-    
+
     return mod_results_files
 
 
@@ -343,7 +375,7 @@ def write_protocol(query_dict, file_path):
             if query == "config options":
                 pass
             elif isinstance(query_dict[query], list):
-                value = ','.join(query_dict[query])
+                value = ",".join(query_dict[query])
                 writer.writerow([f"{query} = {value}"])
             elif isinstance(query_dict[query], dict):
                 for qu in query_dict[query].keys():
@@ -366,7 +398,8 @@ def write_ligands(ligand_names, file_path):
     with open(file, "w") as ligands_file:
         writer = csv.writer(ligands_file)
         for lig in ligand_names:
-            writer.writerow([lig])               
+            writer.writerow([lig])
+
 
 def write_lomap_scores(pert_network_dict, file_path):
     """write the lomap scores to a file.
@@ -386,6 +419,7 @@ def write_lomap_scores(pert_network_dict, file_path):
             score = pert_network_dict[transf]
             writer.writerow([transf[0], transf[1], score])
 
+
 def write_network(pert_network_dict, protocol, file_path):
     """write the network to a file using the protocol for the pipeline.
 
@@ -401,28 +435,33 @@ def write_network(pert_network_dict, protocol, file_path):
     protocol = validate.pipeline_protocol(protocol)
 
     # write perts file. Base the lambda schedule on the file generated in the previous cell.
-    np.set_printoptions(formatter={'float': '{: .4f}'.format})
+    np.set_printoptions(formatter={"float": "{: .4f}".format})
 
     with open(file, "w") as network_file:
-
         writer = csv.writer(network_file, delimiter=" ")
-        
+
         for pert, lomap_score in pert_network_dict.items():
             # # based on the provided (at top of notebook) lambda allocations and LOMAP threshold, decide allocation.
             # if lomap_score == None or lomap_score < float(node.getInput("LOMAP Threshold")):
             #     num_lambda = node.getInput("DiffLambdaWindows")
             # else:
             #     num_lambda = node.getInput("LambdaWindows")
-            
-            num_lambda = protocol.num_lambda()# same no lamdda windows for all
-        
+
+            num_lambda = protocol.num_lambda()  # same no lamdda windows for all
+
             # given the number of allocated lambda windows, generate an array for parsing downstream.
             lam_array_np = np.around(np.linspace(0, 1, int(num_lambda)), decimals=5)
 
             # make the array into a format readable by bash.
-            lam_array = str(lam_array_np).replace("[ ", "").replace("]", "").replace("  ", ",").replace('\n', '')
+            lam_array = (
+                str(lam_array_np)
+                .replace("[ ", "")
+                .replace("]", "")
+                .replace("  ", ",")
+                .replace("\n", "")
+            )
 
             # write out both directions for this perturbation.
             for eng in protocol.engines():
                 writer.writerow([pert[0], pert[1], len(lam_array_np), lam_array, eng])
-                # writer.writerow([pert[1], pert[0], len(lam_array_np), lam_array, engine])   
+                # writer.writerow([pert[1], pert[0], len(lam_array_np), lam_array, engine])

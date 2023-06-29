@@ -6,12 +6,11 @@ from ..utils._files import *
 from ..prep._protocol import *
 from ..analysis._network import *
 
-class initialise_pipeline():
-    """class to intialise the pipeline.
-    """
+
+class initialise_pipeline:
+    """class to intialise the pipeline."""
 
     def __init__(self):
-
         # need a main folder
         # execuction folder automatically made in main folder
         # protein file path
@@ -30,10 +29,9 @@ class initialise_pipeline():
 
         self.protocol = None
         self.analysis_protocol = None
-        
+
         self._is_ligands_setup = False
         self._is_network_setup = False
-
 
     def ligands_folder(self, folder_path=None):
         """set the folder that contains the ligand files if passed, else state the current ligands folder.
@@ -53,10 +51,12 @@ class initialise_pipeline():
 
             ligand_files = glob.glob(f"{folder_path}/*.sdf")
             if len(ligand_files) < 3:
-                raise ValueError("need atleast two *.sdf ligands in folder for setting up the pipeline.")
+                raise ValueError(
+                    "need atleast two *.sdf ligands in folder for setting up the pipeline."
+                )
 
             self._ligands_folder = folder_path
-        
+
         else:
             pass
 
@@ -79,12 +79,11 @@ class initialise_pipeline():
 
             if create_exec_folder:
                 self.exec_folder(f"{self._main_folder}/execution_model")
-        
+
         else:
             pass
 
         return self._main_folder
-
 
     def exec_folder(self, folder_path=None):
         """create the execution model folder path for the pipeline, else return its location.
@@ -122,12 +121,13 @@ class initialise_pipeline():
                 validate.file_path(f"{protein_path}.prm7")
                 self._protein_path = protein_path
             except:
-                raise ValueError("protein path must be that to the rst7 and prm7 parameterised protein")
+                raise ValueError(
+                    "protein path must be that to the rst7 and prm7 parameterised protein"
+                )
         else:
             pass
 
         return self._protein_path
-
 
     @staticmethod
     def _setup_ligands(path_to_ligands, exec_folder):
@@ -143,7 +143,7 @@ class initialise_pipeline():
             ligands_dict: dicitonary of ligand names and the BSS molecule.
         """
 
-        #generate transformation network based on ligands
+        # generate transformation network based on ligands
         ligand_files = sorted(glob.glob(f"{path_to_ligands}/*.sdf"))
 
         ligands = []
@@ -154,9 +154,9 @@ class initialise_pipeline():
             # append the molecule object to a list.
             lig = BSS.IO.readMolecules(filepath)[0]
             ligands.append(lig)
-            
+
             # append the molecule name to another list so that we can use the name of each molecule in our workflow.
-            lig_name = filepath.split("/")[-1].replace(".sdf","")
+            lig_name = filepath.split("/")[-1].replace(".sdf", "")
             ligand_names.append(lig_name)
 
             ligands_dict[lig_name] = lig
@@ -166,9 +166,9 @@ class initialise_pipeline():
             print(lig)
 
         # write ligands file.
-        write_ligands(ligand_names, f"{exec_folder}/ligands.dat")         
+        write_ligands(ligand_names, f"{exec_folder}/ligands.dat")
 
-        return ligands, ligand_names, ligands_dict           
+        return ligands, ligand_names, ligands_dict
 
     def setup_ligands(self):
         """setup the ligands
@@ -179,11 +179,17 @@ class initialise_pipeline():
         """
 
         if not self._ligands_folder:
-            raise ValueError("please provide a ligands folder first using .ligands_folder(path_to_ligands)")
+            raise ValueError(
+                "please provide a ligands folder first using .ligands_folder(path_to_ligands)"
+            )
         if not self._exec_folder:
-            raise ValueError("please provide an execution model folder first using .exec_folder(path_to_exec) or create it using the .main_folder(path, create_exec_folder=True)")
+            raise ValueError(
+                "please provide an execution model folder first using .exec_folder(path_to_exec) or create it using the .main_folder(path, create_exec_folder=True)"
+            )
 
-        ligands, ligand_names, ligands_dict = initialise_pipeline._setup_ligands(self._ligands_folder, self._exec_folder)
+        ligands, ligand_names, ligands_dict = initialise_pipeline._setup_ligands(
+            self._ligands_folder, self._exec_folder
+        )
 
         self.ligands = ligands
         self.ligand_names = ligand_names
@@ -206,10 +212,12 @@ class initialise_pipeline():
                 del self.ligands_dict[lig]
 
             # write ligands file again as updted
-            write_ligands(self.ligand_names, f"{self._exec_folder}/ligands.dat")  
+            write_ligands(self.ligand_names, f"{self._exec_folder}/ligands.dat")
 
         else:
-            print("please setup ligands first (using .setup_ligands() ) before removing any")
+            print(
+                "please setup ligands first (using .setup_ligands() ) before removing any"
+            )
 
     @staticmethod
     def _setup_network(ligands, ligand_names, folder, links_file=None):
@@ -217,7 +225,7 @@ class initialise_pipeline():
 
         Args:
             ligands (list): BSS molecules list of ligands
-            ligand_names (list): list of ligand names, must 
+            ligand_names (list): list of ligand names, must
             folder (str): folder path of where to save the network setup files and visualisation
             links_file (str, optional): file path to a links file to use instead of LOMAP. Defaults to None.
 
@@ -225,21 +233,25 @@ class initialise_pipeline():
             dict: dictionary of perturbations and their scores
         """
 
-        transformations, lomap_scores = BSS.Align.generateNetwork(ligands, plot_network=True,
-                                                                  names=ligand_names,
-                                                                  work_dir=f"{folder}/visualise_network",
-                                                                  links_file=links_file
-                                                                  )
+        transformations, lomap_scores = BSS.Align.generateNetwork(
+            ligands,
+            plot_network=True,
+            names=ligand_names,
+            work_dir=f"{folder}/visualise_network",
+            links_file=links_file,
+        )
 
         # dict of perts
         pert_network_dict = {}
-        transformations_named = [(ligand_names[transf[0]], ligand_names[transf[1]]) for transf in transformations]
+        transformations_named = [
+            (ligand_names[transf[0]], ligand_names[transf[1]])
+            for transf in transformations
+        ]
         for score, transf in sorted(zip(lomap_scores, transformations_named)):
             pert_network_dict[transf] = score
             print(transf, score)
 
         return pert_network_dict
-            
 
     def setup_network(self, folder="LOMAP", links_file=None):
         """setup the network for the ligands, write the scores used for each perturbation and get the perturbations.
@@ -255,15 +267,19 @@ class initialise_pipeline():
 
         # TODO make the ligand names and ligands from dictionary to make sure they match
 
-        pert_network_dict = initialise_pipeline._setup_network(self.ligands,
-                                           self.ligand_names,
-                                           f"{self.exec_folder()}/{folder}",
-                                           links_file=links_file)
-        
+        pert_network_dict = initialise_pipeline._setup_network(
+            self.ligands,
+            self.ligand_names,
+            f"{self.exec_folder()}/{folder}",
+            links_file=links_file,
+        )
+
         self.pert_network_dict = pert_network_dict
         self.perturbations = [f"{key[0]}~{key[1]}" for key in pert_network_dict.keys()]
 
-        write_lomap_scores(pert_network_dict, f"{self.exec_folder()}/network_scores.dat")
+        write_lomap_scores(
+            pert_network_dict, f"{self.exec_folder()}/network_scores.dat"
+        )
 
         self._is_network_setup = True
 
@@ -277,9 +293,13 @@ class initialise_pipeline():
         if self._is_network_setup:
             if pert in self.perturbations:
                 self.perturbations.remove(pert)
-                del self.pert_network_dict[(f"{pert.split('~')[0]}", f"{pert.split('~')[1]}")]
+                del self.pert_network_dict[
+                    (f"{pert.split('~')[0]}", f"{pert.split('~')[1]}")
+                ]
 
-            write_lomap_scores(self.pert_network_dict, f"{self.exec_folder()}/network_scores.dat")
+            write_lomap_scores(
+                self.pert_network_dict, f"{self.exec_folder()}/network_scores.dat"
+            )
 
         else:
             print("please setup network first before removing any perturbations")
@@ -293,21 +313,23 @@ class initialise_pipeline():
         """
 
         if self._is_network_setup:
-
             lig0 = f"{pert.split('~')[0]}"
             lig1 = f"{pert.split('~')[1]}"
-            
+
             # regenerate the network just for that perturbation
-            single_transformation, single_lomap_score = BSS.Align.generateNetwork([self.ligands_dict[lig0], self.ligands_dict[lig1]],
-                                                                                  names=[lig0, lig1],
-                                                                                  plot_network=False,
-                                                                                  links_file=links_file
-                                                                                  )
+            single_transformation, single_lomap_score = BSS.Align.generateNetwork(
+                [self.ligands_dict[lig0], self.ligands_dict[lig1]],
+                names=[lig0, lig1],
+                plot_network=False,
+                links_file=links_file,
+            )
 
             self.pert_network_dict[(lig0, lig1)] = single_lomap_score[0]
             self.perturbations.append(pert)
 
-            write_lomap_scores(self.pert_network_dict, f"{self.exec_folder()}/network_scores.dat")
+            write_lomap_scores(
+                self.pert_network_dict, f"{self.exec_folder()}/network_scores.dat"
+            )
 
         else:
             print("please setup network first before adding any perturbations")
@@ -321,14 +343,13 @@ class initialise_pipeline():
 
         if not folder:
             folder = self.exec_folder()
-        
+
         if not self._is_network_setup:
             print("please setup network first")
             return
-        
+
         graph = net_graph(self.ligand_names, self.perturbations)
         graph.draw_graph(file_dir=folder)
-
 
     def setup_protocols(self, protocol_dictionary=None, ana_protocol_dictionary=None):
         """set default protocols for the pipeline, consider any passed dictionaries.
@@ -345,7 +366,9 @@ class initialise_pipeline():
 
         # create an analysis protocol
         ana_protocol = analysis_protocol(ana_protocol_dictionary, auto_validate=True)
-        ana_protocol.rewrite_protocol(file_path=f"{self.exec_folder()}/analysis_protocol.dat")
+        ana_protocol.rewrite_protocol(
+            file_path=f"{self.exec_folder()}/analysis_protocol.dat"
+        )
         self.analysis_protocol = ana_protocol
 
     def add_pipeline_protocol(self, protocol):
@@ -366,8 +389,9 @@ class initialise_pipeline():
         """
 
         self.analysis_protocol = validate.analysis_protocol(protocol)
-        self.analysis_protocol.rewrite_protocol(file_path=f"{self.exec_folder()}/analysis_protocol.dat")
-
+        self.analysis_protocol.rewrite_protocol(
+            file_path=f"{self.exec_folder()}/analysis_protocol.dat"
+        )
 
     def write_network(self, file_path=None):
         """write the network file for the pipeline.
@@ -384,16 +408,15 @@ class initialise_pipeline():
         else:
             print("please setup network first before writing the network file.")
 
-
     def write_run_all(self):
-        """write the run all file needed to run the pipeline. This file should be checked manually.
-        """
+        """write the run all file needed to run the pipeline. This file should be checked manually."""
 
         # rewrite all the ligands, network files
         # TODO check pipeline scripts loaction etc and pmemd path etc to use those when writing
 
         with open(f"{self._main_folder}/run_all_slurm.sh", "w") as rsh:
-            rsh.write(f'''\
+            rsh.write(
+                f"""\
 #!/bin/bash 
 #
 # generated to run all the lig prep, FEP prep, and the production runs
@@ -442,10 +465,12 @@ source $scripts_dir/extract_execution_model_bash.sh
 
 ###########
 
-''')
+"""
+            )
 
             with open(f"{self._main_folder}/run_all_slurm.sh", "a") as rsh:
-                rsh.write('''\
+                rsh.write(
+                    """\
 
 echo "The folder for all these runs is $MAINDIRECTORY"
 echo ${lig_array[@]}
@@ -477,4 +502,5 @@ jidana=$(sbatch --dependency=afterany:${jidextract} --parsable $scripts_dir/run_
 echo "Analysis jobid for ${trans_array[i]}, ${eng_array[i]} is $jidana"
 done        
 
-''')
+"""
+                )

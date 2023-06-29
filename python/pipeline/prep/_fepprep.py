@@ -11,10 +11,11 @@ from pytest import approx
 from scipy.constants import proton_mass
 from scipy.constants import physical_constants
 
-hydrogen_amu = proton_mass/(physical_constants["atomic mass constant"][0])
+hydrogen_amu = proton_mass / (physical_constants["atomic mass constant"][0])
+
 
 def check_hmr(system, protocol, engine):
-    # from bss code 
+    # from bss code
 
     system = validate.system(system)
     protocol = validate.bss_protocol(protocol)
@@ -24,7 +25,6 @@ def check_hmr(system, protocol, engine):
     # HMR check
     # by default, if the timestep is greater than 4 fs this should be true.
     if protocol.getHmr():
-
         # Set the expected HMR factor.
         hmr_factor = protocol.getHmrFactor()
         if hmr_factor == "auto":
@@ -53,8 +53,7 @@ def check_hmr(system, protocol, engine):
             try:
                 h = mol.search("{element H}[0]")
                 # mass = h._sire_object.property(mass_prop).value()
-                mass = h[0]._sire_object.evaluate().mass(
-                    property_map).value()
+                mass = h[0]._sire_object.evaluate().mass(property_map).value()
                 found_h = True
             except:
                 found_h = False
@@ -79,8 +78,7 @@ def check_hmr(system, protocol, engine):
 
         # error if cant find a H mass
         if not found_h:
-            raise TypeError(
-                "Can't find the mass of a H in the system.")
+            raise TypeError("Can't find the mass of a H in the system.")
 
         # Check that the mass matches what is expected.
         if engine == "SOMD":
@@ -89,7 +87,8 @@ def check_hmr(system, protocol, engine):
                 repartition = False
             else:
                 raise TypeError(
-                    "Please do not pass an already repartitioned system in for use with SOMD.")
+                    "Please do not pass an already repartitioned system in for use with SOMD."
+                )
 
         # check for amber or gromacs repartitioning
         elif engine == "AMBER" or engine == "GROMACS":
@@ -101,34 +100,39 @@ def check_hmr(system, protocol, engine):
                 repartition = False
             # finally, check if the system is repartitioned with the wrong factor.
             elif mass != approx(hmr_factor * hydrogen_amu, rel=1e-2):
-                raise TypeError("""
+                raise TypeError(
+                    """
                 The system is repartitioned at a factor different from that specified in 'hmr_factor'
                 or at the auto default for this engine (3 for AMBER and GROMACS, None for SOMD (as this is specified in the cfg file)).
-                Please pass a correctly partitioned or entirely unpartitioned system.""")
+                Please pass a correctly partitioned or entirely unpartitioned system."""
+                )
 
         # Repartition if necessary.
         if repartition:
             _warnings.warn(
-                f"The passed system is being repartitioned according to a factor of '{hmr_factor}'.")
+                f"The passed system is being repartitioned according to a factor of '{hmr_factor}'."
+            )
             system.repartitionHydrogenMass(
-                factor=hmr_factor, water=water, property_map=property_map)
+                factor=hmr_factor, water=water, property_map=property_map
+            )
         else:
             if engine != "SOMD":
                 _warnings.warn(
-                    "The passed system is already repartitioned. Proceeding without additional repartitioning.")
-    
+                    "The passed system is already repartitioned. Proceeding without additional repartitioning."
+                )
+
     else:
         pass
 
     return system
 
-class fepprep():
+
+class fepprep:
     """class for fepprep
-        makes all the protocols and writes the folders
+    makes all the protocols and writes the folders
     """
 
     def __init__(self, free_system=None, bound_system=None, protocol=None):
-
         # instantiate the class with the system and pipeline_protocol
         if free_system:
             self._merge_free_system = validate.system(free_system).copy()
@@ -136,7 +140,9 @@ class fepprep():
             self._merge_free_system = None
             self._free_system_0 = None
             self._free_system_1 = None
-            print("please add a system for free with lig0 and free with lig1 and merge these")
+            print(
+                "please add a system for free with lig0 and free with lig1 and merge these"
+            )
 
         if bound_system:
             self._merge_bound_system = validate.system(bound_system).copy()
@@ -144,7 +150,9 @@ class fepprep():
             self._merge_bound_system = None
             self._bound_system_0 = None
             self._bound_system_1 = None
-            print("please add a system for bound with lig0 and bound with lig1 and merge these")
+            print(
+                "please add a system for bound with lig0 and bound with lig1 and merge these"
+            )
 
         self._pipeline_protocol = validate.pipeline_protocol(protocol, fepprep=True)
         # generate the BSS protocols from the pipeline protocol
@@ -168,7 +176,7 @@ class fepprep():
             raise ValueError("free_bound must be free or bound.")
         if start_end not in ["start", "end"]:
             raise ValueError("start_end must be start or end.")
-                
+
         if free_bound == "free" and start_end == "start":
             self._free_system_0 = validate.system(system).copy()
         if free_bound == "free" and start_end == "end":
@@ -177,7 +185,6 @@ class fepprep():
             self._bound_system_0 = validate.system(system).copy()
         if free_bound == "bound" and start_end == "end":
             self._bound_system_1 = validate.system(system).copy()
-
 
     def merge_systems(self, align_to="lig0", **kwargs):
         """merge the systems based on whether aligning to the lambda 0.0 coordinates or the lmabda 1.0 coordinates.
@@ -190,91 +197,116 @@ class fepprep():
         """
 
         kwarg_dict = {"ALIGNTO": align_to}
-        
-        for key,value in kwargs.items():
-            kwarg_dict[key.upper().replace(" ","").replace("_","").strip()] = value
+
+        for key, value in kwargs.items():
+            kwarg_dict[key.upper().replace(" ", "").replace("_", "").strip()] = value
 
         print(f"merging using {kwarg_dict} ...")
 
-        self._free_system_0 = check_hmr(self._free_system_0, self._freenrg_protocol, self._pipeline_protocol.engine())
-        self._free_system_1 = check_hmr(self._free_system_1, self._freenrg_protocol, self._pipeline_protocol.engine())
-        self._bound_system_0 = check_hmr(self._bound_system_0, self._freenrg_protocol, self._pipeline_protocol.engine())
-        self._bound_system_1 = check_hmr(self._bound_system_1, self._freenrg_protocol, self._pipeline_protocol.engine())
+        self._free_system_0 = check_hmr(
+            self._free_system_0,
+            self._freenrg_protocol,
+            self._pipeline_protocol.engine(),
+        )
+        self._free_system_1 = check_hmr(
+            self._free_system_1,
+            self._freenrg_protocol,
+            self._pipeline_protocol.engine(),
+        )
+        self._bound_system_0 = check_hmr(
+            self._bound_system_0,
+            self._freenrg_protocol,
+            self._pipeline_protocol.engine(),
+        )
+        self._bound_system_1 = check_hmr(
+            self._bound_system_1,
+            self._freenrg_protocol,
+            self._pipeline_protocol.engine(),
+        )
 
-        free_system = merge.merge_system(self._free_system_0, self._free_system_1, **kwarg_dict)
-        bound_system = merge.merge_system(self._bound_system_0, self._bound_system_1, **kwarg_dict)
+        free_system = merge.merge_system(
+            self._free_system_0, self._free_system_1, **kwarg_dict
+        )
+        bound_system = merge.merge_system(
+            self._bound_system_0, self._bound_system_1, **kwarg_dict
+        )
 
         self._merge_free_system = free_system
         self._merge_bound_system = bound_system
-        
+
         return free_system, bound_system
-    
+
     def _generate_bss_protocols(self):
-        """internal function to generate bss protocols for setup based on passed pipeline protocol.
-        """
+        """internal function to generate bss protocols for setup based on passed pipeline protocol."""
 
         protocol = self._pipeline_protocol
 
-        if protocol.engine() == 'AMBER' or protocol.engine() == 'GROMACS':
-
+        if protocol.engine() == "AMBER" or protocol.engine() == "GROMACS":
             min_protocol = BSS.Protocol.FreeEnergyMinimisation(
-                                                            num_lam=protocol.num_lambda(),
-                                                            steps=protocol.min_steps(),
-                                                            )
-            heat_protocol = BSS.Protocol.FreeEnergyEquilibration(timestep=protocol.timestep()*protocol.timestep_unit(),
-                                                                num_lam=protocol.num_lambda(),
-                                                                runtime=protocol.eq_runtime()*protocol.eq_runtime_unit(),
-                                                                pressure=None,
-                                                                temperature_start=protocol.start_temperature()*protocol.temperature_unit(),
-                                                                temperature_end=protocol.end_temperature()*protocol.temperature_unit(),
-                                                                restart_interval=10000,
-                                                                hmr_factor=protocol.hmr_factor()
-                                                                )
-            eq_protocol = BSS.Protocol.FreeEnergyEquilibration(timestep=protocol.timestep()*protocol.timestep_unit(),
-                                                            num_lam=protocol.num_lambda(),
-                                                            runtime=protocol.eq_runtime()*protocol.eq_runtime_unit(),
-                                                            temperature=protocol.temperature()*protocol.temperature_unit(),
-                                                            pressure=protocol.pressure()*protocol.pressure_unit(),
-                                                            restart=True, restart_interval=10000,
-                                                            hmr_factor=protocol.hmr_factor()
-                                                            )
-            freenrg_protocol = BSS.Protocol.FreeEnergy(timestep=protocol.timestep()*protocol.timestep_unit(),
-                                                        num_lam=protocol.num_lambda(),
-                                                        runtime=protocol.sampling()*protocol.sampling_unit(),
-                                                        temperature=protocol.temperature()*protocol.temperature_unit(),
-                                                        pressure=protocol.pressure()*protocol.pressure_unit(),
-                                                        restart=True, restart_interval=10000,
-                                                        hmr_factor=protocol.hmr_factor()
-                                                    )
+                num_lam=protocol.num_lambda(),
+                steps=protocol.min_steps(),
+            )
+            heat_protocol = BSS.Protocol.FreeEnergyEquilibration(
+                timestep=protocol.timestep() * protocol.timestep_unit(),
+                num_lam=protocol.num_lambda(),
+                runtime=protocol.eq_runtime() * protocol.eq_runtime_unit(),
+                pressure=None,
+                temperature_start=protocol.start_temperature()
+                * protocol.temperature_unit(),
+                temperature_end=protocol.end_temperature()
+                * protocol.temperature_unit(),
+                restart_interval=10000,
+                hmr_factor=protocol.hmr_factor(),
+            )
+            eq_protocol = BSS.Protocol.FreeEnergyEquilibration(
+                timestep=protocol.timestep() * protocol.timestep_unit(),
+                num_lam=protocol.num_lambda(),
+                runtime=protocol.eq_runtime() * protocol.eq_runtime_unit(),
+                temperature=protocol.temperature() * protocol.temperature_unit(),
+                pressure=protocol.pressure() * protocol.pressure_unit(),
+                restart=True,
+                restart_interval=10000,
+                hmr_factor=protocol.hmr_factor(),
+            )
+            freenrg_protocol = BSS.Protocol.FreeEnergy(
+                timestep=protocol.timestep() * protocol.timestep_unit(),
+                num_lam=protocol.num_lambda(),
+                runtime=protocol.sampling() * protocol.sampling_unit(),
+                temperature=protocol.temperature() * protocol.temperature_unit(),
+                pressure=protocol.pressure() * protocol.pressure_unit(),
+                restart=True,
+                restart_interval=10000,
+                hmr_factor=protocol.hmr_factor(),
+            )
 
-        elif protocol.engine() == 'SOMD':
-
+        elif protocol.engine() == "SOMD":
             min_protocol = None
             heat_protocol = None
 
-            eq_protocol = BSS.Protocol.FreeEnergy(timestep=protocol.timestep()*protocol.timestep_unit(),
-                                                num_lam=protocol.num_lambda(),
-                                                temperature=protocol.temperature()*protocol.temperature_unit(),
-                                                runtime=(protocol.eq_runtime()*2)*protocol.eq_runtime_unit(),
-                                                pressure=protocol.pressure()*protocol.pressure_unit(),
-                                                restart_interval=10000,
-                                                hmr_factor=protocol.hmr_factor()
-                                                )
-            freenrg_protocol = BSS.Protocol.FreeEnergy(timestep=protocol.timestep()*protocol.timestep_unit(),
-                                                        num_lam=protocol.num_lambda(),
-                                                        runtime=protocol.sampling()*protocol.sampling_unit(),
-                                                        temperature=protocol.temperature()*protocol.temperature_unit(),
-                                                        pressure=protocol.pressure()*protocol.pressure_unit(),
-                                                        restart_interval=10000,
-                                                        hmr_factor=protocol.hmr_factor()
-                                                       )
+            eq_protocol = BSS.Protocol.FreeEnergy(
+                timestep=protocol.timestep() * protocol.timestep_unit(),
+                num_lam=protocol.num_lambda(),
+                temperature=protocol.temperature() * protocol.temperature_unit(),
+                runtime=(protocol.eq_runtime() * 2) * protocol.eq_runtime_unit(),
+                pressure=protocol.pressure() * protocol.pressure_unit(),
+                restart_interval=10000,
+                hmr_factor=protocol.hmr_factor(),
+            )
+            freenrg_protocol = BSS.Protocol.FreeEnergy(
+                timestep=protocol.timestep() * protocol.timestep_unit(),
+                num_lam=protocol.num_lambda(),
+                runtime=protocol.sampling() * protocol.sampling_unit(),
+                temperature=protocol.temperature() * protocol.temperature_unit(),
+                pressure=protocol.pressure() * protocol.pressure_unit(),
+                restart_interval=10000,
+                hmr_factor=protocol.hmr_factor(),
+            )
 
         # set the new protocols to self as well
         self._min_protocol = min_protocol
         self._heat_protocol = heat_protocol
         self._eq_protocol = eq_protocol
         self._freenrg_protocol = freenrg_protocol
-
 
     def prep_system_middle(self, pmemd_path, work_dir=None):
         """trying to prep the system at lambda 0.5 (not very robust currently)
@@ -289,18 +321,23 @@ class fepprep():
 
         if self._pipeline_protocol.fepprep() == "middle":
             # Solvate and run each the bound and the free system.
-            legs_mols, legs = [self._merge_free_system, self._merge_bound_system], ["lig", "sys"]
+            legs_mols, legs = [self._merge_free_system, self._merge_bound_system], [
+                "lig",
+                "sys",
+            ]
 
             # zip together the molecules in that leg with the name for that leg
             for leg, leg_mol in zip(legs, legs_mols):
                 print(f"carrying out for {leg}")
-                leg_equil_final = minimise_equilibrate_leg(leg_mol, "AMBER", pmemd_path, lig_fep="fepprep", work_dir=work_dir)
+                leg_equil_final = minimise_equilibrate_leg(
+                    leg_mol, "AMBER", pmemd_path, lig_fep="fepprep", work_dir=work_dir
+                )
                 if leg == "lig":
                     self._merge_free_system = leg_equil_final
                 if leg == "sys":
                     self._merge_bound_system = leg_equil_final
-        
-        return self._merge_free_system, self._merge_bound_system 
+
+        return self._merge_free_system, self._merge_bound_system
 
     def _generate_folders(self, system_free, system_bound, work_dir, rep=0):
         """generating the folders for the free and the bound system
@@ -310,7 +347,7 @@ class fepprep():
             system_bound (BioSimSpace._SireWrappers.System): the bound merged system
             work_dir (str): the work dir for where the folders will be generated
         """
-        
+
         protocol = self._pipeline_protocol
         min_protocol = self._min_protocol
         heat_protocol = self._heat_protocol
@@ -319,35 +356,33 @@ class fepprep():
 
         print(f"setting up FEP run in {work_dir}...")
 
-        if protocol.engine() == 'AMBER' or protocol.engine() == 'GROMACS':
-
+        if protocol.engine() == "AMBER" or protocol.engine() == "GROMACS":
             # set up for each the bound and the free leg
             for leg, system in zip(["bound", "free"], [system_bound, system_free]):
-
                 # # repartition the hydrogen masses, so only needs to be done once during the setup
                 # if protocol.hmr() == True:
                 #     print(f"checking and maybe repartitioning hydrogen masses for 4fs timestep for {leg}...")
                 #     system = check_hmr(system, freenrg_protocol, protocol.engine())
                 # elif protocol.hmr() == False:
                 #     pass
-                
+
                 min_extra_options = {}
                 heat_extra_options = {}
                 eq_extra_options = {}
                 prod_extra_options = {}
 
-                for key,value in protocol.config_options()["all"].items():
+                for key, value in protocol.config_options()["all"].items():
                     min_extra_options[key] = value
                     heat_extra_options[key] = value
                     eq_extra_options[key] = value
                     prod_extra_options[key] = value
-                for key,value in protocol.config_options()["min"].items():
+                for key, value in protocol.config_options()["min"].items():
                     min_extra_options[key] = value
-                for key,value in protocol.config_options()["heat"].items():
+                for key, value in protocol.config_options()["heat"].items():
                     heat_extra_options[key] = value
-                for key,value in protocol.config_options()["eq"].items():
+                for key, value in protocol.config_options()["eq"].items():
                     eq_extra_options[key] = value
-                for key,value in protocol.config_options()["prod"].items():
+                for key, value in protocol.config_options()["prod"].items():
                     prod_extra_options[key] = value
 
                 BSS.FreeEnergy.Relative(
@@ -355,7 +390,7 @@ class fepprep():
                     min_protocol,
                     engine=f"{protocol.engine()}",
                     work_dir=f"{work_dir}/{leg}_{rep}/min",
-                    extra_options=min_extra_options
+                    extra_options=min_extra_options,
                 )
 
                 BSS.FreeEnergy.Relative(
@@ -363,15 +398,15 @@ class fepprep():
                     heat_protocol,
                     engine=f"{protocol.engine()}",
                     work_dir=f"{work_dir}/{leg}_{rep}/heat",
-                    extra_options=heat_extra_options
-                ) # {"integrator":"md", "tcoupl":"v-rescale", "tau-t":"0.1", "constraints":"h-bonds"}
+                    extra_options=heat_extra_options,
+                )  # {"integrator":"md", "tcoupl":"v-rescale", "tau-t":"0.1", "constraints":"h-bonds"}
 
                 BSS.FreeEnergy.Relative(
                     system,
                     eq_protocol,
                     engine=f"{protocol.engine()}",
                     work_dir=f"{work_dir}/{leg}_{rep}/eq",
-                    extra_options=eq_extra_options
+                    extra_options=eq_extra_options,
                 )
 
                 BSS.FreeEnergy.Relative(
@@ -379,21 +414,24 @@ class fepprep():
                     freenrg_protocol,
                     engine=f"{protocol.engine()}",
                     work_dir=f"{work_dir}/{leg}_{rep}",
-                    extra_options=prod_extra_options
+                    extra_options=prod_extra_options,
                 )
 
         if protocol.engine() == "SOMD":
             for leg, system in zip(["bound", "free"], [system_bound, system_free]):
+                eq_extra_options = {
+                    "minimise": True,
+                    "minimise maximum iterations": protocol.min_steps(),
+                    "equilibrate": False,
+                }
+                prod_extra_options = {"minimise": False, "equilibrate": False}
 
-                eq_extra_options = {'minimise': True, 'minimise maximum iterations': protocol.min_steps(), 'equilibrate': False}
-                prod_extra_options = {'minimise': False, 'equilibrate': False}
-
-                for key,value in protocol.config_options()["all"].items():
+                for key, value in protocol.config_options()["all"].items():
                     eq_extra_options[key] = value
                     prod_extra_options[key] = value
-                for key,value in protocol.config_options()["eq"].items():
+                for key, value in protocol.config_options()["eq"].items():
                     eq_extra_options[key] = value
-                for key,value in protocol.config_options()["prod"].items():
+                for key, value in protocol.config_options()["prod"].items():
                     prod_extra_options[key] = value
 
                 BSS.FreeEnergy.Relative(
@@ -401,7 +439,7 @@ class fepprep():
                     eq_protocol,
                     engine=f"{protocol.engine()}",
                     work_dir=f"{work_dir}/{leg}_{rep}/eq",
-                    extra_options=eq_extra_options
+                    extra_options=eq_extra_options,
                 )
 
                 BSS.FreeEnergy.Relative(
@@ -409,9 +447,8 @@ class fepprep():
                     freenrg_protocol,
                     engine=f"{protocol.engine()}",
                     work_dir=f"{work_dir}/{leg}_{rep}",
-                    extra_options=prod_extra_options
+                    extra_options=prod_extra_options,
                 )
-
 
     def generate_folders(self, work_dir, **kwargs):
         """generate the folders for the RBFE run.
@@ -424,7 +461,9 @@ class fepprep():
             work_dir = validate.folder_path(work_dir, create=False)
             b_folders, f_folders = get_repeat_folders(work_dir)
             if len(b_folders) != len(f_folders):
-                raise ValueError("work dir must have same number of free and bound folders for reruns.")
+                raise ValueError(
+                    "work dir must have same number of free and bound folders for reruns."
+                )
             # get which repeat on
             rep = len(b_folders)
             start_rep = rep + 1
@@ -439,42 +478,54 @@ class fepprep():
             start_rep = 1
 
         # default options based on engine
-        if self._pipeline_protocol.engine() == "AMBER" or self._pipeline_protocol.engine() == "GROMACS":
-            kwarg_dict = {"PRUNEPERTURBEDCONSTRAINTS":True}
+        if (
+            self._pipeline_protocol.engine() == "AMBER"
+            or self._pipeline_protocol.engine() == "GROMACS"
+        ):
+            kwarg_dict = {"PRUNEPERTURBEDCONSTRAINTS": True}
         else:
             kwarg_dict = {}
-        
+
         # any pipeline kwargs overwrite this
-        for key,value in self._pipeline_protocol.kwargs().items():
-            kwarg_dict[key.upper().replace(" ","").replace("_","").strip()] = value
+        for key, value in self._pipeline_protocol.kwargs().items():
+            kwarg_dict[key.upper().replace(" ", "").replace("_", "").strip()] = value
 
         # any final passed arguments in the script overwrite this
-        for key,value in kwargs.items():
-            kwarg_dict[key.upper().replace(" ","").replace("_","").strip()] = value
+        for key, value in kwargs.items():
+            kwarg_dict[key.upper().replace(" ", "").replace("_", "").strip()] = value
 
         if self._pipeline_protocol.fepprep() == "both":
             ligs = ["lig0", "lig1"]
             for lig in ligs:
-                free_system, bound_system = self.merge_systems(align_to=lig, **kwarg_dict)
-                self._generate_folders(free_system, bound_system, f"{work_dir}/{lig}", rep=rep)
+                free_system, bound_system = self.merge_systems(
+                    align_to=lig, **kwarg_dict
+                )
+                self._generate_folders(
+                    free_system, bound_system, f"{work_dir}/{lig}", rep=rep
+                )
 
             # get half of the lambdas
             lambdas_list = self._freenrg_protocol.getLambdaValues()
-            middle_index=len(lambdas_list)//2        
-            first_half=lambdas_list[:middle_index]
-            sec_half=lambdas_list[middle_index:]
-            
+            middle_index = len(lambdas_list) // 2
+            first_half = lambdas_list[:middle_index]
+            sec_half = lambdas_list[middle_index:]
+
             # copy files to main folder
-            print("copying generated folders for the endstates into a combined folder, so first half is lig0 and second half is lig1")
+            print(
+                "copying generated folders for the endstates into a combined folder, so first half is lig0 and second half is lig1"
+            )
             for lig, lam_list in zip(ligs, [first_half, sec_half]):
                 for leg in ["bound", "free"]:
-                    for part in ["min/","heat/", "eq/", ""]:
-                        try: # so will not copy if folders do not exist
+                    for part in ["min/", "heat/", "eq/", ""]:
+                        try:  # so will not copy if folders do not exist
                             for lam in lam_list:
-                                copy_tree(f"{work_dir}/{lig}/{leg}_{rep}/{part}lambda_{lam:.4f}", f"{work_dir}/{leg}_{rep}/{part}lambda_{lam:.4f}")
+                                copy_tree(
+                                    f"{work_dir}/{lig}/{leg}_{rep}/{part}lambda_{lam:.4f}",
+                                    f"{work_dir}/{leg}_{rep}/{part}lambda_{lam:.4f}",
+                                )
                         except:
                             pass
-                
+
                 # remove the dir
                 print(f"removing directory for {lig} as copied...")
                 remove_tree(f"{work_dir}/{lig}")
@@ -483,13 +534,17 @@ class fepprep():
             if not self._merge_free_system or not self._merge_bound_system:
                 print("no merged systems, merging....")
                 self.merge_systems(**kwarg_dict)
-            self._generate_folders(self._merge_free_system, self._merge_bound_system, work_dir, rep=rep)
+            self._generate_folders(
+                self._merge_free_system, self._merge_bound_system, work_dir, rep=rep
+            )
 
         # default folder is with no integer.
         # for the sake of analysis , doesnt matter as finds folders w names of leg
         more_repeats = list(range(start_rep, self._pipeline_protocol.repeats()))
 
-        print(f"there are {self._pipeline_protocol.repeats()} folder(s) being made for each leg...")
+        print(
+            f"there are {self._pipeline_protocol.repeats()} folder(s) being made for each leg..."
+        )
         for r in more_repeats:
             for leg in ["bound", "free"]:
                 copy_tree(f"{work_dir}/{leg}_{rep}", f"{work_dir}/{leg}_{r}")

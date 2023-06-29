@@ -8,47 +8,53 @@ from argparse import ArgumentParser
 import itertools as it
 
 print("adding code to the pythonpath...")
-code = '/home/anna/Documents/code/python'
+code = "/home/anna/Documents/code/python"
 if code not in sys.path:
     sys.path.insert(1, code)
 import pipeline
 from pipeline.utils import validate
 
-def no_perturbing_atoms(pert, prep):
 
-    lig_0 = pert.split('~')[0]
-    lig_1 = pert.split('~')[1]
+def no_perturbing_atoms(pert, prep):
+    lig_0 = pert.split("~")[0]
+    lig_1 = pert.split("~")[1]
 
     # Load equilibrated inputs for both ligands
     system0 = BSS.IO.readMolecules(
-        [f"{prep}/{lig_0}_lig_equil_solv.rst7", f"{prep}/{lig_0}_lig_equil_solv.prm7"])
+        [f"{prep}/{lig_0}_lig_equil_solv.rst7", f"{prep}/{lig_0}_lig_equil_solv.prm7"]
+    )
     system1 = BSS.IO.readMolecules(
-        [f"{prep}/{lig_1}_lig_equil_solv.rst7", f"{prep}/{lig_1}_lig_equil_solv.prm7"])    
-    
-    l0a, l1a, mapping = pipeline.prep.merge.atom_mappings(system0, system1, **({"prune perturbed constraints":True}))
+        [f"{prep}/{lig_1}_lig_equil_solv.rst7", f"{prep}/{lig_1}_lig_equil_solv.prm7"]
+    )
+
+    l0a, l1a, mapping = pipeline.prep.merge.atom_mappings(
+        system0, system1, **({"prune perturbed constraints": True})
+    )
     # print(len(l0a))
     # print(len(l1a))
     # print(len(mapping))
     # print(len(l0a) - len(mapping))
     # print(len(l1a) - len(mapping))
-    no_atoms = (len(l0a)+len(l1a))/2 - len(mapping)
+    no_atoms = (len(l0a) + len(l1a)) / 2 - len(mapping)
 
     return no_atoms
 
-def get_inputs(net_file, prot):
 
+def get_inputs(net_file, prot):
     perts, ligs = pipeline.setup.get_info_network(net_file)
     engs = prot.engines()
-    
+
     return perts, engs
 
-def check_arguments(args):
 
+def check_arguments(args):
     # pass the checks to the other check functions
     if args.main_folder:
         main_folder = validate.folder_path(args.main_folder)
     else:
-        main_folder = validate.folder_path(str(input("what is the main folder of the run?: ")).strip())
+        main_folder = validate.folder_path(
+            str(input("what is the main folder of the run?: ")).strip()
+        )
 
     if args.prep_folder:
         prep_folder = validate.folder_path(args.prep_folder)
@@ -57,12 +63,16 @@ def check_arguments(args):
             prep_folder = validate.folder_path(f"{main_folder}/prep")
         except:
             print("Cant find prep folder...")
-            prep_folder = validate.folder_path(str(input("what is the prep folder of the run?: ")).strip())
+            prep_folder = validate.folder_path(
+                str(input("what is the prep folder of the run?: ")).strip()
+            )
 
     if args.net_file:
         net_file = validate.file_path(args.net_file)
     else:
-        net_file = validate.file_path(f"{main_folder}/execution_model/network_combined.dat")
+        net_file = validate.file_path(
+            f"{main_folder}/execution_model/network_combined.dat"
+        )
 
     if args.output_file:
         file = validate.string(args.output_file)
@@ -72,11 +82,15 @@ def check_arguments(args):
     if args.protocol_file:
         protocol_file = validate.file_path(args.protocol_file)
     else:
-        protocol_file = validate.file_path(f"{main_folder}/execution_model/protocol.dat")
+        protocol_file = validate.file_path(
+            f"{main_folder}/execution_model/protocol.dat"
+        )
     prot = pipeline.prep.pipeline_protocol(protocol_file, auto_validate=True)
-    
+
     try:
-        ana_protocol = validate.file_path(f"{main_folder}/execution_model/analysis_protocol.dat")
+        ana_protocol = validate.file_path(
+            f"{main_folder}/execution_model/analysis_protocol.dat"
+        )
     except Exception as e:
         print(e)
         print("ana protocol must be in exec model folder")
@@ -85,31 +99,52 @@ def check_arguments(args):
 
     if args.exp_file:
         exp_file = validate.file_path(args.exp_file)
-    else: # f"/home/anna/Documents/benchmark/inputs/experimental/{protein}.yml"
-        exp_file = validate.folder_path(str(input("what is the experimental file for this protein?: ")).strip())
+    else:  # f"/home/anna/Documents/benchmark/inputs/experimental/{protein}.yml"
+        exp_file = validate.folder_path(
+            str(input("what is the experimental file for this protein?: ")).strip()
+        )
 
     return main_folder, net_file, prot, ana_prot, file, prep_folder, exp_file
 
-def main():
 
+def main():
     # accept all options as arguments
     parser = ArgumentParser(description="correlate perturbing atoms and bad overlap")
-    parser.add_argument("-mf", "--main_folder", type=str, default=None, help="main folder path where runs are")
-    parser.add_argument("-prep", "--prep_folder", type=str, default=None, help="main folder path where runs are")
-    parser.add_argument("-net", "--net_file", type=str, default=None, help="network file")
-    parser.add_argument("-prot", "--protocol_file", type=str, default=None, help="the protocol file")
-    parser.add_argument("-out", "--output_file", type=str, default=None, help="the output file")
-    parser.add_argument("-exp", "--exp_file", type=str, default=None, help="the experimental file")
+    parser.add_argument(
+        "-mf",
+        "--main_folder",
+        type=str,
+        default=None,
+        help="main folder path where runs are",
+    )
+    parser.add_argument(
+        "-prep",
+        "--prep_folder",
+        type=str,
+        default=None,
+        help="main folder path where runs are",
+    )
+    parser.add_argument(
+        "-net", "--net_file", type=str, default=None, help="network file"
+    )
+    parser.add_argument(
+        "-prot", "--protocol_file", type=str, default=None, help="the protocol file"
+    )
+    parser.add_argument(
+        "-out", "--output_file", type=str, default=None, help="the output file"
+    )
+    parser.add_argument(
+        "-exp", "--exp_file", type=str, default=None, help="the experimental file"
+    )
     args = parser.parse_args()
 
-    mf, nf, prot, ana_prot,file,prep,exp_file = check_arguments(args)
+    mf, nf, prot, ana_prot, file, prep, exp_file = check_arguments(args)
     # get the perturbations
     perts, engs = get_inputs(nf, prot)
 
     all_analysis_object = pipeline.analysis.analysis_network(
-                                        exp_file=exp_file,
-                                        net_file=nf
-                                            )
+        exp_file=exp_file, net_file=nf
+    )
 
     all_analysis_object.get_experimental()
     all_analysis_object.get_experimental_pert()
@@ -117,8 +152,18 @@ def main():
 
     with open(file, "w") as f:
         writer = csv.writer(f)
-        writer.writerow(["perturbation","engine","perturbing_atoms","percen_overlap_okay","too_small_avg","diff_to_exp","error"])
-        for pert,eng in it.product(perts, engs):
+        writer.writerow(
+            [
+                "perturbation",
+                "engine",
+                "perturbing_atoms",
+                "percen_overlap_okay",
+                "too_small_avg",
+                "diff_to_exp",
+                "error",
+            ]
+        )
+        for pert, eng in it.product(perts, engs):
             print(f"running {pert}, {eng}....")
             folder = f"{mf}/outputs_extracted/{eng}/{pert}"
             pert_atoms = no_perturbing_atoms(pert, prep)
@@ -133,8 +178,8 @@ def main():
                 too_smalls_avg = None
                 diff = None
                 err = None
-            
-            row = [pert,eng,pert_atoms,percen_okay,too_smalls_avg,diff,err]
+
+            row = [pert, eng, pert_atoms, percen_okay, too_smalls_avg, diff, err]
             print(row)
             writer.writerow(row)
 

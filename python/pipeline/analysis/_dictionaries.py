@@ -1,4 +1,3 @@
-
 # import libraries
 import BioSimSpace as BSS
 import csv
@@ -8,23 +7,29 @@ import pandas as pd
 from scipy.stats import sem as sem
 import csv
 import numpy as np
-import pandas as pd 
+import pandas as pd
 
 from ..utils import *
 
 # functions
 # TODO clean up and make sure have description at start
 
-class make_dict():
-    """class of static methods for making dicts to analyse the results
-    """
+
+class make_dict:
+    """class of static methods for making dicts to analyse the results"""
 
     def __init__():
         pass
 
-    
     @staticmethod
-    def comp_results(results_files=None, perturbations=None, engine=None, name=None, source=None, output_file=None):
+    def comp_results(
+        results_files=None,
+        perturbations=None,
+        engine=None,
+        name=None,
+        source=None,
+        output_file=None,
+    ):
         """write results files into different file or dictionary for certain perturbations.
 
         Args:
@@ -37,12 +42,12 @@ class make_dict():
         Returns:
             dict: dictionary of the computed differences (RBFE)
         """
-        
+
         # check if list, if not make a list
         results_files = validate.is_list(results_files, make_list=True)
         for file in results_files:
             validate.file_path(file)
-        
+
         if perturbations:
             perturbations = validate.is_list(perturbations)
             make_pert_list = False
@@ -73,16 +78,15 @@ class make_dict():
         # append for results file
         for res_file in results_files:
             res_df = pd.read_csv(res_file)
-            for index,row in res_df.iterrows():
-
+            for index, row in res_df.iterrows():
                 if name:
-                    if name.lower() == row['method'].strip().lower(): 
+                    if name.lower() == row["method"].strip().lower():
                         pass
                     else:
                         continue
 
                 if engine:
-                    if engine == row['engine'].strip(): 
+                    if engine == row["engine"].strip():
                         pass
                     else:
                         continue
@@ -97,16 +101,20 @@ class make_dict():
 
                 if not isinstance(row[2], float):
                     # to convert as it will be a string
-                    ddG = BSS.Types.Energy(float(row[2].split()[0]),row[2].split()[-1]).value()
+                    ddG = BSS.Types.Energy(
+                        float(row[2].split()[0]), row[2].split()[-1]
+                    ).value()
                     ddG_unit = row[2].split()[-1]
                 else:
                     ddG = row[2]
                 if not isinstance(row[3], float):
-                    ddG_err = BSS.Types.Energy(float(row[3].split()[0]),row[3].split()[-1]).value()
+                    ddG_err = BSS.Types.Energy(
+                        float(row[3].split()[0]), row[3].split()[-1]
+                    ).value()
                     ddG_err_unit = row[3].split()[-1]
                 else:
                     ddG_err = row[3]
-                    
+
                 if pert in comp_dict_list:
                     # Key exist in dict, check if is a list
                     if not isinstance(comp_dict_list[pert], list):
@@ -131,7 +139,7 @@ class make_dict():
         for pert in perturbations:
             lig_0 = pert.split("~")[0]
             lig_1 = pert.split("~")[1]
-            
+
             # check if the perturbations calculated are also those in the network file and if any are missing
             try:
                 # find the values in the dictionary
@@ -146,33 +154,62 @@ class make_dict():
                 else:
                     comp_err = sem(ddGs)
                     # comp_err = sem([ddG.value() for ddG in ddGs])
-        
+
             # if unable to calculate one of the perturbations, this is a None value.
             except:
                 comp_ddG = None
                 comp_err = None
 
-            #update the dictionary for plotting later
-            comp_diff_dict.update({pert:(comp_ddG, comp_err)})
+            # update the dictionary for plotting later
+            comp_diff_dict.update({pert: (comp_ddG, comp_err)})
 
         if output_file:
-
             # write these to a csv file
             with open(f"{output_file}.csv", "w+") as comp_pert_file:
                 writer = csv.writer(comp_pert_file, delimiter=",")
-                writer.writerow(["lig_0","lig_1","freenrg","error","engine","analysis","method"])
+                writer.writerow(
+                    [
+                        "lig_0",
+                        "lig_1",
+                        "freenrg",
+                        "error",
+                        "engine",
+                        "analysis",
+                        "method",
+                    ]
+                )
 
-                for key,value in comp_diff_dict.items():
+                for key, value in comp_diff_dict.items():
                     lig_0 = key.split("~")[0]
                     lig_1 = key.split("~")[1]
                     comp_ddG = value[0]
                     comp_err = value[1]
 
                     if engine:
-                        writer.writerow([lig_0, lig_1, comp_ddG, comp_err, engine, "not specified", str(name)])
+                        writer.writerow(
+                            [
+                                lig_0,
+                                lig_1,
+                                comp_ddG,
+                                comp_err,
+                                engine,
+                                "not specified",
+                                str(name),
+                            ]
+                        )
                     elif source:
-                        writer.writerow([lig_0, lig_1, comp_ddG, comp_err, source, "not specified", str(name)])
-        
+                        writer.writerow(
+                            [
+                                lig_0,
+                                lig_1,
+                                comp_ddG,
+                                comp_err,
+                                source,
+                                "not specified",
+                                str(name),
+                            ]
+                        )
+
         return comp_diff_dict
 
     @staticmethod
@@ -190,22 +227,23 @@ class make_dict():
         for file in results_files:
             validate.file_path(file)
 
-        error_list  = []
+        error_list = []
 
         # append for results file
         for res_file in results_files:
             res_df = pd.read_csv(res_file)
-            for index,row in res_df.iterrows():
-                
+            for index, row in res_df.iterrows():
                 # assume here as this is normal format of files
                 # TODO get from error index
                 if not isinstance(row[3], float):
-                    ddG_err = BSS.Types.Energy(float(row[3].split()[0]),row[3].split()[-1]).value()
+                    ddG_err = BSS.Types.Energy(
+                        float(row[3].split()[0]), row[3].split()[-1]
+                    ).value()
                 else:
                     ddG_err = row[3]
-                
+
                 error_list.append(ddG_err)
-        
+
         return error_list
 
     @staticmethod
@@ -220,15 +258,19 @@ class make_dict():
         Returns:
             tuple: (experimental difference dict, experimental value dict)
         """
-        
+
         ligands = validate.is_list(ligands)
         perturbations = validate.is_list(perturbations)
 
-        exper_val_dict = make_dict._from_freenrgworkflows_experimental_val(experimental_DDGs, ligands)
-        exper_diff_dict = make_dict._from_freenrgworkflows_experimental_diff(exper_val_dict, perturbations)
+        exper_val_dict = make_dict._from_freenrgworkflows_experimental_val(
+            experimental_DDGs, ligands
+        )
+        exper_diff_dict = make_dict._from_freenrgworkflows_experimental_diff(
+            exper_val_dict, perturbations
+        )
 
         return exper_diff_dict, exper_val_dict
-    
+
     @staticmethod
     def _from_freenrgworkflows_experimental_val(experimental_DDGs, ligands):
         """get the experimental value dict from the freenergworkflows
@@ -249,15 +291,15 @@ class make_dict():
             lig_name = list(lig_dict.keys())[0]
             exper = lig_dict[lig_name]
             exper_err = lig_dict["error"]
-            exper_val_dict.update({lig_name:(exper, exper_err)})
+            exper_val_dict.update({lig_name: (exper, exper_err)})
 
         # add any ligands that are in the ligands file but dont have experimental values for
         for lig_name in ligands:
             if lig_name in exper_val_dict:
                 pass
             else:
-                exper_val_dict.update({lig_name:(None, None)})
-        
+                exper_val_dict.update({lig_name: (None, None)})
+
         return exper_val_dict
 
     @staticmethod
@@ -282,15 +324,18 @@ class make_dict():
             lig_1 = pert.split("~")[1]
             # exclude from calculating if one of the ligands is not available
             if exper_val_dict[lig_0][0] is None or exper_val_dict[lig_1][0] is None:
-                exper_ddG =None
+                exper_ddG = None
                 exper_err = None
-                exper_diff_dict.update({pert:(None, None)})
+                exper_diff_dict.update({pert: (None, None)})
             # if experimental data is available, calculate experimental perturbation and propagate
             else:
                 exper_ddG = exper_val_dict[lig_1][0] - exper_val_dict[lig_0][0]
-                exper_err = math.sqrt(math.pow(exper_val_dict[lig_0][1], 2) + math.pow(exper_val_dict[lig_1][1], 2))
-                exper_diff_dict.update({pert:(exper_ddG, exper_err)})
-        
+                exper_err = math.sqrt(
+                    math.pow(exper_val_dict[lig_0][1], 2)
+                    + math.pow(exper_val_dict[lig_1][1], 2)
+                )
+                exper_diff_dict.update({pert: (exper_ddG, exper_err)})
+
         return exper_diff_dict
 
     @staticmethod
@@ -312,7 +357,7 @@ class make_dict():
             freenrg = list(item.values())[0]
             error = list(item.values())[1]
 
-            freenrg_dict.update({ligand:(freenrg, error)})
+            freenrg_dict.update({ligand: (freenrg, error)})
 
         return freenrg_dict
 
@@ -320,7 +365,7 @@ class make_dict():
     def from_cinnabar_network_edges(network, calc_exp, perturbations):
         # TODO docstring
 
-        if calc_exp not in ["calc","exp"]:
+        if calc_exp not in ["calc", "exp"]:
             raise ValueError("calc_exp must be either 'calc' or 'exp'")
 
         freenrg_dict = {}
@@ -342,30 +387,44 @@ class make_dict():
                 add_dict = True
             else:
                 add_dict = False
-            
+
             if add_dict:
                 try:
-                    freenrg_dict.update({pert_name:(edge[2][f"{calc_exp}_DDG"], edge[2][f"{calc_exp}_dDDG"])})
+                    freenrg_dict.update(
+                        {
+                            pert_name: (
+                                edge[2][f"{calc_exp}_DDG"],
+                                edge[2][f"{calc_exp}_dDDG"],
+                            )
+                        }
+                    )
                 except:
                     print(f"{pert_name} value not computed. cannot add to dictionary")
-        
+
         return freenrg_dict
 
     @staticmethod
     def from_cinnabar_network_node(network, calc_exp, normalise=False):
         # TODO docstring
 
-        if calc_exp not in ["calc","exp"]:
+        if calc_exp not in ["calc", "exp"]:
             raise ValueError("calc_exp must be either 'calc' or 'exp'")
 
         freenrg_dict = {}
 
         for node in network.graph.nodes(data=True):
             try:
-                freenrg_dict.update({node[1]["name"]:(node[1][f"{calc_exp}_DG"], node[1][f"{calc_exp}_dDG"])})
+                freenrg_dict.update(
+                    {
+                        node[1]["name"]: (
+                            node[1][f"{calc_exp}_DG"],
+                            node[1][f"{calc_exp}_dDG"],
+                        )
+                    }
+                )
             except:
                 print(f"{node[1]['name']} value not computed. cannot add to dictionary")
-        
+
         if normalise:
             normalised_freenrg_dict = make_dict._normalise_data(freenrg_dict)
             return normalised_freenrg_dict
@@ -384,12 +443,14 @@ class make_dict():
         Returns:
             tuple: (experimental diff dict, exper val dict)
         """
-        
+
         ligands = validate.is_list(ligands)
         perturbations = validate.is_list(perturbations)
 
         exper_val_dict = make_dict._exper_from_ligands(exper_dict, ligands)
-        exper_diff_dict = make_dict._exper_from_perturbations(exper_val_dict, perturbations)
+        exper_diff_dict = make_dict._exper_from_perturbations(
+            exper_val_dict, perturbations
+        )
 
         return exper_diff_dict, exper_val_dict
 
@@ -409,22 +470,23 @@ class make_dict():
         ligands = validate.is_list(ligands)
         normalise = validate.boolean(normalise)
 
-        new_exper_val_dict ={}
+        new_exper_val_dict = {}
 
         for lig in ligands:
             if lig not in exper_val_dict.keys():
-                print(f"{lig} not found in experimental values. Please add to the experimental file.")
+                print(
+                    f"{lig} not found in experimental values. Please add to the experimental file."
+                )
             else:
                 exper_dG = exper_val_dict[lig][0]
                 exper_err = exper_val_dict[lig][1]
-                new_exper_val_dict.update({lig:(exper_dG, exper_err)})
-        
+                new_exper_val_dict.update({lig: (exper_dG, exper_err)})
+
         if normalise:
             normalised_exper_val_dict = make_dict._normalise_data(new_exper_val_dict)
             return normalised_exper_val_dict
         else:
             return new_exper_val_dict
-
 
     @staticmethod
     def _exper_from_perturbations(exper_val_dict, perturbations):
@@ -437,7 +499,7 @@ class make_dict():
         Returns:
             dict: experimental differences dict
         """
-        
+
         exper_diff_dict = {}
 
         # calculate the experimental RBFEs
@@ -445,8 +507,11 @@ class make_dict():
             lig_0 = pert.split("~")[0]
             lig_1 = pert.split("~")[1]
             exper_ddG = exper_val_dict[lig_1][0] - exper_val_dict[lig_0][0]
-            exper_err = math.sqrt(math.pow(exper_val_dict[lig_0][1], 2) + math.pow(exper_val_dict[lig_1][1], 2))
-            exper_diff_dict.update({pert:(exper_ddG, exper_err)})
+            exper_err = math.sqrt(
+                math.pow(exper_val_dict[lig_0][1], 2)
+                + math.pow(exper_val_dict[lig_1][1], 2)
+            )
+            exper_diff_dict.update({pert: (exper_ddG, exper_err)})
 
         return exper_diff_dict
 
@@ -468,26 +533,27 @@ class make_dict():
         except:
             data = validate.is_list(data)
             is_dict = False
-        
+
         if is_dict:
             normalised_dict = {}
             values = []
             for val in data_dict.values():
-                values.append(float(val[0])) # incase it is a tuple of vals
+                values.append(float(val[0]))  # incase it is a tuple of vals
             avg_val = np.mean(values)
             for key in data_dict:
-                normalised_dict.update({key:(float(data_dict[key][0]) - avg_val, data_dict[key][1])}) # also incl error
+                normalised_dict.update(
+                    {key: (float(data_dict[key][0]) - avg_val, data_dict[key][1])}
+                )  # also incl error
 
             return normalised_dict
-        
+
         else:
             avg_val = np.mean(data)
             normalised_data = []
             for val in data:
                 normalised_data.append(val - avg_val)
-            
-            return normalised_data
 
+            return normalised_data
 
     @staticmethod
     def cycle_closures(pert_dict, cycle_closures):
@@ -500,30 +566,32 @@ class make_dict():
         cycle_vals = []
 
         for cycle in cycle_closures:
-
             cycle_dict = {}
             # print(cycle)
             cycle_val = []
             cycle_val_err = []
             for pert in cycle:
-
                 liga = pert.split("~")[0]
                 ligb = pert.split("~")[1]
                 rev_pert = f"{ligb}~{liga}"
-            
+
                 if pert in pert_dict:
                     if pert_dict[pert][0] is not None:
                         cycle_val.append(+pert_dict[pert][0])
                         cycle_val_err.append(pert_dict[pert][1])
                     else:
-                        print(f"{pert} or {rev_pert} does not exist in the results for {cycle}. This cycle is not included.")
+                        print(
+                            f"{pert} or {rev_pert} does not exist in the results for {cycle}. This cycle is not included."
+                        )
                         break
                 elif rev_pert in pert_dict:
                     if pert_dict[rev_pert][0] is not None:
                         cycle_val.append(-pert_dict[rev_pert][0])
                         cycle_val_err.append(pert_dict[rev_pert][1])
                     else:
-                        print(f"{pert} or {rev_pert} does not exist in the results for {cycle}. This cycle is not included.")
+                        print(
+                            f"{pert} or {rev_pert} does not exist in the results for {cycle}. This cycle is not included."
+                        )
                         break
 
             if not all(i is None for i in cycle_val):
@@ -531,7 +599,8 @@ class make_dict():
             else:
                 pass
 
-            cycles_dict.update({"_".join(cycle):(sum(cycle_val), cycle_val_err)}) # TODO also incl the error for a cycle depending on whether or not std or other error
+            cycles_dict.update(
+                {"_".join(cycle): (sum(cycle_val), cycle_val_err)}
+            )  # TODO also incl the error for a cycle depending on whether or not std or other error
 
         return (cycles_dict, cycle_vals, np.mean(cycle_vals), np.std(cycle_vals))
-

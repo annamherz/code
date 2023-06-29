@@ -5,7 +5,7 @@ from ..utils._validate import *
 
 
 def run_process(system, protocol, engine="AMBER", exe=None, work_dir=None):
-    """    Given a solvated system (BSS object) and BSS protocol, run a process workflow with either 
+    """Given a solvated system (BSS object) and BSS protocol, run a process workflow with either
     AMBER or GROMACS. Returns the processed system.
 
     Args:
@@ -22,11 +22,12 @@ def run_process(system, protocol, engine="AMBER", exe=None, work_dir=None):
         BioSimSpace._SireWrappers.System: the system after the process is completed.
     """
 
-    eng_proc_dict = {"AMBER":BSS.Process.Amber,
-                     "GROMACS":BSS.Process.Gromacs,
-                     "SOMD":BSS.Process.Somd,
-                     }
-    
+    eng_proc_dict = {
+        "AMBER": BSS.Process.Amber,
+        "GROMACS": BSS.Process.Gromacs,
+        "SOMD": BSS.Process.Somd,
+    }
+
     func = eng_proc_dict[validate.engine(engine)]
 
     if exe:
@@ -35,16 +36,15 @@ def run_process(system, protocol, engine="AMBER", exe=None, work_dir=None):
         try:
             exe = os.environ["AMBERHOME"] + "/bin/pmemd.cuda"
         except:
-            raise IOError("please have either 'amber' or 'AMBERHOME' set in the environment.")
-    
+            raise IOError(
+                "please have either 'amber' or 'AMBERHOME' set in the environment."
+            )
+
     # Create the process passing a working directory.
     if exe:
-        process = func(
-            system, protocol, work_dir=work_dir, exe=exe)
+        process = func(system, protocol, work_dir=work_dir, exe=exe)
     else:
-        process = func(
-            system, protocol, work_dir=work_dir)
-  
+        process = func(system, protocol, work_dir=work_dir)
 
     # Start the process, wait for it to exit
     process.start()
@@ -61,6 +61,7 @@ def run_process(system, protocol, engine="AMBER", exe=None, work_dir=None):
 
     return system
 
+
 def min_prots(lig_fep):
     """define the minimisation protocols for the equilibration. For fepprep is at lambda 0.5
 
@@ -71,28 +72,27 @@ def min_prots(lig_fep):
         BSS.Protocol: the minimisation restrained and minimisation no restraints protocols.
     """
 
-    prot_dict = {"ligprep": (BSS.Protocol.Minimisation, {}),
-                 "fepprep": (BSS.Protocol.FreeEnergyMinimisation, {"lam_vals":[0.5], "lam":0.5})}
-    
+    prot_dict = {
+        "ligprep": (BSS.Protocol.Minimisation, {}),
+        "fepprep": (
+            BSS.Protocol.FreeEnergyMinimisation,
+            {"lam_vals": [0.5], "lam": 0.5},
+        ),
+    }
+
     func = prot_dict[lig_fep][0]
     args = prot_dict[lig_fep][1]
 
     # minimisation of solvent
-    protocol_min_rest = func(
-        steps=10000,
-        restraint="all",
-        **args
-    )
+    protocol_min_rest = func(steps=10000, restraint="all", **args)
     # minimisation full system
-    protocol_min = func(
-        steps=10000,
-        **args
-    )
+    protocol_min = func(steps=10000, **args)
 
     return protocol_min_rest, protocol_min
 
+
 def nvt_prots(lig_fep):
-    """define the nvt protocols for the equilibration. For fepprep is at lambda 0.5 
+    """define the nvt protocols for the equilibration. For fepprep is at lambda 0.5
 
     Args:
         lig_fep (str): 'ligprep' or 'fepprep' ; which the protocols are for
@@ -101,17 +101,22 @@ def nvt_prots(lig_fep):
         BSS.Protocol: the nvt restrained all, restrained heavy, no restraints protocols.
     """
 
-    prot_dict = {"ligprep": (BSS.Protocol.Equilibration, {}),
-                 "fepprep": (BSS.Protocol.FreeEnergyEquilibration, {"lam_vals":[0.5], "lam":0.5})}
-    
+    prot_dict = {
+        "ligprep": (BSS.Protocol.Equilibration, {}),
+        "fepprep": (
+            BSS.Protocol.FreeEnergyEquilibration,
+            {"lam_vals": [0.5], "lam": 0.5},
+        ),
+    }
+
     func = prot_dict[lig_fep][0]
     args = prot_dict[lig_fep][1]
 
     # NVTs
     # NVT restraining all non solvent atoms
     protocol_nvt_sol = func(
-        runtime=1000*BSS.Units.Time.picosecond,
-        temperature=300*BSS.Units.Temperature.kelvin,
+        runtime=1000 * BSS.Units.Time.picosecond,
+        temperature=300 * BSS.Units.Temperature.kelvin,
         restraint="all",
         restart=False,
         **args
@@ -119,25 +124,26 @@ def nvt_prots(lig_fep):
 
     # NVT restraining all backbone/heavy atoms
     protocol_nvt_heavy = func(
-        runtime=1000*BSS.Units.Time.picosecond,
-        temperature=300*BSS.Units.Temperature.kelvin,
+        runtime=1000 * BSS.Units.Time.picosecond,
+        temperature=300 * BSS.Units.Temperature.kelvin,
         restraint="heavy",
         restart=True,
         **args
     )
     # NVT no restraints
     protocol_nvt = func(
-        runtime=1000*BSS.Units.Time.picosecond,
-        temperature_start=0*BSS.Units.Temperature.kelvin,
-        temperature_end=300*BSS.Units.Temperature.kelvin,
+        runtime=1000 * BSS.Units.Time.picosecond,
+        temperature_start=0 * BSS.Units.Temperature.kelvin,
+        temperature_end=300 * BSS.Units.Temperature.kelvin,
         restart=True,
         **args
     )
 
     return protocol_nvt_sol, protocol_nvt_heavy, protocol_nvt
 
+
 def npt_prots(lig_fep):
-    """define the npt protocols for the equilibration. For fepprep is at lambda 0.5 
+    """define the npt protocols for the equilibration. For fepprep is at lambda 0.5
 
     Args:
         lig_fep (str): 'ligprep' or 'fepprep' ; which the protocols are for
@@ -146,27 +152,32 @@ def npt_prots(lig_fep):
         BSS.Protocol: the npt restrained heavy 10, restrained heavy 5, no restraints protocols.
     """
 
-    prot_dict = {"ligprep": (BSS.Protocol.Equilibration, {}),
-                 "fepprep": (BSS.Protocol.FreeEnergyEquilibration, {"lam_vals":[0.5], "lam":0.5})}
-    
+    prot_dict = {
+        "ligprep": (BSS.Protocol.Equilibration, {}),
+        "fepprep": (
+            BSS.Protocol.FreeEnergyEquilibration,
+            {"lam_vals": [0.5], "lam": 0.5},
+        ),
+    }
+
     func = prot_dict[lig_fep][0]
     args = prot_dict[lig_fep][1]
 
     # NPTs
     # NPT restraining all non solvent heavy atoms
     protocol_npt_heavy = func(
-        runtime=1000*BSS.Units.Time.picosecond,
-        pressure=1*BSS.Units.Pressure.atm,
-        temperature=300*BSS.Units.Temperature.kelvin,
+        runtime=1000 * BSS.Units.Time.picosecond,
+        pressure=1 * BSS.Units.Pressure.atm,
+        temperature=300 * BSS.Units.Temperature.kelvin,
         restraint="heavy",
         restart=True,
         **args
     )
     # NPT with gradual release of restraints
     protocol_npt_heavy_lighter = func(
-        runtime=1000*BSS.Units.Time.picosecond,
-        pressure=1*BSS.Units.Pressure.atm,
-        temperature=300*BSS.Units.Temperature.kelvin,
+        runtime=1000 * BSS.Units.Time.picosecond,
+        pressure=1 * BSS.Units.Pressure.atm,
+        temperature=300 * BSS.Units.Temperature.kelvin,
         restraint="heavy",
         force_constant=5,
         restart=True,
@@ -174,9 +185,9 @@ def npt_prots(lig_fep):
     )
     # NPT no restraints
     protocol_npt = func(
-        runtime=3000*BSS.Units.Time.picosecond,
-        pressure=1*BSS.Units.Pressure.atm,
-        temperature=300*BSS.Units.Temperature.kelvin,
+        runtime=3000 * BSS.Units.Time.picosecond,
+        pressure=1 * BSS.Units.Pressure.atm,
+        temperature=300 * BSS.Units.Temperature.kelvin,
         restart=True,
         **args
     )
@@ -196,24 +207,37 @@ def md_prots(runtime, **kwargs):
 
     runtime = validate.integer(runtime)
 
-    prot_dict = {"ligprep": (BSS.Protocol.Equilibration, {}),
-                 "fepprep": (BSS.Protocol.FreeEnergyEquilibration, {"lam_vals":[0.5], "lam":0.5})}
-    
+    prot_dict = {
+        "ligprep": (BSS.Protocol.Equilibration, {}),
+        "fepprep": (
+            BSS.Protocol.FreeEnergyEquilibration,
+            {"lam_vals": [0.5], "lam": 0.5},
+        ),
+    }
+
     func = BSS.Protocol.Production
     args = kwargs
 
     # NPT no restraints
     protocol_md = func(
-        runtime=runtime*BSS.Units.Time.nanosecond,
-        pressure=1*BSS.Units.Pressure.atm,
-        temperature=300*BSS.Units.Temperature.kelvin,
+        runtime=runtime * BSS.Units.Time.nanosecond,
+        pressure=1 * BSS.Units.Pressure.atm,
+        temperature=300 * BSS.Units.Temperature.kelvin,
         restart=True,
         **args
     )
 
     return protocol_md
 
-def minimise_equilibrate_leg(system_solvated, engine="AMBER", pmemd=None, lig_fep="ligprep", work_dir=None, timestep=2):  # times at the top
+
+def minimise_equilibrate_leg(
+    system_solvated,
+    engine="AMBER",
+    pmemd=None,
+    lig_fep="ligprep",
+    work_dir=None,
+    timestep=2,
+):  # times at the top
     """minimse and equilibrate for the given leg of the pipeline
 
     Args:
@@ -241,40 +265,56 @@ def minimise_equilibrate_leg(system_solvated, engine="AMBER", pmemd=None, lig_fe
     # NPTs
     protocol_npt_heavy, protocol_npt_heavy_lighter, protocol_npt = npt_prots(lig_fep)
 
-    protocol_nvt_sol.setTimeStep(timestep*BSS.Units.Time.femtosecond)
-    protocol_nvt_heavy.setTimeStep(timestep*BSS.Units.Time.femtosecond)
-    protocol_nvt.setTimeStep(timestep*BSS.Units.Time.femtosecond)
-    protocol_npt_heavy.setTimeStep(timestep*BSS.Units.Time.femtosecond)
-    protocol_npt_heavy_lighter.setTimeStep(timestep*BSS.Units.Time.femtosecond)
-    protocol_npt.setTimeStep(timestep*BSS.Units.Time.femtosecond)
+    protocol_nvt_sol.setTimeStep(timestep * BSS.Units.Time.femtosecond)
+    protocol_nvt_heavy.setTimeStep(timestep * BSS.Units.Time.femtosecond)
+    protocol_nvt.setTimeStep(timestep * BSS.Units.Time.femtosecond)
+    protocol_npt_heavy.setTimeStep(timestep * BSS.Units.Time.femtosecond)
+    protocol_npt_heavy_lighter.setTimeStep(timestep * BSS.Units.Time.femtosecond)
+    protocol_npt.setTimeStep(timestep * BSS.Units.Time.femtosecond)
 
     # run all the protocols
     if lig_fep == "ligprep":
         print("minimising...")
-        minimised1 = run_process(system_solvated, protocol_min_rest, engine, pmemd, work_dir=work_dir)
-        minimised2 = run_process(minimised1, protocol_min, engine, pmemd, work_dir=work_dir)
+        minimised1 = run_process(
+            system_solvated, protocol_min_rest, engine, pmemd, work_dir=work_dir
+        )
+        minimised2 = run_process(
+            minimised1, protocol_min, engine, pmemd, work_dir=work_dir
+        )
         print("equilibrating NVT...")
-        equil1 = run_process(minimised2, protocol_nvt_sol, engine, pmemd, work_dir=work_dir)
-        equil2 = run_process(equil1, protocol_nvt_heavy, engine, pmemd, work_dir=work_dir)
+        equil1 = run_process(
+            minimised2, protocol_nvt_sol, engine, pmemd, work_dir=work_dir
+        )
+        equil2 = run_process(
+            equil1, protocol_nvt_heavy, engine, pmemd, work_dir=work_dir
+        )
         equil3 = run_process(equil2, protocol_nvt, engine, pmemd, work_dir=work_dir)
-        print("equilibrating NPT...") 
-        equil4 = run_process(equil3, protocol_npt_heavy, engine, pmemd, work_dir=work_dir)
-        equil5 = run_process(equil4, protocol_npt_heavy_lighter, engine, pmemd, work_dir=work_dir)
-        sys_equil_fin = run_process(equil5, protocol_npt, engine, pmemd, work_dir=work_dir)
-    
+        print("equilibrating NPT...")
+        equil4 = run_process(
+            equil3, protocol_npt_heavy, engine, pmemd, work_dir=work_dir
+        )
+        equil5 = run_process(
+            equil4, protocol_npt_heavy_lighter, engine, pmemd, work_dir=work_dir
+        )
+        sys_equil_fin = run_process(
+            equil5, protocol_npt, engine, pmemd, work_dir=work_dir
+        )
+
     if lig_fep == "fepprep":
         print("minimising...")
         minimised1 = run_process(system_solvated, protocol_min_rest, engine, pmemd)
         minimised2 = run_process(minimised1, protocol_min, engine, pmemd)
         print("equilibrating NVT...")
         equil_nvt = run_process(minimised2, protocol_nvt, engine, pmemd)
-        print("equilibrating NPT...") 
+        print("equilibrating NPT...")
         sys_equil_fin = run_process(equil_nvt, protocol_npt, engine, pmemd)
 
     return sys_equil_fin
 
 
-def md_leg(system_equil, engine="AMBER", pmemd=None, runtime=10, work_dir=None, timestep=2):  # times at the top
+def md_leg(
+    system_equil, engine="AMBER", pmemd=None, runtime=10, work_dir=None, timestep=2
+):  # times at the top
     """minimse and equilibrate for the given leg of the pipeline
 
     Args:
@@ -295,8 +335,10 @@ def md_leg(system_equil, engine="AMBER", pmemd=None, runtime=10, work_dir=None, 
 
     # MD
     protocol_md = md_prots(runtime)
-    protocol_md.setTimeStep(timestep*BSS.Units.Time.femtosecond)
+    protocol_md.setTimeStep(timestep * BSS.Units.Time.femtosecond)
 
-    sys_md_fin = run_process(system_equil, protocol_md, engine, pmemd, work_dir=work_dir)
+    sys_md_fin = run_process(
+        system_equil, protocol_md, engine, pmemd, work_dir=work_dir
+    )
 
     return sys_md_fin

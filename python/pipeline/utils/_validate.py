@@ -7,13 +7,12 @@ import networkx as nx
 
 import pipeline
 
-class validate():
-    """class of staticmethods to return validated input
-    """
+
+class validate:
+    """class of staticmethods to return validated input"""
 
     def __init__(self):
         pass
-
 
     @staticmethod
     def string(string):
@@ -30,9 +29,8 @@ class validate():
         """
         if not isinstance(string, str):
             raise TypeError(f"{string} / 'string' must be of type 'str'.")
-        
-        return string
 
+        return string
 
     @staticmethod
     def dictionary(dictionary):
@@ -49,9 +47,8 @@ class validate():
         """
         if not isinstance(dictionary, dict):
             raise TypeError(f"{dictionary} / 'dictionary' must be of type 'dict'.")
-        
-        return dictionary
 
+        return dictionary
 
     @staticmethod
     def nxgraph(nxgraph):
@@ -68,9 +65,8 @@ class validate():
         """
         if not isinstance(nxgraph, nx.Graph):
             raise TypeError(f"{nxgraph} / 'nxgraph' must be of type 'networkx.Graph'.")
-        
-        return nxgraph
 
+        return nxgraph
 
     @staticmethod
     def is_list(a_list, make_list=False):
@@ -87,15 +83,14 @@ class validate():
             a_list: the list
         """
         make_list = validate.boolean(make_list)
-        
+
         if not isinstance(a_list, list):
             if make_list:
                 a_list = [a_list]
             else:
                 raise TypeError(f"{a_list} / 'a_list' must be of type 'list'.")
-        
-        return a_list
 
+        return a_list
 
     @staticmethod
     def file_path(file_path, create=False):
@@ -116,9 +111,8 @@ class validate():
 
         if not os.path.exists(file_path):
             raise ValueError(f"{file_path} does not exist!")
-        
-        return file_path
 
+        return file_path
 
     @staticmethod
     def folder_path(folder_path, create=False):
@@ -142,13 +136,12 @@ class validate():
                 print(f"creating {folder_path} as it could not be found...")
                 os.makedirs(folder_path)
             else:
-                pass   
+                pass
         else:
             if not os.path.exists(folder_path):
                 raise ValueError(f"{folder_path} does not exist!")
-        
-        return folder_path
 
+        return folder_path
 
     @staticmethod
     def engine(engine):
@@ -169,9 +162,9 @@ class validate():
 
         if engine.upper() not in BSS.FreeEnergy.engines():
             raise ValueError(f"'engine' must be one of {BSS.FreeEnergy.engines()}.")
-        
+
         return engine.upper()
-    
+
     @staticmethod
     def engines(engines=None):
         """_summary_
@@ -206,7 +199,7 @@ class validate():
             except:
                 print("engine input not recognised. Will use all engines.")
                 engines = BSS.FreeEnergy.engines()
-        
+
         return engines
 
     @staticmethod
@@ -229,19 +222,26 @@ class validate():
         else:
             lig_ff = lig_ff.lower()
 
-        lig_ff_list = ["sage","parsely","gaff","gaff2", "openff_unconstrained-2.0.0", "openff_unconstrained-1.3.0", "openff"]
+        lig_ff_list = [
+            "sage",
+            "parsely",
+            "gaff",
+            "gaff2",
+            "openff_unconstrained-2.0.0",
+            "openff_unconstrained-1.3.0",
+            "openff",
+        ]
         if lig_ff not in lig_ff_list:
             raise ValueError(f"'lig_ff' must be one of {lig_ff_list}.")
-        
+
         if lig_ff == "sage":
             lig_ff = "openff_unconstrained-2.0.0"
         elif lig_ff == "parsely":
             lig_ff = "openff_unconstrained-1.3.0"
         elif lig_ff == "openff":
             lig_ff = "openff_unconstrained-2.0.0"
-        
-        return lig_ff
 
+        return lig_ff
 
     @staticmethod
     def prot_ff(prot_ff):
@@ -261,12 +261,11 @@ class validate():
         if not isinstance(prot_ff, str):
             raise TypeError("'prot_ff' must be of type 'str'.")
 
-        prot_ff_list = ['ff03','ff14SB','ff99','ff99SB','ff99SBildn']
+        prot_ff_list = ["ff03", "ff14SB", "ff99", "ff99SB", "ff99SBildn"]
         if prot_ff not in prot_ff_list:
             raise ValueError(f"'prot_ff' must be one of {prot_ff_list}.")
 
         return prot_ff
-
 
     @staticmethod
     def solvent_ff(solvent_ff):
@@ -287,7 +286,9 @@ class validate():
             raise TypeError("'solvent_ff' must be of type 'str'.")
 
         if solvent_ff.lower() not in BSS.Solvent.waterModels():
-            raise ValueError(f"'solvent_ff' must be one of {BSS.Solvent.waterModels()}.")
+            raise ValueError(
+                f"'solvent_ff' must be one of {BSS.Solvent.waterModels()}."
+            )
 
         return solvent_ff.lower()
 
@@ -309,7 +310,9 @@ class validate():
         if not isinstance(integer, int):
             if not isinstance(integer, float):
                 if not isinstance(integer, str):
-                    raise TypeError(f"{integer} must be of type 'int', 'float' or 'str'")
+                    raise TypeError(
+                        f"{integer} must be of type 'int', 'float' or 'str'"
+                    )
                 else:
                     try:
                         if "." in integer:
@@ -317,8 +320,10 @@ class validate():
                         else:
                             integer = int(integer)
                     except:
-                        raise ValueError(f"{integer} could not be converted into an integer")
-        
+                        raise ValueError(
+                            f"{integer} could not be converted into an integer"
+                        )
+
         if isinstance(integer, float):
             print(f"{integer} will be turned into {int(integer)}")
             integer = round(integer)
@@ -369,23 +374,24 @@ class validate():
 
         if not isinstance(time_unit, str):
             if not isinstance(time_unit, BSS.Types.Time):
-                raise TypeError("'time_unit' must be of type 'str' or 'BSS.Types.Time'.")
+                raise TypeError(
+                    "'time_unit' must be of type 'str' or 'BSS.Types.Time'."
+                )
 
         else:
-            time_unit = time_unit.strip().split(' ')[-1].lower()
+            time_unit = time_unit.strip().split(" ")[-1].lower()
             time_unit_list = ["ns", "ps", "fs"]
             if time_unit not in time_unit_list:
                 raise ValueError(f"'time_unit' must be one of {time_unit_list}.")
-            
+
             if time_unit == "ns":
                 time_unit = BSS.Units.Time.nanosecond
             elif time_unit == "ps":
-                time_unit = BSS.Units.Time.picosecond      
+                time_unit = BSS.Units.Time.picosecond
             elif time_unit == "fs":
-                time_unit = BSS.Units.Time.femtosecond      
+                time_unit = BSS.Units.Time.femtosecond
 
         return time_unit
-       
 
     @staticmethod
     def box_edges_unit(box_edges_unit):
@@ -404,21 +410,24 @@ class validate():
 
         if not isinstance(box_edges_unit, str):
             if not isinstance(box_edges_unit, BSS.Types.Length):
-                raise TypeError("'box_edges_unit' must be of type 'str' or 'BSS.Types.Length'.")
+                raise TypeError(
+                    "'box_edges_unit' must be of type 'str' or 'BSS.Types.Length'."
+                )
 
         else:
-            box_edges_unit = box_edges_unit.strip().split(' ')[-1].lower()
+            box_edges_unit = box_edges_unit.strip().split(" ")[-1].lower()
             box_edges_unit_list = ["angstrom", "a", "nanometer", "nm"]
             if box_edges_unit not in box_edges_unit_list:
-                raise ValueError(f"'box_edges_unit' must be one of {box_edges_unit_list}.")
+                raise ValueError(
+                    f"'box_edges_unit' must be one of {box_edges_unit_list}."
+                )
 
             if box_edges_unit == "angstrom" or box_edges_unit == "a":
                 box_edges_unit = BSS.Units.Length.angstrom
             elif box_edges_unit == "nm" or box_edges_unit == "nanometer":
-                box_edges_unit = BSS.Units.Length.nanometer   
+                box_edges_unit = BSS.Units.Length.nanometer
 
         return box_edges_unit
-
 
     @staticmethod
     def temperature_unit(temperature_unit):
@@ -436,21 +445,24 @@ class validate():
 
         if not isinstance(temperature_unit, str):
             if not isinstance(temperature_unit, BSS.Types.Temperature):
-                raise TypeError("'temperature_unit' must be of type 'str' or 'BSS.Types.Temperature'.")
+                raise TypeError(
+                    "'temperature_unit' must be of type 'str' or 'BSS.Types.Temperature'."
+                )
 
         else:
-            temperature_unit = temperature_unit.strip().split(' ')[-1].lower()
+            temperature_unit = temperature_unit.strip().split(" ")[-1].lower()
             temperature_unit_list = ["kelvin", "k", "celsius", "c"]
             if temperature_unit not in temperature_unit_list:
-                raise ValueError(f"'temperature_unit' must be one of {temperature_unit_list}.")
+                raise ValueError(
+                    f"'temperature_unit' must be one of {temperature_unit_list}."
+                )
 
             if temperature_unit == "k" or temperature_unit == "kelvin":
                 temperature_unit = BSS.Units.Temperature.kelvin
             elif temperature_unit == "c" or temperature_unit == "celsius":
-                temperature_unit = BSS.Units.Temperature.celsius   
+                temperature_unit = BSS.Units.Temperature.celsius
 
         return temperature_unit
-
 
     @staticmethod
     def pressure_unit(pressure_unit):
@@ -468,21 +480,24 @@ class validate():
 
         if not isinstance(pressure_unit, str):
             if not isinstance(pressure_unit, BSS.Types.Pressure):
-                raise TypeError("'pressure_unit' must be of type 'str' or 'BSS.Types.Pressure'.")
+                raise TypeError(
+                    "'pressure_unit' must be of type 'str' or 'BSS.Types.Pressure'."
+                )
 
         else:
-            pressure_unit = pressure_unit.strip().split(' ')[-1].lower()
+            pressure_unit = pressure_unit.strip().split(" ")[-1].lower()
             pressure_unit_list = ["atm", "atmosphere", "bar"]
             if pressure_unit not in pressure_unit_list:
-                raise ValueError(f"'pressure_unit' must be one of {pressure_unit_list}.")
+                raise ValueError(
+                    f"'pressure_unit' must be one of {pressure_unit_list}."
+                )
 
             if pressure_unit == "atm" or pressure_unit == "atmosphere":
                 pressure_unit = BSS.Units.Pressure.atm
             elif pressure_unit == "bar":
-                pressure_unit = BSS.Units.Pressure.bar  
+                pressure_unit = BSS.Units.Pressure.bar
 
         return pressure_unit
-        
 
     @staticmethod
     def box_type(box_type):
@@ -508,7 +523,6 @@ class validate():
 
         return box_type
 
-
     @staticmethod
     def boolean(boolean):
         """validates boolean input
@@ -527,23 +541,24 @@ class validate():
         if boolean != 1 and boolean != 0:
             if not isinstance(boolean, bool):
                 if not isinstance(boolean, str):
-                    raise TypeError(f"{boolean} must be of type 'str' (True or False) or 'bool'.")
+                    raise TypeError(
+                        f"{boolean} must be of type 'str' (True or False) or 'bool'."
+                    )
                 else:
-                    boolean_list = ["TRUE", "FALSE","1","0"]
+                    boolean_list = ["TRUE", "FALSE", "1", "0"]
                     if boolean.upper() not in boolean_list:
                         raise ValueError(f"{boolean} must be one of {boolean_list}.")
         else:
             boolean = str(boolean)
 
         boolean = boolean.upper()
-        
+
         if boolean == "TRUE" or boolean == "1":
             boolean = True
         elif boolean == "FALSE" or boolean == "0":
             boolean = False
-        
-        return boolean
 
+        return boolean
 
     @staticmethod
     def trajectories(trajectories):
@@ -585,9 +600,9 @@ class validate():
         """
 
         pert_val = validate.string(pert_val).lower()
-        if pert_val not in ["pert","val"]:
+        if pert_val not in ["pert", "val"]:
             raise ValueError("pert_val must be either 'pert' or 'val'")
-        
+
         return pert_val
 
     @staticmethod
@@ -607,11 +622,11 @@ class validate():
 
         if estimator:
             estimator = validate.string(estimator).upper()
-        estimator_list = ["MBAR","TI",None]
+        estimator_list = ["MBAR", "TI", None]
         if estimator not in estimator_list:
             raise ValueError(f"estimator must be in {estimator_list}")
         if not estimator:
-            estimator =  "MBAR"
+            estimator = "MBAR"
 
         return estimator
 
@@ -632,13 +647,13 @@ class validate():
 
         if analysis_method:
             analysis_method = validate.string(analysis_method).lower()
-        method_list = ["alchemlyb","native",None]
+        method_list = ["alchemlyb", "native", None]
         if analysis_method not in method_list:
             raise ValueError(f"analysis_method must be in {method_list}")
-        
+
         if not analysis_method:
             analysis_method = "alchemlyb"
-        
+
         return analysis_method
 
     @staticmethod
@@ -658,15 +673,15 @@ class validate():
 
         if mbar_method:
             mbar_method = validate.string(mbar_method).lower()
-        method_list = ["robust","default",None, "none"]
+        method_list = ["robust", "default", None, "none"]
         if mbar_method not in method_list:
             raise ValueError(f"mbar_method must be in {method_list}")
-        
+
         if not mbar_method:
             mbar_method = None
         if mbar_method == "none":
             mbar_method = None
-        
+
         return mbar_method
 
     @staticmethod
@@ -686,15 +701,15 @@ class validate():
 
         if truncate_keep:
             truncate_keep = validate.string(truncate_keep).lower()
-        method_list = ["start","end",None]
+        method_list = ["start", "end", None]
         if truncate_keep not in method_list:
             raise ValueError(f"truncate_keep must be in {method_list}")
-        
+
         if not truncate_keep:
             truncate_keep = "end"
-        
+
         return truncate_keep
-    
+
     @staticmethod
     def num_lambda(num_lambda):
         """validate number of lambdas to be run
@@ -718,7 +733,6 @@ class validate():
 
         return num_lambda
 
-
     @staticmethod
     def pipeline_protocol(protocol, auto_validate=True, fepprep=False):
         """check if the passed protocol is a correct pipeline_protocol
@@ -734,7 +748,9 @@ class validate():
         """
 
         if not isinstance(protocol, pipeline.prep.pipeline_protocol):
-            raise TypeError("'protocol' must be of type 'pipeline.prep.pipeline_protocol'.")
+            raise TypeError(
+                "'protocol' must be of type 'pipeline.prep.pipeline_protocol'."
+            )
 
         if not isinstance(fepprep, bool):
             raise TypeError("'fepprep' must be of type 'bool'.")
@@ -748,11 +764,15 @@ class validate():
         # if fepprep, check that an engine and no of lam was specified
         if fepprep:
             if not hasattr(protocol, "num_lambda"):
-                warnings.warn("the provided protocol does not have attribute 'num_lambda'.\n 11 lambda windows will be used...")
+                warnings.warn(
+                    "the provided protocol does not have attribute 'num_lambda'.\n 11 lambda windows will be used..."
+                )
                 protocol.num_lambda(11)
             if not hasattr(protocol, "engine"):
-                raise TypeError("protocol must have an engine to be used for fep. This is usually defined in the network file. \
-                                This is different from protocol.engines in the protocol file. ")
+                raise TypeError(
+                    "protocol must have an engine to be used for fep. This is usually defined in the network file. \
+                                This is different from protocol.engines in the protocol file. "
+                )
 
         return protocol
 
@@ -770,7 +790,9 @@ class validate():
         """
 
         if not isinstance(protocol, pipeline.prep.analysis_protocol):
-            raise TypeError("'protocol' must be of type 'pipeline.prep.analysis_protocol'.")
+            raise TypeError(
+                "'protocol' must be of type 'pipeline.prep.analysis_protocol'."
+            )
 
         if auto_validate:
             # validate incase it wasnt
@@ -794,12 +816,10 @@ class validate():
             BioSimSpace._SireWrappers._system.System: the passed system
         """
 
-
         if not isinstance(system, _System):
             raise TypeError("'system' must be a BSS system!.")
 
         return system
-
 
     @staticmethod
     def bss_protocol(protocol):
@@ -815,15 +835,15 @@ class validate():
             BioSimSpace.Protocol: the BSS protocol.
         """
 
-        # TODO this is a very hacky way and not ideal 
-        
+        # TODO this is a very hacky way and not ideal
+
         ty = type(protocol)
 
         if "BioSimSpace.Protocol" not in str(ty):
             raise TypeError("'protocol' must be a BSS protocol!.")
 
         return protocol
-    
+
     @staticmethod
     def molecule(molecule):
         """Check if BSS molecule
@@ -841,17 +861,18 @@ class validate():
         if not isinstance(molecule, _Molecule):
             if not isinstance(molecule, _System):
                 raise TypeError("'molecule' must be a BSS molecule (or system)!.")
-            else: # if it is a system, convert to a molecule
-                warnings.warn("a BSS system was passed. The first molecule in the system will be taken.")
+            else:  # if it is a system, convert to a molecule
+                warnings.warn(
+                    "a BSS system was passed. The first molecule in the system will be taken."
+                )
                 system = molecule
                 molecule = system[0]
 
-        return molecule     
-
+        return molecule
 
     @staticmethod
     def analysis(analysis, analysed=True):
-        """checks if it is an analysed pipeline.analysis.analyse 
+        """checks if it is an analysed pipeline.analysis.analyse
 
         Args:
             system (pipeline.analysis.analyse): an analysed pipeline analysis
@@ -863,13 +884,11 @@ class validate():
             pipeline.analysis.analyse: the passed system
         """
 
-
         if not isinstance(analysis, pipeline.analysis.analyse):
             raise TypeError("'analysis' must be a pipeline.analysis.analyse!.")
-        
+
         if analysed == True:
             if not analysis.is_analysed:
                 raise ValueError("'analysis' must have already been analysed!.")
 
         return analysis
-    
