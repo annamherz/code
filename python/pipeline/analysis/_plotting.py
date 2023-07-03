@@ -429,7 +429,7 @@ class plotting_engines:
         else:
             colour_dict = {}
 
-        other_colours = ["limegreen", "gold", "mediumpurple", "darkred", "papayawhip"]
+        other_colours = ["limegreen", "gold", "mediumpurple", "darkred", "papayawhip", "honeydew", "grey", "lightsteelblue", "peru", "plum"]
         other_res_list = []
 
         for res in self.other_results_names:
@@ -489,7 +489,57 @@ class plotting_engines:
 
         placement_dict = {}
 
-        if len(names) == 6:
+        if len(names) == 10:
+            width = 0.10  # set bar width
+            placement = [
+                -width * (9 / 2),
+                -width * (7 / 2),
+                -width * (5 / 2),
+                -width * (3 / 2),
+                -width * (1 / 2),
+                width * (1 / 2),
+                width * (3 / 2),
+                width * (5 / 2),
+                width * (7 / 2),
+                width * (9 / 2),
+            ]
+        elif len(names) == 9:
+            width = 0.10  # set bar width
+            placement = [
+                -width * (8 / 2),
+                -width * (6 / 2),
+                -width * (4 / 2),
+                -width * (2 / 2),
+                0,
+                width * (2 / 2),
+                width * (4 / 2),
+                width * (6 / 2),
+                width * (8 / 2),
+            ]
+        elif len(names) == 8:
+            width = 0.10  # set bar width
+            placement = [
+                -width * (7 / 2),
+                -width * (5 / 2),
+                -width * (3 / 2),
+                -width * (1 / 2),
+                width * (1 / 2),
+                width * (3 / 2),
+                width * (5 / 2),
+                width * (7 / 2),
+            ]
+        elif len(names) == 7:
+            width = 0.12  # set bar width
+            placement = [
+                -width * (6 / 2),
+                -width * (4 / 2),
+                -width * (2 / 2),
+                0,
+                width * (2 / 2),
+                width * (4 / 2),
+                width * (6 / 2),
+            ]
+        elif len(names) == 6:
             width = 0.12  # set bar width
             placement = [
                 -width * (5 / 2),
@@ -527,7 +577,7 @@ class plotting_engines:
             placement = [0]
         else:
             raise ValueError(
-                "length of the engine list + exp cannot exceed 6? must have atleast 1 engine/exp."
+                "length of the engine list + exp cannot exceed 10? must have atleast 1 engine/exp."
             )
 
         for eng, place in zip(names, placement):

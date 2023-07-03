@@ -266,7 +266,7 @@ class merge:
             prematch=prematch,
             prune_perturbed_constraints=prune_perturbed_constraints,
             prune_crossing_constraints=prune_crossing_constraints,
-            **kwargs,
+            # **kwargs,
         )
 
         return (ligand_0.getAtoms(), ligand_1.getAtoms(), mapping)

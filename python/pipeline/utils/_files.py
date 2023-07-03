@@ -34,13 +34,13 @@ def write_analysis_file(analysis, results_dir, method=None):
         ),  # need as string so can compare to existing entries sometimes
         str(analysis.error),
         analysis.engine,
-        analysis.file_ext,
+        analysis.file_extension,
         method,
     ]
 
     # use csv to open the results file.
     final_summary_file = (
-        f"{results_dir}/final_summary_{analysis.engine.upper()}_{analysis.file_ext}.csv"
+        f"{results_dir}/final_summary_{analysis.engine.upper()}_{analysis.file_extension}.csv"
     )
     with open(final_summary_file, "a") as freenrg_writefile:
         writer = csv.writer(freenrg_writefile)
@@ -85,10 +85,10 @@ def write_analysis_file(analysis, results_dir, method=None):
             str(analysis.repeats_tuple_list[r][1]),
             str(analysis.repeats_tuple_list[r][2]),
             analysis.engine,
-            analysis.file_ext,
+            analysis.file_extension,
             method,
         ]
-        results_file_path = f"{results_dir}/freenrg_repeat_{no_repeats.index(r)}_{analysis.engine.upper()}_{analysis.file_ext}.csv"
+        results_file_path = f"{results_dir}/freenrg_repeat_{no_repeats.index(r)}_{analysis.engine.upper()}_{analysis.file_extension}.csv"
         with open(results_file_path, "a") as freenrg_writefile:
             writer = csv.writer(freenrg_writefile)
 
@@ -152,7 +152,7 @@ def write_analysis_file(analysis, results_dir, method=None):
                     str(val_dict[f"{key}"]),
                     str(err_dict[f"{key}"]),
                     analysis.engine,
-                    analysis.file_ext,
+                    analysis.file_extension,
                     method,
                 ]
             except:
@@ -163,10 +163,10 @@ def write_analysis_file(analysis, results_dir, method=None):
                     str(np.nan),
                     str(np.nan),
                     analysis.engine,
-                    analysis.file_ext,
+                    analysis.file_extension,
                     method,
                 ]
-            results_file_path = f"{results_dir}/{name}_repeat_{r}_{analysis.engine.upper()}_{analysis.file_ext}.csv"
+            results_file_path = f"{results_dir}/{name}_repeat_{r}_{analysis.engine.upper()}_{analysis.file_extension}.csv"
             with open(results_file_path, "a") as freenrg_writefile:
                 writer = csv.writer(freenrg_writefile)
 

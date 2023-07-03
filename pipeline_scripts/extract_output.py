@@ -46,7 +46,7 @@ def extract_output(folder, prot_file):
     extraction.extract_output()
     # # get trajectory, will get rmsd by default
     print("extracting trajectory files...")
-    extraction.extract_frames(traj_lambdas=traj_lambdas, overwrite=True)
+    extraction.extract_frames(traj_lambdas=traj_lambdas, overwrite=False)
     print("extracting sample config files...")
     extraction.extract_config()
 

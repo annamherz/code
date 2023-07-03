@@ -57,8 +57,8 @@ def analysis(pert, engine, ana_file, main_dir, prot_file=None):
     write_analysis_file(analysed_pert, final_results_folder)
 
     # plot the convergence
-    analysed_pert.calculate_convergence()
-    analysed_pert.plot_convergence()
+    # analysed_pert.calculate_convergence()
+    # analysed_pert.plot_convergence()
 
 
 def analysis_work_dir(work_dir, pert, engine, ana_file):

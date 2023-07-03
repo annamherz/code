@@ -42,6 +42,7 @@ echo "The folder for all these runs is $MAINDIRECTORY"
 echo ${trans_array[@]}
 echo ${eng_array[@]}
 echo ${win_array[@]}
+echo "name is $name"
 
 # make output dir for slurm out and err files
 if [[ ! -d ../slurm_logs ]]; then
