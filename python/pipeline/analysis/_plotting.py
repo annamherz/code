@@ -743,9 +743,9 @@ class plotting_engines:
             y_label = y_label
         else:
             if pert_val == "pert":
-                y_label = "$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
+                y_label = "$\Delta\Delta$G$_{bind}$ (kcal/mol)"
             elif pert_val == "val":
-                y_label = "$\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
+                y_label = "$\Delta$G$_{bind}$ (kcal/mol)"
 
         plt.ylabel(y_label)
 
@@ -960,9 +960,9 @@ class plotting_engines:
             y_label = y_label
         else:
             if pert_val == "pert":
-                y_label = "Computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
+                y_label = "Computed $\Delta\Delta$G$_{bind}$ (kcal/mol)"
             elif pert_val == "val":
-                y_label = "Computed $\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
+                y_label = "Computed $\Delta$G$_{bind}$ (kcal/mol)"
 
         plt.ylabel(y_label)
 
@@ -970,9 +970,9 @@ class plotting_engines:
             x_label = x_label
         else:
             if pert_val == "pert":
-                x_label = f"{x_name} " + "$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
+                x_label = f"{x_name} " + "$\Delta\Delta$G$_{bind}$ (kcal/mol)"
             elif pert_val == "val":
-                x_label = f"{x_name} " + "$\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
+                x_label = f"{x_name} " + "$\Delta$G$_{bind}$ (kcal/mol)"
 
         plt.xlabel(x_label)
 

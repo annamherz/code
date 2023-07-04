@@ -1071,9 +1071,9 @@ class analysis_network:
         )
 
         if pert_val == "pert":
-            binding = "$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
+            binding = "$\Delta\Delta$G$_{bind}$ (kcal/mol)"
         elif pert_val == "val":
-            binding = "$\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
+            binding = "$\Delta$G$_{bind}$ (kcal/mol)"
         plotting_dict = {
             "title": f"{engine_a} vs {engine_b}\n for {self.file_ext}, {self.net_ext}",
             "y label": f"{engine_a} " + binding,

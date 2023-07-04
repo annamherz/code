@@ -1164,16 +1164,16 @@ class analyse:
 
         if plot_error:
             if plot_difference:
-                plt.ylabel("Computed Error difference to final / kcal$\cdot$mol$^{-1}$")
+                plt.ylabel("Computed Error difference to final (kcal/mol)")
             else:
-                plt.ylabel("Computed Error / kcal$\cdot$mol$^{-1}$")
+                plt.ylabel("Computed Error (kcal/mol)")
         else:
             if plot_difference:
                 plt.ylabel(
-                    "difference to final result for computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
+                    "difference to final result for computed $\Delta\Delta$G$_{bind}$ (kcal/mol)"
                 )
             else:
-                plt.ylabel("Computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+                plt.ylabel("Computed $\Delta\Delta$G$_{bind}$ (kcal/mol)")
 
         if file_path:
             plt.savefig(file_path)
