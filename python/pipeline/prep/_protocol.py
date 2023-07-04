@@ -962,11 +962,13 @@ class pipeline_protocol(protocol):
     def config_options(self, value=None):
         if value:
             try:
+                print("trying to read config options as a file / read the file for this...")
                 value = validate.file_path(value)
                 value_dict = self._read_config_file(file=value)
                 self._query_dict["config options file"] = value
                 self._config_options_file = value
             except:
+                print("config options not a file, trying to read in as dictionary...")
                 value_dict = value
             value = validate.dictionary(value_dict)
             self._query_dict["config options"] = value

@@ -39,9 +39,7 @@ def write_analysis_file(analysis, results_dir, method=None):
     ]
 
     # use csv to open the results file.
-    final_summary_file = (
-        f"{results_dir}/final_summary_{analysis.engine.upper()}_{analysis.file_extension}.csv"
-    )
+    final_summary_file = f"{results_dir}/final_summary_{analysis.engine.upper()}_{analysis.file_extension}.csv"
     with open(final_summary_file, "a") as freenrg_writefile:
         writer = csv.writer(freenrg_writefile)
 

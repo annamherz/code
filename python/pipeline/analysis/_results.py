@@ -28,7 +28,7 @@ class analysis_network:
         net_file=None,
         output_folder=None,
         analysis_prot=None,
-        name=None,
+        method=None,
         extra_options=None,
         verbose=False,
     ):
@@ -41,6 +41,7 @@ class analysis_network:
             net_file (str, optional): file path to the network of perturbations to analyse. Defaults to None.
             output_folder (str, optional): folder path to where to save all the outputs of the analysis. Defaults to None.
             analysis_prot (pipeline.protocol.analysis_protocol, optional): analysis protocol to make file extension to look for for the results. Defaults to None.
+            method (str, optional): Method to consider in the method column of the results files. Defaults to None (will consider all results in the file).
             extra_options (dict, optional): extra options (eg temperature). Defaults to None.
 
         Raises:
@@ -49,10 +50,10 @@ class analysis_network:
 
         self.is_verbose(verbose)
 
-        if name:
-            self.name = validate.string(name)
+        if method:
+            self.method = validate.string(method)
         else:
-            self.name = None
+            self.method = None
 
         # get engines for analysis
         if engines:
@@ -448,7 +449,34 @@ class analysis_network:
         self._plotting_object = None
         self._stats_object = None
 
-    # TODO add perturbation and value ?? someway to add more data?
+    def change_name(self, old_name, new_name):
+        """change the name of the data. Can be used for engine or other result names. Will update the self.dicts with this new name.
+
+        Args:
+            old_name (str): old name to replace
+            new_name (str): new name to replace it with
+        """
+
+        dict_list = [self.calc_pert_dict, self.cinnabar_calc_val_dict, self.cinnabar_exper_val_dict,self.cinnabar_calc_pert_dict,
+                     self.cinnabar_exper_pert_dict, self._cinnabar_networks, self.spert_results_dict, self.spert_bound_dict,
+                     self.spert_free_dict, self.epert_results_dict, self.epert_bound_dict, self.epert_free_dict, self._fwf_computed_relative_DDGs]
+
+        for adict in dict_list:
+            try:
+                adict[new_name] = adict.pop(old_name)
+            except:
+                print(f"could not rename one of the dicts, as it does not have this key as one of its keys.")
+
+        if old_name in self.other_results_names:
+            self.other_results_names.remove(old_name)
+            self.other_results_names.append(new_name)
+        elif old_name in self.engines:
+            self.engines.remove(old_name)
+            self.other_results_names.append(new_name)
+
+        # remove plotting object as needs to be reintialised with new name
+        self._plotting_object = None
+        self._stats_object = None
 
     def compute(self, cycle_closure=True, statistics=True, use_cinnabar=True):
         """compute the dictionaries for analysis and those passed to the plotting object.
@@ -506,14 +534,14 @@ class analysis_network:
                 files = self._results_files[eng]
 
             calc_diff_dict = make_dict.comp_results(
-                files, self.perturbations, eng, name=self.name
+                files, self.perturbations, eng, method=self.method
             )  # older method
             self.calc_pert_dict.update({eng: calc_diff_dict})
 
             if use_cinnabar:
-                self._compute_cinnabar_dict(files, eng, name=self.name)
+                self._compute_cinnabar_dict(files, eng, method=self.method)
 
-    def _compute_cinnabar_dict(self, files, eng, name=None):
+    def _compute_cinnabar_dict(self, files, eng, method=None):
         """compute cinnabar and get the dictionaries from it."""
 
         perts, ligs = get_info_network_from_dict(self.calc_pert_dict[eng])
@@ -528,7 +556,7 @@ class analysis_network:
             self.exper_val_dict,
             cinnabar_file_name,
             perturbations=perts,
-            name=name,
+            method=method,
         )
 
         try:
@@ -560,12 +588,13 @@ class analysis_network:
             print(e)
             print(f"could not create cinnabar network for {eng}")
 
-    def compute_other_results(self, file_names=None, name=None, use_cinnabar=True):
+    def compute_other_results(self, file_names=None, name=None, method=None, use_cinnabar=True):
         """compute other results in a similar manner to the engine results.
 
         Args:
             file_names (list, optional): list of other results. Defaults to None.
             name (str, optional): name of these other results (for files and graphs and identification). Defaults to None.
+            method (str, optional): method in the input files to include only. Defaults to None.
             use_cinnabar (bool, optional): whether to use cinnabar. Defaults to True.
         """
 
@@ -575,7 +604,11 @@ class analysis_network:
 
         # add identifier for the other results
         name = validate.string(name)
-        self.other_results_names.append(name)
+        if name in self.other_results_names:
+            print(f"{name} is already in the other results. please use a different name!")
+            return
+        else:
+            self.other_results_names.append(name)
 
         # add files to file list
         self._results_repeat_files[name] = file_names
@@ -587,7 +620,8 @@ class analysis_network:
             file_names,
             perturbations=None,
             engine=None,
-            source=name,
+            name=name,
+            method=method,
             output_file=new_file_path,
         )
         self.calc_pert_dict.update({name: calc_diff_dict})
@@ -614,8 +648,8 @@ class analysis_network:
 
             for pert in self.perturbations:
                 # find correct path, use extracted if it exists
-                if self.name:
-                    name = f"_{self.name}"
+                if self.method:
+                    name = f"_{self.method}"
                 else:
                     name = ""
                 path_to_dir = (
@@ -982,7 +1016,7 @@ class analysis_network:
             plot_obj = self._initialise_plotting_object(
                 check=True, verbose=self._is_verbose
             )
-            plot_obj.scatter(pert_val="pert", engines=engine, **kwargs)
+            plot_obj.scatter(pert_val="pert", y_names=engine, **kwargs)
 
     def plot_scatter_lig(self, engine=None, use_cinnabar=False, **kwargs):
         """plot the scatter plot of the values per ligand.
@@ -1021,7 +1055,7 @@ class analysis_network:
             plot_obj = self._initialise_plotting_object(
                 check=True, verbose=self._is_verbose
             )
-            plot_obj.scatter(pert_val="val", engines=engine, **kwargs)
+            plot_obj.scatter(pert_val="val", y_names=engine, **kwargs)
 
     def plot_eng_vs_eng(self, engine_a=None, engine_b=None, pert_val="pert"):
         """plot scatter plot of engine_a vs engine_b
@@ -1048,10 +1082,10 @@ class analysis_network:
         }
 
         plot_obj.scatter(
-            pert_val=pert_val, engines=engine_a, name=engine_b, **plotting_dict
+            pert_val=pert_val, y_names=engine_a, x_name=engine_b, **plotting_dict
         )
 
-    def plot_other_results(self, name=None, engine=None, pert_val=None, outliers=None):
+    def plot_other_results(self, name=None, engine=None, pert_val=None, outliers=None, **kwargs):
         """plot any other results as a scatter plot
 
         Args:
@@ -1076,19 +1110,14 @@ class analysis_network:
             check=True, verbose=self._is_verbose
         )
 
-        if outliers:
-            plot_obj.outlier(
-                pert_val=pert_val, engines=engine, outliers=outliers, name=name
-            )
-        else:
-            plot_obj.scatter(pert_val=pert_val, engines=engine, name=name)
+        plot_obj.scatter(pert_val=pert_val, y_names=engine, x_name=name, outliers=outliers, **kwargs)
 
-    def plot_outliers(self, engine=None, outliers=5, pert_val="pert"):
+    def plot_outliers(self, engine=None, no_outliers=5, pert_val="pert", **kwargs):
         """plot scatter plot with annotated outliers.
 
         Args:
             engine (list, optional): engine to plot for. Defaults to None.
-            outliers (int, optional): number of outliers to annotate. Defaults to 5.
+            no_outliers (int, optional): number of outliers to annotate. Defaults to 5.
             pert_val (str, optional): whether plotting 'pert' ie perturbations or 'val' ie values (per ligand result). Defaults to None.
 
         """
@@ -1096,7 +1125,7 @@ class analysis_network:
         plot_obj = self._initialise_plotting_object(
             check=True, verbose=self._is_verbose
         )
-        plot_obj.outlier(pert_val=pert_val, engines=engine, outliers=outliers)
+        plot_obj.scatter(pert_val=pert_val, y_names=engine, no_outliers=no_outliers, **kwargs)
 
     def plot_histogram_runs(self, engine=None, per_repeat=False):
         """plot histograms for the individual runs (ie per repeats)

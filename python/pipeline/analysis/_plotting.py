@@ -45,8 +45,8 @@ class plotting_engines:
                 f"{output_folder}/graphs", create=True
             )
 
-        # set the colours and bar spacing
-        self._set_style()
+        # set the colours
+        self.set_colours()
 
         # convert the dictionaries into dataframes for plotting
         self._analysis_dicts_to_df()
@@ -408,12 +408,6 @@ class plotting_engines:
 
         return df
 
-    def _set_style(self):
-        """set the style of the graphs."""
-
-        self.set_colours()
-        self._get_bar_spacing()
-
     def set_colours(self, colour_dict=None):
         """set the colours of the bars or scatter plots.
 
@@ -429,7 +423,18 @@ class plotting_engines:
         else:
             colour_dict = {}
 
-        other_colours = ["limegreen", "gold", "mediumpurple", "darkred", "papayawhip", "honeydew", "grey", "lightsteelblue", "peru", "plum"]
+        other_colours = [
+            "limegreen",
+            "gold",
+            "mediumpurple",
+            "darkred",
+            "papayawhip",
+            "honeydew",
+            "grey",
+            "lightsteelblue",
+            "peru",
+            "plum",
+        ]
         other_res_list = []
 
         for res in self.other_results_names:
@@ -470,14 +475,6 @@ class plotting_engines:
 
         return default_colour_dict
 
-    def _get_bar_spacing(self):
-        """_get the bar spacing based on how many engines."""
-
-        bar_spacing, bar_width = plotting_engines.get_bar_spacing(names=self.engines)
-
-        self._bar_spacing = bar_spacing
-        self._bar_width = bar_width
-
     @staticmethod
     def get_bar_spacing(names=None):
         names = validate.is_list(names)
@@ -489,6 +486,7 @@ class plotting_engines:
 
         placement_dict = {}
 
+        # TODO some way to make this less code? or just leave
         if len(names) == 10:
             width = 0.10  # set bar width
             placement = [
@@ -577,7 +575,7 @@ class plotting_engines:
             placement = [0]
         else:
             raise ValueError(
-                "length of the engine list + exp cannot exceed 10? must have atleast 1 engine/exp."
+                f"length of the engine list + exp is {(len(names))}. it cannot exceed 10? must have atleast 1 engine/exp."
             )
 
         for eng, place in zip(names, placement):
@@ -609,6 +607,42 @@ class plotting_engines:
 
         return engines
 
+    def _parse_kwargs_graphs(self, graph=None, **kwargs):
+
+        graph = validate.string(graph).upper()
+        if graph not in ["BAR","SCATTER","OUTLIER"]:
+            raise ValueError(f"graph argument must be bar, scatter or outlier.")
+
+        # default
+        y_label = None
+        x_label = None
+        title = None
+        include_key = True
+        save_fig_location = None
+        include_x_error = False
+        include_y_error = True
+
+        # check kwargs incase there is plotting info
+        for key, value in kwargs.items():
+            key = key.upper().replace(" ","").replace("_","")
+            if key == "YLABEL":
+                y_label = value
+            if key == "XLABEL":
+                x_label = value
+            if key == "TITLE":
+                title = value
+            if key == "KEY":
+                include_key = validate.boolean(value)
+            if key == "SAVE":
+                save_fig_location = validate.string(f"{value}.png") # TODO fix so also below
+            if key == "XERROR":
+                include_x_error = validate.boolean(value)
+            if key == "YERROR":
+                include_y_error = validate.boolean(value)
+
+        return y_label,x_label,title,include_key,save_fig_location,include_x_error,include_y_error
+
+
     def bar(self, pert_val=None, names=None, values=None, **kwargs):
         """plot a bar plot of the results
 
@@ -624,12 +658,11 @@ class plotting_engines:
             names = validate.is_list(names, make_list=True)
             for eng in names:
                 self._validate_in_names_list(eng)
-            bar_spacing, width = plotting_engines.get_bar_spacing(names=names)
         # if no engines provided, use the defaults that were set based on the analysis object
         else:
             names = self.engines
-            bar_spacing = self._bar_spacing
-            width = self._bar_width
+
+        bar_spacing, width = plotting_engines.get_bar_spacing(names=names)
 
         if not values:
             if pert_val == "pert":
@@ -639,6 +672,9 @@ class plotting_engines:
         else:
             values = validate.is_list(values)
 
+        # other kwargs
+        y_label,x_label,title,include_key,save_fig_location,include_x_error,include_y_error = self._parse_kwargs_graphs(graph="bar", **kwargs)
+        
         plt.rc("font", size=12)
         fig, ax = plt.subplots(figsize=(15, 8))
 
@@ -676,12 +712,17 @@ class plotting_engines:
             # determine positions for X axis labels.
             x_locs = np.arange(len(freenrg_df_plotting))
 
+            if include_y_error:
+                yerr = freenrg_df_plotting["err_calc"]
+            else:
+                yerr = None
+
             # plot both our experimental and FEP free energies using an offset on the x position so bars don't overlap.
             ax.bar(
                 x_locs + space,
                 height=freenrg_df_plotting["freenrg_calc"],
                 width=width,
-                yerr=freenrg_df_plotting["err_calc"],
+                yerr=yerr,
                 label=eng,
                 color=col,
             )
@@ -690,54 +731,76 @@ class plotting_engines:
         # plt.ylabel('ΔΔG for calculated (kcal/mol)')
         # format the plot further.
         plt.axhline(color="black")
-        plt.title(
-            f"Freenrg for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}"
-        )
-        if pert_val == "pert":
-            plt.ylabel("$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
-            plt.xlabel("perturbations")
-        elif pert_val == "val":
-            plt.ylabel("$\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
-            plt.xlabel("ligands")
-        plt.xticks(x_locs, freenrg_df_plotting.index, rotation=70, ha="right")
-        plt.legend()
 
-        eng_name = "_".join(str(eng) for eng in names)
-        plt.savefig(
-            f"{self.graph_folder}/barplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png",
-            dpi=300,
-            bbox_inches="tight",
-        )  # TODO fix eng name
+        if title:
+            title = title
+        else:
+            title = f"Freenrg for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}"
+
+        plt.title(title, fontsize=20)
+
+        if y_label:
+            y_label = y_label
+        else:
+            if pert_val == "pert":
+                y_label = "$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
+            elif pert_val == "val":
+                y_label = "$\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
+
+        plt.ylabel(y_label)
+
+        if x_label:
+            x_label = x_label
+        else:
+            if pert_val == "pert":
+                x_label = "perturbations"
+            elif pert_val == "val":
+                x_label = "ligands"
+
+        plt.xlabel(x_label)        
+        
+        plt.xticks(x_locs, freenrg_df_plotting.index, rotation=70, ha="right")
+        
+        if include_key:
+            plt.legend()
+        else:
+            pass
+
+        eng_name = self._get_y_name(names)
+        if save_fig_location:
+            save_fig_location = save_fig_location
+        else:
+            save_fig_location = f"{self.graph_folder}/barplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png"
+
+        plt.savefig(save_fig_location, dpi=300, bbox_inches="tight")
         plt.show()
 
     def scatter(
-        self, pert_val=None, engines=None, name="experimental", values=None, **kwargs
-    ):  # TODO change x_name, y_name
+        self, pert_val=None, y_names=None, x_name="experimental", values=None, outliers=False, no_outliers=3, **kwargs
+    ):
         """plot scatter plot.
 
         Args:
             pert_val (str, optional): whether plotting 'pert' ie perturbations or 'val' ie values (per ligand result). Defaults to None.
-            engines (list, optional): engines to plot for. Defaults to None.
-            name (str, optional): what to plot against. Defaults to "experimental". #TODO fix so can plot multiple other results
+            y_names (list, optional): y_names to plot for. Defaults to None.
+            x_name (str, optional): what to plot against. Defaults to "experimental".
             values (list, optional): list of values (perturbations or ligands) to plot for. Defaults to None.
 
         Raises:
-            ValueError: the name must be available in the other names list ie have results assosciated with it.
+            ValueError: the x_name must be available in the other names list ie have results assosciated with it.
         """
 
         pert_val = validate.pert_val(pert_val)
-        name = self._validate_in_names_list(name)
+        x_name = self._validate_in_names_list(x_name)
 
-        if engines:
-            engines = validate.is_list(engines, make_list=True)
-            for eng in engines:
-                if eng not in self.names_list:
+        if y_names:
+            y_names = validate.is_list(y_names, make_list=True)
+            for y_name in y_names:
+                if y_name not in self.names_list:
                     raise ValueError("name must be in calc names")
-
-            # engines = self._plotting_engines(engines)
-        # if no engines provided, use the defaults that were set based on the analysis object
         else:
-            engines = self.engines
+            y_names = self.names_list
+            y_names.remove(x_name)
 
         if not values:
             if pert_val == "pert":
@@ -747,40 +810,75 @@ class plotting_engines:
         else:
             values = validate.is_list(values)
 
+        # if check outliers
+        outliers = validate.boolean(outliers)
+        no_outliers = validate.integer(no_outliers)
+
+        # other kwargs
+        y_label,x_label,title,include_key,save_fig_location,include_x_error,include_y_error = self._parse_kwargs_graphs(graph="scatter",**kwargs)
+        
         # plot a scatter plot
         plt.rc("font", size=20)
         fig, ax = plt.subplots(figsize=(7, 7))
 
         lines = []
 
-        for eng in engines:
-            col = self.colours[eng]
+        for y_name in y_names:
+            col = self.colours[y_name]
 
-            freenrg_df_plotting = self.freenrg_df_dict[name][eng][pert_val].dropna()
+            freenrg_df_plotting = self.freenrg_df_dict[x_name][y_name][pert_val].dropna()
 
             # prune df to only have perturbations considered
             freenrg_df_plotting = self._prune_perturbations(freenrg_df_plotting, values)
 
-            x = freenrg_df_plotting[f"freenrg_{name}"]
+            x = freenrg_df_plotting[f"freenrg_{x_name}"]
             y = freenrg_df_plotting["freenrg_calc"]
-            x_er = freenrg_df_plotting[f"err_{name}"]
-            y_er = freenrg_df_plotting["err_calc"]
+
+            if include_x_error:
+                x_er = freenrg_df_plotting[f"err_{x_name}"]
+            else:
+                x_er = None
+            if include_y_error:
+                y_er = freenrg_df_plotting["err_calc"]
+            else:
+                y_er = None
+
+            # outliers
+            if outliers:
+                # get an array of the MUE values comparing experimental and FEP values. Take the absolute values.
+                mue_values = abs(x - y)
+
+                # find the n ligand names that are outliers.
+                outlier_names = mue_values.nlargest(
+                    number_outliers_to_annotate
+                ).index.values.tolist()
+                print(outlier_names)
+
+                # construct a list of labels to annotate the scatterplot with.
+                annot_labels = []
+                colours = []
+                for label in freenrg_df_plotting.index.values:
+                    # if the ligand is an outlier, append the name to the annotation labels list.
+                    if label in outlier_names:
+                        if len(y_names) > 1:
+                            annot_labels.append(f"{label}, {y_name}")
+                        else:
+                            annot_labels.append(f"{label}")
+                        colours.append(self.colours["experimental"])
+                    else:
+                        # if the ligand is not an outlier, append an empty string to the annotation labels list.
+                        annot_labels.append("")
+                        colours.append(self.colours[y_name])
 
             scatterplot = [plt.scatter(x, y, zorder=10, c=col)]
 
-            # diff shapes for diff proteins
-            # scatterplot = [plt.scatter(x[:4], y[:4], zorder=10, c=col, label="TYK2"),
-            #                plt.scatter(x[4:5], y[4:5], zorder=10, c=col, marker="D", label="p38"),
-            #                plt.scatter(x[5:], y[5:], zorder=10, c=col, marker="s",label="MCL1")]
-
-            lines += plt.plot(0, 0, c=col, label=eng)
+            lines += plt.plot(0, 0, c=col, label=y_name)
 
             plt.errorbar(
                 x,
                 y,
                 yerr=y_er,
-                xerr=x_er,  # comment this line to hide experimental error bars \
-                # as this can sometimes overcrowd the plot.
+                xerr=x_er,
                 ls="none",
                 lw=0.5,
                 capsize=2,
@@ -788,24 +886,19 @@ class plotting_engines:
                 zorder=5,
             )
 
-            # plotting lines - need to change this part so incl from the correct written equations if want a linear fit line
-            # x_line = np.linspace(-2,2,20)
-            # y_line = (slope)*(x_line) + (intercept)
-            # ax.plot(x_line, y_line, label=eng)
-
-        # plotting error bars
-        plt.errorbar(
-            x,
-            y,
-            yerr=y_er,
-            # xerr=x_er,   # comment this line to hide experimental error bars \
-            # as this can sometimes overcrowd the plot.
-            ls="none",
-            lw=0.5,
-            capsize=2,
-            color="black",
-            zorder=5,
-        )
+            if outliers:
+                # then, after generating the figure, we can annotate:
+                for i, txt in enumerate(annot_labels):
+                    plt.annotate(
+                        txt,
+                        (
+                            freenrg_df_plotting[f"freenrg_{x_name}"].values.tolist()[i]
+                            + 0.1,  # x coords
+                            freenrg_df_plotting["freenrg_calc"].values.tolist()[i] + 0.1,
+                        ),  # y coords
+                        size=15,
+                        color=self.colours["experimental"],
+                    )
 
         # plot 1/2 kcal bounds:
         plt.fill_between(
@@ -839,7 +932,7 @@ class plotting_engines:
         )
 
         min_lim, max_lim = self._get_bounds_scatter(
-            engines, self.freenrg_df_dict[name], pert_val, values, name
+            y_names, self.freenrg_df_dict[x_name], pert_val, values, x_name
         )
 
         # for a scatterplot we want the axis ranges to be the same.
@@ -848,25 +941,6 @@ class plotting_engines:
 
         plt.axhline(color="black", zorder=1)
         plt.axvline(color="black", zorder=1)
-
-        # default
-        y_label = None
-        x_label = None
-        title = None
-        include_key = True
-
-        # check kwargs incase there is plotting info
-        for key, value in kwargs.items():
-            if key == "y label":
-                y_label = value
-            if key == "x label":
-                x_label = value
-            if key == "title":
-                title = value
-            if key == "key":
-                include_key = validate.boolean(value)
-            if key == "save":
-                save_fig_location = validate.string(f"{value}.png")
 
         if include_key:
             labels = [l.get_label() for l in lines]
@@ -875,254 +949,58 @@ class plotting_engines:
         if title:
             title = title
         else:
-            if name:
-                title = f"Computed vs {name}\nfor {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}"
+            if outliers:
+                title = f"Computed vs {x_name} outliers\nfor {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}"
             else:
-                title = f"Computed vs Experimental\nfor {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}"
+                title = f"Computed vs {x_name}\nfor {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}"
 
         plt.title(title, fontsize=20)
 
         if y_label:
-            plt.ylabel(f"{y_label}")
+            y_label = y_label
         else:
             if pert_val == "pert":
-                plt.ylabel("Computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+                y_label = "Computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
             elif pert_val == "val":
-                plt.ylabel("Computed $\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+                y_label = "Computed $\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
+
+        plt.ylabel(y_label)
 
         if x_label:
-            plt.xlabel(f"{x_label}")
+            x_label = x_label
         else:
             if pert_val == "pert":
-                if name:
-                    plt.xlabel(
-                        f"{name} " + "$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
-                    )
-                else:
-                    plt.xlabel(
-                        "Experimental $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
-                    )
+                x_label = f"{x_name} " + "$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
             elif pert_val == "val":
-                if name:
-                    plt.xlabel(
-                        f"{name} " + "$\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
-                    )
-                else:
-                    plt.xlabel(
-                        "Experimental $\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
-                    )
+                x_label = f"{x_name} " + "$\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
 
-        eng_name = self._get_eng_name(engines)
-        save_fig_location = f"{self.graph_folder}/calc_vs_{name}_scatterplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png"
+        plt.xlabel(x_label)
+
+        eng_name = self._get_y_name(y_names)
+        if save_fig_location:
+            save_fig_location = save_fig_location
+        else:
+            if outliers:
+                save_fig_location = f"{self.graph_folder}/calc_vs_{x_name}_outlierplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png"
+            else:
+                save_fig_location = f"{self.graph_folder}/calc_vs_{x_name}_scatterplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png"
+
         plt.savefig(save_fig_location, dpi=300, bbox_inches="tight")
-        plt.show()
-
-    def outlier(
-        self,
-        pert_val="pert",
-        engines=None,
-        outliers=3,
-        name="experimental",
-        values=None,
-        **kwargs,
-    ):
-        """plot scatter plot with annotated outliers.
-
-        Args:
-            pert_val (str, optional): whether plotting 'pert' ie perturbations or 'val' ie values (per ligand result). Defaults to None.
-            engines (list, optional): engines to plot for. Defaults to None.
-            outliers (int, optional): number of outliers to annotate. Defaults to 3.
-            name (str, optional): what to plot against. Defaults to "experimental". #TODO fix so can plot multiple other results
-            values (list, optional): list of values (perturbations or ligands) to plot for. Defaults to None.
-
-        """
-
-        pert_val = validate.pert_val(pert_val)
-        name = self._validate_in_names_list(name)
-
-        if engines:
-            engines = self._plotting_engines(engines)
-        # if no engines provided, use the defaults that were set based on the analysis object
-        else:
-            engines = self.engines
-
-        number_outliers_to_annotate = validate.integer(outliers)
-
-        if not values:
-            if pert_val == "pert":
-                values = self.perturbations
-            elif pert_val == "val":
-                values = self.ligands
-        else:
-            values = validate.is_list(values)
-
-        # plot a scatter plot
-        plt.rc("font", size=12)
-        fig, ax = plt.subplots(figsize=(10, 10))
-
-        lines = []
-
-        for eng in engines:
-            col = self.colours[eng]
-
-            freenrg_df_plotting = self.freenrg_df_dict[name][eng][pert_val].dropna()
-            # prune df to only have perturbations considered
-            freenrg_df_plotting = self._prune_perturbations(freenrg_df_plotting, values)
-
-            x = freenrg_df_plotting[f"freenrg_{name}"]
-            y = freenrg_df_plotting["freenrg_calc"]
-            x_er = freenrg_df_plotting[f"err_{name}"]
-            y_er = freenrg_df_plotting["err_calc"]
-
-            # get an array of the MUE values comparing experimental and FEP values. Take the absolute values.
-            mue_values = abs(x - y)
-
-            # find the n ligand names that are outliers.
-            outlier_names = mue_values.nlargest(
-                number_outliers_to_annotate
-            ).index.values.tolist()
-            print(outlier_names)
-
-            # construct a list of labels to annotate the scatterplot with.
-            annot_labels = []
-            colours = []
-            for label in freenrg_df_plotting.index.values:
-                # if the ligand is an outlier, append the name to the annotation labels list.
-                if label in outlier_names:
-                    if len(engines) > 1:
-                        annot_labels.append(f"{label}, {eng}")
-                    else:
-                        annot_labels.append(f"{label}")
-                    colours.append(self.colours["experimental"])
-                else:
-                    # if the ligand is not an outlier, append an empty string to the annotation labels list.
-                    annot_labels.append("")
-                    colours.append(self.colours[eng])
-
-            scatterplot = [plt.scatter(x, y, zorder=10, c=colours)]
-            lines += plt.plot(0, 0, c=col, label=eng)
-            plt.errorbar(
-                x,
-                y,
-                yerr=y_er,
-                xerr=x_er,  # comment this line to hide experimental error bars \
-                # as this can sometimes overcrowd the plot.
-                ls="none",
-                lw=0.5,
-                capsize=2,
-                color="black",
-                zorder=5,
-            )
-
-            # then, after generating the figure, we can annotate:
-            for i, txt in enumerate(annot_labels):
-                plt.annotate(
-                    txt,
-                    (
-                        freenrg_df_plotting[f"freenrg_{name}"].values.tolist()[i]
-                        + 0.1,  # x coords
-                        freenrg_df_plotting["freenrg_calc"].values.tolist()[i] + 0.1,
-                    ),  # y coords
-                    size=15,
-                    color=self.colours["experimental"],
-                )
-
-        # can plot a line for ideal
-        # plt.plot((min_lim*1.3,max_lim*1.3),(min_lim*1.3,max_lim*1.3), color="teal")
-
-        # or if want to plot 1/2 kcal bounds
-        plt.fill_between(
-            x=[-100, 100],
-            y2=[-100.25, 99.75],
-            y1=[-99.75, 100.25],
-            lw=0,
-            zorder=-10,
-            alpha=0.3,
-            color="grey",
-        )
-        # upper bound:
-        plt.fill_between(
-            x=[-100, 100],
-            y2=[-99.5, 100.5],
-            y1=[-99.75, 100.25],
-            lw=0,
-            zorder=-10,
-            color="grey",
-            alpha=0.2,
-        )
-        # lower bound:
-        plt.fill_between(
-            x=[-100, 100],
-            y2=[-100.25, 99.75],
-            y1=[-100.5, 99.5],
-            lw=0,
-            zorder=-10,
-            color="grey",
-            alpha=0.2,
-        )
-
-        labels = [l.get_label() for l in lines]
-        plt.legend(lines, labels, loc="upper left")
-
-        # for a scatterplot we want the axis ranges to be the same.
-        min_lim, max_lim = self._get_bounds_scatter(
-            engines, self.freenrg_df_dict[name], pert_val, values, name
-        )
-        plt.xlim(min_lim * 1.3, max_lim * 1.3)
-        plt.ylim(min_lim * 1.3, max_lim * 1.3)
-
-        plt.axhline(color="black", zorder=1)
-        plt.axvline(color="black", zorder=1)
-
-        if name:
-            plt.title(
-                f"Computed vs {name} outliers\nfor {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}"
-            )
-        else:
-            plt.title(
-                f"Computed vs Experimental outliers\nfor {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}"
-            )
-        if pert_val == "pert":
-            plt.ylabel("$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
-            if name:
-                plt.xlabel(
-                    f"{name} " + "$\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
-                )
-            else:
-                plt.xlabel(
-                    "Experimental $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$"
-                )
-        elif pert_val == "val":
-            plt.ylabel("$\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
-            if name:
-                plt.xlabel(f"{name} " + "$\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
-            else:
-                plt.xlabel("Experimental $\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
-
-        eng_name = self._get_eng_name(engines)
-        plt.savefig(
-            f"{self.graph_folder}/calc_vs_{name}_outlierplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png",
-            dpi=300,
-            bbox_inches="tight",
-        )
         plt.show()
 
     # some functions so cleaner in plotting functions
     @staticmethod
-    def _get_eng_name(engines):
+    def _get_y_name(engines):
         """get the engine names for writing the titles and file names
 
         Args:
-            engines (list): list of engines
+            engines (list): list of engines or other results names
 
         Returns:
             str: name for the plotting and file name
         """
-        # TODO adjust so also includes other results names
-        if len(engines) == 3:
-            eng_name = "all"
-        else:
-            eng_name = "_".join(str(eng) for eng in engines)
+
+        eng_name = "_".join(str(eng) for eng in engines)
 
         return eng_name
 
@@ -1290,7 +1168,7 @@ class plotting_engines:
 
         plt.xlabel("Error")
         plt.ylabel("Frequency")
-        eng_name = self._get_eng_name(engines)
+        eng_name = self._get_y_name(engines)
         plt.title(
             f"Distribution of error for {type_error}, {eng_name}, {self.net_ext.replace('_',', ')}"
         )

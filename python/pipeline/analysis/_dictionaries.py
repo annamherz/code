@@ -27,7 +27,7 @@ class make_dict:
         perturbations=None,
         engine=None,
         name=None,
-        source=None,
+        method=None,
         output_file=None,
     ):
         """write results files into different file or dictionary for certain perturbations.
@@ -36,7 +36,7 @@ class make_dict:
             results_files (list, optional): list of results files (for the repeats). Defaults to None.
             perturbations (list, optional): list of perturbations to use. Defaults to None.
             engine (str, optional): engine to use. Defaults to None. Else will get average result for all entries regardless of engine.
-                                    Can also be used for the other results names.
+                                    Can also be used for the other results methods.
             output_file (str, optional): output file to write. Defaults to None.
 
         Returns:
@@ -55,11 +55,11 @@ class make_dict:
             make_pert_list = True
             perturbations = []
 
+        if method:
+            method = validate.string(method)
+
         if name:
             name = validate.string(name)
-
-        if source:
-            source = validate.string(source)
 
         if engine:
             try:
@@ -67,8 +67,8 @@ class make_dict:
             except:
                 engine = validate.string(engine)
 
-        if engine and source:
-            raise ValueError("can only have engine or source currently for nameing")
+        if engine and name:
+            raise ValueError("can only have engine or name currently for nameing")
 
         # TODO get analysis method and method from file or from extra options. engine in extra options.
         # make a dictionary with the results of the files
@@ -79,8 +79,8 @@ class make_dict:
         for res_file in results_files:
             res_df = pd.read_csv(res_file)
             for index, row in res_df.iterrows():
-                if name:
-                    if name.lower() == row["method"].strip().lower():
+                if method:
+                    if method.lower() == row["method"].strip().lower():
                         pass
                     else:
                         continue
@@ -194,19 +194,19 @@ class make_dict:
                                 comp_err,
                                 engine,
                                 "not specified",
-                                str(name),
+                                str(method),
                             ]
                         )
-                    elif source:
+                    elif name:
                         writer.writerow(
                             [
                                 lig_0,
                                 lig_1,
                                 comp_ddG,
                                 comp_err,
-                                source,
+                                name,
                                 "not specified",
-                                str(name),
+                                str(method),
                             ]
                         )
 

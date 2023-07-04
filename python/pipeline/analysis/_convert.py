@@ -144,7 +144,7 @@ class convert:
 
     @staticmethod
     def cinnabar_file(
-        results_files, exper_val, output_file, perturbations=None, name=None
+        results_files, exper_val, output_file, perturbations=None, method=None
     ):
         """convert results files into format needed for cinnabar. If multiple results files, uses the average of a perturbation.
 
@@ -153,7 +153,7 @@ class convert:
             exper_val (dict or str): dict of experimental values or yml file of experimental values.
             output_file (str): output file path
             perturbations (list, optional): list of perturbations to include. Defaults to None.
-            name (str, optional): name of the method to consider.
+            method (str, optional): name of the method to consider.
         """
         # files is a list of files
         results_files = validate.is_list(results_files, make_list=True)
@@ -204,7 +204,7 @@ class convert:
 
             # need to write the average of the data, otherwise cinnabar just uses the last entry
             comp_diff_dict = make_dict.comp_results(
-                results_files, perturbations=perturbations, name=name
+                results_files, perturbations=perturbations, method=method,
             )
 
             # write to file
