@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 from ..utils import *
+from ._network import get_info_network
 
 # functions
 # TODO clean up and make sure have description at start
@@ -75,9 +76,20 @@ class make_dict:
         comp_dict_list = {}
         comp_err_dict_list = {}
 
+        if make_pert_list:
+            perts, ligs = get_info_network(results_files=results_files)
+            perturbations = perts
+        
+        for pert in perturbations:
+            comp_dict_list[pert] = []
+            comp_err_dict_list[pert] = []
+
         # append for results file
         for res_file in results_files:
             res_df = pd.read_csv(res_file)
+            # drop any none values in freenrg
+            res_df = res_df.dropna()
+            res_df = res_df[res_df["freenrg"].str.contains("nan") == False]
             for index, row in res_df.iterrows():
                 if method:
                     if method.lower() == row["method"].strip().lower():
@@ -95,10 +107,6 @@ class make_dict:
                 lig_1 = row[1]
                 pert = f"{lig_0}~{lig_1}"
 
-                if make_pert_list:
-                    if pert not in perturbations:
-                        perturbations.append(pert)
-
                 if not isinstance(row[2], float):
                     # to convert as it will be a string
                     ddG = BSS.Types.Energy(
@@ -115,22 +123,9 @@ class make_dict:
                 else:
                     ddG_err = row[3]
 
-                if pert in comp_dict_list:
-                    # Key exist in dict, check if is a list
-                    if not isinstance(comp_dict_list[pert], list):
-                        # If type is not list then make it list
-                        comp_dict_list[pert] = [comp_dict_list[pert]]
-                    if not isinstance(comp_err_dict_list[pert], list):
-                        # If type is not list then make it list
-                        comp_err_dict_list[pert] = [comp_err_dict_list[pert]]
-                    # Append the value in list
-                    comp_dict_list[pert].append(ddG)
-                    comp_err_dict_list[pert].append(ddG_err)
-                else:
-                    # As key is not in dict,
-                    # so, add key-value pair
-                    comp_dict_list[pert] = [ddG]
-                    comp_err_dict_list[pert] = [ddG_err]
+                # Append the value in list
+                comp_dict_list[pert].append(ddG)
+                comp_err_dict_list[pert].append(ddG_err)
 
         # now calculate all the avg and SEM for the network perturbations
         # put these into a dictionary
