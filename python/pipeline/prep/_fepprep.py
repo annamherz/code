@@ -30,13 +30,7 @@ def check_hmr(system, protocol, engine):
         if hmr_factor == "auto":
             if engine == "AMBER" or engine == "GROMACS":
                 hmr_factor = 3
-        # TODO someway to check somd also as extra option
-        #     elif engine == "SOMD":
-        #         self._extra_options["hydrogen mass repartitioning factor"] = "1.5"
-        # else:
-        #     if self._engine == "SOMD":
-        #         self._extra_options["hydrogen mass repartitioning factor"] = str(
-        #             hmr_factor)
+        # SOMD factor set during relative from the protocol.
 
         # Extract the molecules to which HMR applies.
         # set auto based on engine

@@ -8,6 +8,15 @@ from pipeline.prep import *
 
 
 def extract_output(folder, prot_file):
+    # so can pass with name, but will also append if not there
+    if protocol.name():
+        if protocol.name() != str(folder).split("_")[-1]:
+            folder += f"_{protocol.name()}"
+            print(
+                f"name of the protocol ({protocol.name()}) is not in the folder path, will use:\n"
+                f"{folder} as folder path for this run..."
+            )
+
     # read in protocol
     protocol = pipeline_protocol(prot_file, auto_validate=True)
     if protocol.trajectories() == "None":
@@ -17,17 +26,16 @@ def extract_output(folder, prot_file):
     if protocol.trajectories() == "0,1":
         traj_lambdas = ["0.0000", "1.0000"]
     if protocol.trajectories() == "All":
-        # TODO get lambda windows from network file
-        traj_lambdas = ["0.0000", "0.5000", "1.0000"]
-
-    # so can pass with name, but will also append if not there
-    if protocol.name():
-        if protocol.name() != str(folder).split("_")[-1]:
-            folder += f"_{protocol.name()}"
-            print(
-                f"name of the protocol ({protocol.name()}) is not in the folder path, will use:\n"
-                f"{folder} as folder path for this run..."
-            )
+        free_folders = [
+            name
+            for name in os.listdir(f"{folder}/free_0")
+            if os.path.isdir(os.path.join(f"{folder}/free_0", name))
+        ]
+        traj_lambdas = [
+            name.replace("lambda", "").replace("_", "")
+            for name in free_folders
+            if "lambda" in name
+        ]
 
     # simfile header
     if "SOMD" in folder:

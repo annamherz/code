@@ -25,7 +25,6 @@ class initialise_pipeline:
 
         self._main_folder = None
         self._exec_folder = None
-        # TODO set ligands file and network file etc so can change name of this also change then when writing bash script
 
         self.protocol = None
         self.analysis_protocol = None
@@ -265,11 +264,16 @@ class initialise_pipeline:
             print("please run setup_ligands before setting up the network")
             return
 
-        # TODO make the ligand names and ligands from dictionary to make sure they match
+        ligs = []
+        lig_names = []
+
+        for key, value in self.ligands_dict.items():
+            ligs.append(value)
+            lig_names.append(key)
 
         pert_network_dict = initialise_pipeline._setup_network(
-            self.ligands,
-            self.ligand_names,
+            ligs,
+            lig_names,
             f"{self.exec_folder()}/{folder}",
             links_file=links_file,
         )
@@ -411,9 +415,6 @@ class initialise_pipeline:
     def write_run_all(self):
         """write the run all file needed to run the pipeline. This file should be checked manually."""
 
-        # rewrite all the ligands, network files
-        # TODO check pipeline scripts loaction etc and pmemd path etc to use those when writing
-
         with open(f"{self._main_folder}/run_all_slurm.sh", "w") as rsh:
             rsh.write(
                 f"""\
@@ -427,8 +428,8 @@ class initialise_pipeline:
 # make sure engines etc are sourced correctly
 export PYTHONPATH=export PYTHONPATH="/home/anna/BioSimSpace/python:$PYTHONPATH" # if using a cloned git branch of BSS - otherwise comment out
 export BSS="/home/anna/anaconda3/bin/activate biosimspace-dev" # to use the conda env to make sure sire works correctly - sourced in each sh script
-export amber="/home/anna/amber22" # sourced in each script
-export gromacs="/usr/local/gromacs/bin/GMXRC" # sourced in each script
+export amber="{BSS._amber_home}" # sourced in each script
+export gromacs="{BSS._gmx_exe}" # sourced in each script
 
 # export important file locations
 export MAINDIRECTORY="{self._main_folder}"
@@ -477,6 +478,7 @@ echo ${lig_array[@]}
 echo ${trans_array[@]}
 echo ${eng_array[@]}
 echo ${win_array[@]}
+echo "name is $name"
 
 # make output dir for slurm out and err files
 if [[ ! -d ../slurm_logs ]]; then
@@ -494,7 +496,7 @@ echo "FEP prep jobid is $jidfep"
 
 # Production runs and analysis for the transformation
 for i in "${!trans_array[@]}"; do
-jidprod=$(sbatch --dependency=afterany:${jidfep} --parsable --array=0-$((${win_array[i]}-1)) $scripts_dir/run_production_slurm.sh ${trans_array[i]} ${eng_array[i]} ${win_array[i]} $repeats)
+jidprod=$(sbatch --dependency=afterany:${jidfep} --parsable --array=0-$((${win_array[i]}-1)) $scripts_dir/run_production_slurm.sh ${trans_array[i]}$name ${eng_array[i]} ${win_array[i]} $repeats)
 echo "Production jobid for ${trans_array[i]}, ${eng_array[i]} is $jidprod"
 jidextract=$(sbatch --dependency=afterany:${jidprod} --parsable $scripts_dir/run_extract_output_slurm.sh ${trans_array[i]} ${eng_array[i]})
 echo "Extraction jobid for ${trans_array[i]}, ${eng_array[i]} is $jidextract"

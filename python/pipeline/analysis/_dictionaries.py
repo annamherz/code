@@ -11,9 +11,7 @@ import pandas as pd
 
 from ..utils import *
 from ._network import get_info_network
-
-# functions
-# TODO clean up and make sure have description at start
+from ._analysis import *
 
 
 class make_dict:
@@ -29,6 +27,7 @@ class make_dict:
         engine=None,
         name=None,
         method=None,
+        ana_protocol=None,
         output_file=None,
     ):
         """write results files into different file or dictionary for certain perturbations.
@@ -68,10 +67,15 @@ class make_dict:
             except:
                 engine = validate.string(engine)
 
+        if ana_protocol:
+            ana_protocol = validate.analysis_protocol(ana_protocol)
+            ana_string = analyse.file_ext(ana_protocol.dictionary())
+        else:
+            ana_string = "unspecified"
+
         if engine and name:
             raise ValueError("can only have engine or name currently for nameing")
 
-        # TODO get analysis method and method from file or from extra options. engine in extra options.
         # make a dictionary with the results of the files
         comp_dict_list = {}
         comp_err_dict_list = {}
@@ -79,7 +83,7 @@ class make_dict:
         if make_pert_list:
             perts, ligs = get_info_network(results_files=results_files)
             perturbations = perts
-        
+
         for pert in perturbations:
             comp_dict_list[pert] = []
             comp_err_dict_list[pert] = []
@@ -103,29 +107,33 @@ class make_dict:
                     else:
                         continue
 
-                lig_0 = row[0]
-                lig_1 = row[1]
+                lig_0 = row["lig_0"]
+                lig_1 = row["lig_1"]
                 pert = f"{lig_0}~{lig_1}"
 
-                if not isinstance(row[2], float):
-                    # to convert as it will be a string
-                    ddG = BSS.Types.Energy(
-                        float(row[2].split()[0]), row[2].split()[-1]
-                    ).value()
-                    ddG_unit = row[2].split()[-1]
-                else:
-                    ddG = row[2]
-                if not isinstance(row[3], float):
-                    ddG_err = BSS.Types.Energy(
-                        float(row[3].split()[0]), row[3].split()[-1]
-                    ).value()
-                    ddG_err_unit = row[3].split()[-1]
-                else:
-                    ddG_err = row[3]
+                if pert in perturbations:
+                    if not isinstance(row["freenrg"], float):
+                        # to convert as it will be a string
+                        ddG = BSS.Types.Energy(
+                            float(row["freenrg"].split()[0]), row["freenrg"].split()[-1]
+                        ).value()
+                        ddG_unit = row["freenrg"].split()[-1]
+                    else:
+                        ddG = row["freenrg"]
+                    if not isinstance(row["error"], float):
+                        ddG_err = BSS.Types.Energy(
+                            float(row["error"].split()[0]), row["error"].split()[-1]
+                        ).value()
+                        ddG_err_unit = row["error"].split()[-1]
+                    else:
+                        ddG_err = row["error"]
 
-                # Append the value in list
-                comp_dict_list[pert].append(ddG)
-                comp_err_dict_list[pert].append(ddG_err)
+                    # Append the value in list
+                    comp_dict_list[pert].append(ddG)
+                    comp_err_dict_list[pert].append(ddG_err)
+
+                else:
+                    pass
 
         # now calculate all the avg and SEM for the network perturbations
         # put these into a dictionary
@@ -188,7 +196,7 @@ class make_dict:
                                 comp_ddG,
                                 comp_err,
                                 engine,
-                                "not specified",
+                                ana_string,
                                 str(method),
                             ]
                         )
@@ -200,7 +208,7 @@ class make_dict:
                                 comp_ddG,
                                 comp_err,
                                 name,
-                                "not specified",
+                                ana_string,
                                 str(method),
                             ]
                         )
@@ -208,14 +216,15 @@ class make_dict:
         return comp_diff_dict
 
     @staticmethod
-    def error_list_from_files(results_files):
-        """get list of errors from the files. Used for error histogram plotting.
+    def value_list_from_files(results_files, header="error"):
+        """get list of errors from the files. Eg used for error histogram plotting.
 
         Args:
             results_files (list): list of results files
+            header (str): name of header in file to make list of. Defaults to error.
 
         Returns:
-            list: list of errors.
+            list: list of values.
         """
 
         results_files = validate.is_list(results_files)
@@ -229,13 +238,12 @@ class make_dict:
             res_df = pd.read_csv(res_file)
             for index, row in res_df.iterrows():
                 # assume here as this is normal format of files
-                # TODO get from error index
-                if not isinstance(row[3], float):
+                if not isinstance(row[header], float):
                     ddG_err = BSS.Types.Energy(
-                        float(row[3].split()[0]), row[3].split()[-1]
+                        float(row[header].split()[0]), row[header].split()[-1]
                     ).value()
                 else:
-                    ddG_err = row[3]
+                    ddG_err = row[header]
 
                 error_list.append(ddG_err)
 
@@ -358,7 +366,19 @@ class make_dict:
 
     @staticmethod
     def from_cinnabar_network_edges(network, calc_exp, perturbations):
-        # TODO docstring
+        """get a dictionary of results from a cinnabar network
+
+        Args:
+            network (): A cinnabar network for the perturbation network.
+            calc_exp (str): whether to get the calculated 'calc' or experimental 'exp' data.
+            perturbations (list): perturbations to consider
+
+        Raises:
+            ValueError: calc_exp must be either 'calc' or 'exp'
+
+        Returns:
+            dict: freenreg dict of the {pert:(value, error)}
+        """
 
         if calc_exp not in ["calc", "exp"]:
             raise ValueError("calc_exp must be either 'calc' or 'exp'")
@@ -400,7 +420,19 @@ class make_dict:
 
     @staticmethod
     def from_cinnabar_network_node(network, calc_exp, normalise=False):
-        # TODO docstring
+        """get value per ligand (node) from a cinnabar network as a dictionary.
+
+        Args:
+            network (): A cinnabar network for the perturbation network.
+            calc_exp (str): whether to get the calculated 'calc' or experimental 'exp' data.
+            normalise (bool, optional): whether to normalise the data. Defaults to False.
+
+        Raises:
+            ValueError: calc_exp must be either 'calc' or 'exp'
+
+        Returns:
+            dict: freenreg dict of the {ligand:(value, error)}
+        """
 
         if calc_exp not in ["calc", "exp"]:
             raise ValueError("calc_exp must be either 'calc' or 'exp'")
@@ -552,7 +584,19 @@ class make_dict:
 
     @staticmethod
     def cycle_closures(pert_dict, cycle_closures):
-        # TODO docstring
+        """_summary_
+
+        Args:
+            pert_dict (_type_): _description_
+            cycle_closures (_type_): _description_
+
+        Returns:
+            tuple: (cycles_dict, cycle_vals, np.mean(cycle_vals), np.std(cycle_vals))
+                    cycles_dict is {lig_in_cycle:(cycle closure value, cycle closure error)}
+                    cycle_vals is all cycle closures
+                    average cycle closure
+                    standard deviation of cycle closures
+        """
 
         pert_dict = validate.dictionary(pert_dict)
         cycle_closures = validate.is_list(cycle_closures)
@@ -594,8 +638,6 @@ class make_dict:
             else:
                 pass
 
-            cycles_dict.update(
-                {"_".join(cycle): (sum(cycle_val), cycle_val_err)}
-            )  # TODO also incl the error for a cycle depending on whether or not std or other error
+            cycles_dict.update({"_".join(cycle): (sum(cycle_val), sum(cycle_val_err))})
 
         return (cycles_dict, cycle_vals, np.mean(cycle_vals), np.std(cycle_vals))

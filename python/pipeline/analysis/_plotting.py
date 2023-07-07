@@ -11,6 +11,7 @@ from scipy.stats import bootstrap, norm
 from ..utils import *
 from ._network import *
 from ._analysis import *
+from ._dictionaries import *
 
 
 class plotting_engines:
@@ -22,7 +23,7 @@ class plotting_engines:
             output_folder (str, optional): output folder for generated csv files and graph images. Defaults to None.
 
         Raises:
-            ValueError: must ptovide an analysis network object.
+            ValueError: must provide an analysis network object.
         """
 
         self.is_verbose(verbose)
@@ -31,6 +32,7 @@ class plotting_engines:
             self._analysis_object = analysis_object
             # get info about things for plotting from analysis
             self.analysis_obj_into_format()
+            self.analysis_obj_dicts_into_format()
         else:
             raise ValueError("please provide an analysis object to be plotted for.")
 
@@ -46,7 +48,7 @@ class plotting_engines:
             )
 
         # set the colours
-        self.set_colours()
+        self.colours = plotting_engines.set_colours(self.other_results_names)
 
         # convert the dictionaries into dataframes for plotting
         self._analysis_dicts_to_df()
@@ -76,6 +78,9 @@ class plotting_engines:
         # file extension
         self.file_extension(self.default_file_ext())
         self.network_extension(self.default_net_ext())
+
+    def analysis_obj_dicts_into_format(self):
+        ana_obj = self._analysis_object
 
         # dictionaries of engines for plotting from cinnabar
         if ana_obj.cinnabar_calc_pert_dict:
@@ -408,7 +413,8 @@ class plotting_engines:
 
         return df
 
-    def set_colours(self, colour_dict=None):
+    @staticmethod
+    def set_colours(colour_dict=None, other_results_names=None):
         """set the colours of the bars or scatter plots.
 
         Args:
@@ -423,6 +429,9 @@ class plotting_engines:
         else:
             colour_dict = {}
 
+        if other_results_names:
+            other_results_names = validate.is_list(other_results_names, make_list=True)
+
         other_colours = [
             "limegreen",
             "gold",
@@ -435,30 +444,15 @@ class plotting_engines:
             "peru",
             "plum",
         ]
-        other_res_list = []
 
-        for res in self.other_results_names:
-            if res not in colour_dict.keys():
-                other_res_list.append(res)
+        if other_results_names:
+            other_res_list = []
+            for res in other_results_names:
+                if res not in colour_dict.keys():
+                    other_res_list.append(res)
 
-        for res, col in zip(other_res_list, other_colours):
-            colour_dict[res] = col
-
-        set_colour_dict = self._set_colours(colour_dict)
-        self.colours = set_colour_dict
-
-        return set_colour_dict
-
-    @staticmethod
-    def _set_colours(colour_dict=None):
-        """set colours to replace those in the default dictionary.
-
-        Args:
-            colour_dict (_type_, optional): _description_. Defaults to None.
-
-        Returns:
-            _type_: _description_
-        """
+            for res, col in zip(other_res_list, other_colours):
+                colour_dict[res] = col
 
         default_colour_dict = {
             "AMBER": "orange",
@@ -467,11 +461,9 @@ class plotting_engines:
             "experimental": "midnightblue",
         }
 
-        if colour_dict:
-            colour_dict = validate.dictionary(colour_dict)
-            for key in colour_dict:
-                # replace default colour dict keys with those in the passed dictionary
-                default_colour_dict[key] = colour_dict[key]
+        for key in colour_dict:
+            # replace default colour dict keys with those in the passed dictionary
+            default_colour_dict[key] = colour_dict[key]
 
         return default_colour_dict
 
@@ -486,7 +478,6 @@ class plotting_engines:
 
         placement_dict = {}
 
-        # TODO some way to make this less code? or just leave
         if len(names) == 10:
             width = 0.10  # set bar width
             placement = [
@@ -608,9 +599,8 @@ class plotting_engines:
         return engines
 
     def _parse_kwargs_graphs(self, graph=None, **kwargs):
-
         graph = validate.string(graph).upper()
-        if graph not in ["BAR","SCATTER","OUTLIER"]:
+        if graph not in ["BAR", "SCATTER", "OUTLIER"]:
             raise ValueError(f"graph argument must be bar, scatter or outlier.")
 
         # default
@@ -624,7 +614,7 @@ class plotting_engines:
 
         # check kwargs incase there is plotting info
         for key, value in kwargs.items():
-            key = key.upper().replace(" ","").replace("_","")
+            key = key.upper().replace(" ", "").replace("_", "")
             if key == "YLABEL":
                 y_label = value
             if key == "XLABEL":
@@ -634,14 +624,21 @@ class plotting_engines:
             if key == "KEY":
                 include_key = validate.boolean(value)
             if key == "SAVE":
-                save_fig_location = validate.string(f"{value}.png") # TODO fix so also below
+                save_fig_location = validate.string(f"{value}.png")
             if key == "XERROR":
                 include_x_error = validate.boolean(value)
             if key == "YERROR":
                 include_y_error = validate.boolean(value)
 
-        return y_label,x_label,title,include_key,save_fig_location,include_x_error,include_y_error
-
+        return (
+            y_label,
+            x_label,
+            title,
+            include_key,
+            save_fig_location,
+            include_x_error,
+            include_y_error,
+        )
 
     def bar(self, pert_val=None, names=None, values=None, **kwargs):
         """plot a bar plot of the results
@@ -673,8 +670,16 @@ class plotting_engines:
             values = validate.is_list(values)
 
         # other kwargs
-        y_label,x_label,title,include_key,save_fig_location,include_x_error,include_y_error = self._parse_kwargs_graphs(graph="bar", **kwargs)
-        
+        (
+            y_label,
+            x_label,
+            title,
+            include_key,
+            save_fig_location,
+            include_x_error,
+            include_y_error,
+        ) = self._parse_kwargs_graphs(graph="bar", **kwargs)
+
         plt.rc("font", size=12)
         fig, ax = plt.subplots(figsize=(15, 8))
 
@@ -757,10 +762,10 @@ class plotting_engines:
             elif pert_val == "val":
                 x_label = "ligands"
 
-        plt.xlabel(x_label)        
-        
+        plt.xlabel(x_label)
+
         plt.xticks(x_locs, freenrg_df_plotting.index, rotation=70, ha="right")
-        
+
         if include_key:
             plt.legend()
         else:
@@ -776,7 +781,14 @@ class plotting_engines:
         plt.show()
 
     def scatter(
-        self, pert_val=None, y_names=None, x_name="experimental", values=None, outliers=False, no_outliers=3, **kwargs
+        self,
+        pert_val=None,
+        y_names=None,
+        x_name="experimental",
+        values=None,
+        outliers=False,
+        no_outliers=3,
+        **kwargs,
     ):
         """plot scatter plot.
 
@@ -815,8 +827,16 @@ class plotting_engines:
         no_outliers = validate.integer(no_outliers)
 
         # other kwargs
-        y_label,x_label,title,include_key,save_fig_location,include_x_error,include_y_error = self._parse_kwargs_graphs(graph="scatter",**kwargs)
-        
+        (
+            y_label,
+            x_label,
+            title,
+            include_key,
+            save_fig_location,
+            include_x_error,
+            include_y_error,
+        ) = self._parse_kwargs_graphs(graph="scatter", **kwargs)
+
         # plot a scatter plot
         plt.rc("font", size=20)
         fig, ax = plt.subplots(figsize=(7, 7))
@@ -826,7 +846,9 @@ class plotting_engines:
         for y_name in y_names:
             col = self.colours[y_name]
 
-            freenrg_df_plotting = self.freenrg_df_dict[x_name][y_name][pert_val].dropna()
+            freenrg_df_plotting = self.freenrg_df_dict[x_name][y_name][
+                pert_val
+            ].dropna()
 
             # prune df to only have perturbations considered
             freenrg_df_plotting = self._prune_perturbations(freenrg_df_plotting, values)
@@ -894,7 +916,8 @@ class plotting_engines:
                         (
                             freenrg_df_plotting[f"freenrg_{x_name}"].values.tolist()[i]
                             + 0.1,  # x coords
-                            freenrg_df_plotting["freenrg_calc"].values.tolist()[i] + 0.1,
+                            freenrg_df_plotting["freenrg_calc"].values.tolist()[i]
+                            + 0.1,
                         ),  # y coords
                         size=15,
                         color=self.colours["experimental"],
@@ -1026,9 +1049,7 @@ class plotting_engines:
             freenrg_df_plotting = plotting_engines._prune_perturbations(
                 freenrg_df_plotting, values
             )
-            x = np.array(
-                freenrg_df_plotting[f"freenrg_{name}"]
-            ).tolist()  # TODO also fix so does based on which df is passed - get default non calc name?
+            x = np.array(freenrg_df_plotting[f"freenrg_{name}"]).tolist()
             y = np.array(freenrg_df_plotting["freenrg_calc"]).tolist()
             all_freenrg_values_pre.append(x)
             all_freenrg_values_pre.append(y)
@@ -1043,155 +1064,15 @@ class plotting_engines:
 
         return min_lim, max_lim
 
-    # TODO plot cycle closure things?
-
-    def histogram(
-        self,
-        engines=None,
-        pert_val=None,
-        error_dict=None,
-        file_ext=None,
-        perturbations=None,
-        name="experimental",
-    ):
-        """default plots histogram of SEM, if error dict supplied in format {engine: error_list}, will plot these
-
-        Args:
-            engines (list, optional): list of engines. Defaults to None.
-            pert_val (str, optional): whether plotting 'pert' ie perturbations or 'val' ie values (per ligand result). Defaults to None.
-            error_dict (dict, optional): dictionary of errors if want to plot that instead. Defaults to None.
-            file_ext (str, optional): file extension to be used for the plots. Defaults to None (object file extension).
-            perturbations (list, optional): list of perturbations to plot for. Defaults to None.
-            name (str): what is being plotted against. Defaults to "experimental".
-
-        Returns:
-            dict: dictionary of histograms (for names / engines, and the over all 'dist')
-        """
-
-        name = self._validate_in_names_list(name)
-
-        if error_dict:
-            type_error = "error"
-            if file_ext:
-                type_error = validate.string(file_ext)
-        else:
-            pert_val = validate.pert_val(pert_val)
-            if pert_val == "pert":
-                type_error = "perturbations"
-            if pert_val == "val":
-                type_error = "value"
-
-        if engines:
-            engines = self._plotting_engines(engines)
-        # if no engines provided, use the defaults that were set based on the analysis object
-        else:
-            engines = self.engines
-
-        if not perturbations:
-            perturbations = self.perturbations
-        else:
-            perturbations = validate.is_list(perturbations)
-
-        best_fit_dict = {}
-        histogram_dict = {}
-
-        for eng in engines:
-            # set plot defaults
-            plt.rc("font", size=12)
-            fig, ax = plt.subplots(figsize=(8, 8))
-            col = self.colours[eng]
-
-            if error_dict:
-                x = error_dict[eng]
-            else:
-                freenrg_df_plotting = self.freenrg_df_dict[name][eng][pert_val].dropna()
-                freenrg_df_plotting = self._prune_perturbations(
-                    freenrg_df_plotting, perturbations
-                )
-                x = freenrg_df_plotting["err_calc"]
-
-            # no_bins = int(len(freenrg_df_plotting["err_exp"])/8)
-            no_bins = 6  # TODO calculate no of bins so min and max per bin
-
-            # Fit a normal distribution to the data, mean and standard deviation
-            mu, std = norm.fit(x)
-
-            # plot histogram
-            plt.hist(
-                x, bins=no_bins, density=True, alpha=0.7, color=col, edgecolor="grey"
-            )
-
-            # Plot the PDF.
-            xmin, xmax = plt.xlim()
-            x = np.linspace(xmin, xmax, 100)
-            y = norm.pdf(x, mu, std)
-
-            plt.plot(x, y, "--", linewidth=2, color=self.colours["experimental"])
-
-            best_fit_dict.update({eng: ((x, y), mu, std)})
-            # TODO also save as pickle? and also save as tipe with mu and std
-
-            # plot
-            plt.xlabel("Error")
-            plt.ylabel("Frequency")
-            plt.title(
-                f"Distribution of error for {type_error}, {eng}, {self.net_ext.replace('_',', ')}\n mu = {mu:.3f} , std = {std:.3f}"
-            )
-            plt.savefig(
-                f"{self.graph_folder}/fep_vs_exp_histogram_{type_error}_{self.file_ext}_{self.net_ext}_{eng}.png",
-                dpi=300,
-                bbox_inches="tight",
-            )
-            plt.show()
-
-            # add to histogram dict for shared plotting
-            histogram_dict.update({eng: fig})
-
-        # plot the distributions
-        fig, ax = plt.subplots(figsize=(10, 10))
-
-        lines = []
-
-        for eng in engines:
-            col = self.colours[eng]
-            plt.plot(
-                best_fit_dict[eng][0][0],
-                best_fit_dict[eng][0][1],
-                "k",
-                linewidth=2,
-                color=col,
-            )
-            lines += plt.plot(0, 0, c=col, label=eng)
-
-        labels = [l.get_label() for l in lines]
-        plt.legend(lines, labels, loc="upper right")
-
-        plt.xlabel("Error")
-        plt.ylabel("Frequency")
-        eng_name = self._get_y_name(engines)
-        plt.title(
-            f"Distribution of error for {type_error}, {eng_name}, {self.net_ext.replace('_',', ')}"
-        )
-        plt.savefig(
-            f"{self.graph_folder}/fep_vs_exp_normal_dist_{type_error}_{self.file_ext}_{self.net_ext}_{eng_name}.png",
-            dpi=300,
-            bbox_inches="tight",
-        )
-        plt.show()
-
-        histogram_dict.update({"dist": fig})
-
-        return histogram_dict
-
     def plot_convergence(self, engines=None):
         engines = validate.engines(engines)
 
         for engine in engines:
             print(f"plotting diff to final result for all perturbations in {engine}...")
-            sdf = plotting_engines.pert_dict_into_df(
+            sdf = plotting_engines.pert_dict_into_conv_df(
                 self.spert_results_dict[engine], plot_error=False, plot_difference=True
             )
-            edf = plotting_engines.pert_dict_into_df(
+            edf = plotting_engines.pert_dict_into_conv_df(
                 self.epert_results_dict[engine], plot_error=False, plot_difference=True
             )
             analyse.plot_truncated(
@@ -1203,7 +1084,7 @@ class plotting_engines:
             print(f"saved images in {self.graph_folder}.")
 
     @staticmethod
-    def pert_dict_into_df(pert_dict, plot_error=False, plot_difference=True):
+    def pert_dict_into_conv_df(pert_dict, plot_error=False, plot_difference=True):
         df = pd.DataFrame.from_dict(pert_dict)
         perts = list(df.columns)
         df = df.reset_index().dropna()
@@ -1250,3 +1131,165 @@ class plotting_engines:
         df = df.dropna()
 
         return df
+
+
+class plotting_histogram(plotting_engines):
+    def __init__(self, analysis_object=None, output_folder=None, verbose=False):
+        """for plotting histograms.
+
+        Args:
+            analysis_object (pipeline.analysis.analysis_network, optional): analysis object that is to be plotted for. Defaults to None.
+            output_folder (str, optional): output folder for generated csv files and graph images. Defaults to None.
+
+        Raises:
+            ValueError: must provide an analysis network object.
+        """
+
+        self.is_verbose(verbose)
+
+        if analysis_object:
+            self._analysis_object = analysis_object
+            # get info about things for plotting from analysis
+            self.analysis_obj_into_format()
+            self.analysis_obj_files_into_format()
+            # remove experimental as not needed for this
+            try:
+                self.names_list.remove("experimental")
+            except:
+                pass
+        else:
+            raise ValueError("please provide an analysis object to be plotted for.")
+
+        # place to write results to
+        if not output_folder:
+            # want to write to the graph directory
+            self.output_folder = self._analysis_object.output_folder
+            self.graph_folder = self._analysis_object.graph_dir
+        else:
+            self.output_folder = validate.folder_path(output_folder, create=True)
+            self.graph_folder = validate.folder_path(
+                f"{output_folder}/graphs", create=True
+            )
+        # set the colours
+        self.colours = plotting_engines.set_colours(self.other_results_names)
+
+        # set the dictionary for histograms
+        self.files_into_error_lists()
+
+        # make empty dicts
+        self.best_fit_dict = {}
+        for err in self.error_type:
+            self.best_fit_dict[err] = {}
+
+    def analysis_obj_files_into_format(self):
+        ana_obj = self._analysis_object
+
+        self._results_files = ana_obj._results_files
+        self._results_repeat_files = ana_obj._results_repeat_files
+        self._results_free_repeat_files = ana_obj._results_free_repeat_files
+        self._results_bound_repeat_files = ana_obj._results_bound_repeat_files
+        self._results_value_files = ana_obj._results_value_files
+        print(self._results_value_files)
+
+    def files_into_error_lists(self):
+        self.error_dict = {}
+
+        self.error_type = ["SEM_pert", "per_lig", "repeat", "free", "bound"]
+        dict_to_use = (
+            self._results_files,
+            self._results_value_files,
+            self._results_repeat_files,
+            self._results_free_repeat_files,
+            self._results_bound_repeat_files,
+        )
+
+        for err, dtu in zip(self.error_type, dict_to_use):
+            self.error_dict[err] = {}
+            for name in self.names_list:
+                try:
+                    error_list = make_dict.value_list_from_files(dtu[name])
+                    self.error_dict[err][name] = error_list
+                except:
+                    self.error_dict[err][name] = None
+
+    def histogram(self, name=None, type_error="SEM_pert"):
+        if type_error not in self.error_type:
+            raise ValueError(f"error name must be in {self.error_type}")
+        name = self._validate_in_names_list(name)
+
+        # set plot defaults
+        plt.rc("font", size=12)
+        fig, ax = plt.subplots(figsize=(8, 8))
+        col = self.colours[name]
+        x_list = self.error_dict[type_error][name]
+        x = [x_val for x_val in x_list if str(x_val) != "nan"]
+
+        no_bins = round(math.sqrt(len(x)))
+
+        # Fit a normal distribution to the data, mean and standard deviation
+        mu, std = norm.fit(x)
+
+        # plot histogram
+        plt.hist(x, bins=no_bins, density=True, alpha=0.7, color=col, edgecolor="grey")
+
+        # Plot the PDF.
+        xmin, xmax = plt.xlim()
+        x = np.linspace(xmin, xmax, 100)
+        y = norm.pdf(x, mu, std)
+
+        plt.plot(x, y, "--", linewidth=2, color=self.colours["experimental"])
+
+        self.best_fit_dict[type_error][name] = ((x, y), mu, std)
+
+        # plot
+        plt.xlabel("Error")
+        plt.ylabel("Frequency")
+        plt.title(
+            f"Distribution of {type_error} for {name}, {self.net_ext.replace('_',', ')}\n mu = {mu:.3f} , std = {std:.3f}"
+        )
+        plt.savefig(
+            f"{self.graph_folder}/histogram_{name}_{type_error}_{self.file_ext}_{self.net_ext}.png",
+            dpi=300,
+            bbox_inches="tight",
+        )
+        plt.show()
+
+    def histogram_distribution(self, names=None, type_error="SEM_pert"):
+        for name in names:
+            name = self._validate_in_names_list(name)
+            if name in self.best_fit_dict[type_error].keys():
+                pass
+            else:
+                self.histogram(name, type_error)
+
+        # plot the distributions
+        fig, ax = plt.subplots(figsize=(10, 10))
+
+        lines = []
+
+        for name in names:
+            col = self.colours[name]
+            plt.plot(
+                self.best_fit_dict[type_error][name][0][0],
+                self.best_fit_dict[type_error][name][0][1],
+                "k",
+                linewidth=2,
+                color=col,
+            )
+            lines += plt.plot(0, 0, c=col, label=name)
+
+        labels = [l.get_label() for l in lines]
+        plt.legend(lines, labels, loc="upper right")
+
+        plt.xlabel("Error")
+        plt.ylabel("Frequency")
+        eng_name = self._get_y_name(names)
+        plt.title(
+            f"Distribution of error for {type_error}, {eng_name}, {self.net_ext.replace('_',', ')}"
+        )
+        plt.savefig(
+            f"{self.graph_folder}/normal_dist_{eng_name}_{type_error}_{self.file_ext}_{self.net_ext}.png",
+            dpi=300,
+            bbox_inches="tight",
+        )
+        plt.show()

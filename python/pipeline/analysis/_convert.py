@@ -22,13 +22,12 @@ class convert:
     def __init__(self):
         pass
 
-    # TODO more robust yml file conversion
     @staticmethod
     def yml_into_freenrgworkflows(exp_file, exp_file_dat):
         """convert yml format into one suitable for freenergworkflows
 
         Args:
-            exp_file (str): yml file path of experimental data
+            exp_file (str): yml file. Each key is a ligand, with a 'measurement' that has 'unit', 'value', 'error'. Unit in uM or nM.
             exp_file_dat (str): new file to write experimental data to (fwf format)
         """
         # get the experimental data into a useable format (from yml to csv)
@@ -92,7 +91,7 @@ class convert:
         """convert yml file into experimental dictionary of values.
 
         Args:
-            exp_file (str): yml file
+            exp_file (str): yml file. Each key is a ligand, with a 'measurement' that has 'unit', 'value', 'error'. Unit in uM or nM.
             temp (int, optional): Temperature to use during the conversion. Defaults to 300.
 
         Returns:
@@ -102,7 +101,6 @@ class convert:
         exp_file = validate.file_path(exp_file)
         temp = validate.is_float(temp)
 
-        # TODO different data formats
         with open(exp_file, "r") as file:
             data = yaml.safe_load(file)  # loads as dictionary
 
@@ -118,6 +116,60 @@ class convert:
                     "{:.4f}".format(data[key]["measurement"]["value"] / 1000),
                     data[key]["measurement"]["error"] / 1000,
                 )
+
+        exper_val_dict = convert.exper_raw_dict_into_val_dict(exper_raw_dict, temp)
+
+        return exper_val_dict
+
+    @staticmethod
+    def csv_into_exper_dict(exp_file, temp=300):
+        """convert csv file into experimental dictionary of values.
+
+        Args:
+            exp_file (str): csv file. Has columns 'ligand', 'unit', 'value', 'error'. Unit in uM or nM.
+            temp (int, optional): Temperature to use during the conversion. Defaults to 300.
+
+        Returns:
+            dict: kcal/mol value for each ligand
+        """
+
+        exp_file = validate.file_path(exp_file)
+        temp = validate.is_float(temp)
+
+        res_df = pd.read_csv(exp_file)
+
+        exper_raw_dict = {}
+
+        for index, row in res_df.iterrows():
+            if row["unit"].strip() == "uM":
+                exper_raw_dict[row["ligand"].strip()] = (
+                    row["value"].strip(),
+                    row["error"].strip(),
+                )
+            elif row["unit"].strip() == "nM":
+                exper_raw_dict[key] = (
+                    float(row["value"].strip()) / 1000,
+                    float(row["value"].strip()) / 1000,
+                )
+
+        exper_val_dict = convert.exper_raw_dict_into_val_dict(exper_raw_dict, temp)
+
+        return exper_val_dict
+
+    @staticmethod
+    def exper_raw_dict_into_val_dict(exper_raw_dict, temp=300):
+        """convert raw exp data dict in uM to kcal/mol
+
+        Args:
+            exper_raw_dict (dict): the experimental data in uM with {ligand:(value, error)}
+            temp (int, optional): temperature for conversion. Defaults to 300.
+
+        Returns:
+            _type_: _description_
+        """
+
+        exper_raw_dict = validate.dictionary(exper_raw_dict)
+        temp = validate.is_float(temp)
 
         exper_val_dict = {}
 
@@ -183,7 +235,7 @@ class convert:
                 writer.writerow(["# Experimental block"])
                 writer.writerow(["# Ligand", "expt_DDG", "expt_dDDG"])
 
-                # TODO calc exp from yml, follwed by conversion into dict
+                # write in kcal/mol
                 for lig in exper_val_dict.keys():
                     writer.writerow(
                         [lig, f"{exper_val_dict[lig][0]}", f"{exper_val_dict[lig][1]}"]
@@ -204,7 +256,9 @@ class convert:
 
             # need to write the average of the data, otherwise cinnabar just uses the last entry
             comp_diff_dict = make_dict.comp_results(
-                results_files, perturbations=perturbations, method=method,
+                results_files,
+                perturbations=perturbations,
+                method=method,
             )
 
             # write to file

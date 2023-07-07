@@ -112,12 +112,10 @@ def main():
         f"made all files in {pl.main_folder()}. Run run_all_slurm.sh to run all pipeline components."
     )
     print(
-        "carefully check the run all script first to make sure all paths are correct."
+        "carefully check the run all script first to make sure all paths and executables are correct and can be sourced correctly."
     )
     print("modify any of the input files as required.")
 
-
-# TODO add setting of environment variables eg amber etc
 
 if __name__ == "__main__":
     main()

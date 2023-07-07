@@ -23,7 +23,7 @@ echo ${eng_array[@]}
 echo ${win_array[@]}
 echo ${repeats_array[@]}
 
-for trans in ${trans_array[@]}; do
+for i in "${!trans_array[@]}"; do
 
 var1=$(squeue -u axh37-sxk13 | grep "PD")
 var2=$(squeue -u axh37-sxk13 | grep "axh37-sx  R")
@@ -42,8 +42,8 @@ done
 
 echo "can submit job..."
 sleep 5
-jidprod=$(sbatch --parsable --array=0-$((${#repeats_array[@]}-1)) production.sh $trans)
-echo "Production jobid for $trans is $jidprod"
+jidprod=$(sbatch --parsable --array=0-$((${#repeats_array[@]}-1)) production.sh ${trans_array[i]}$name ${eng_array[i]} ${win_array[i]})
+echo "Production jobid for ${trans_array[i]}, ${eng_array[i]} is $jidprod"
 sleep 10
 
 done

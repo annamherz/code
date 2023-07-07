@@ -18,8 +18,8 @@ start=`date +%s`
 # get the things for the trans and stuff etc
 # define lambda based on slurm array
 rep=${repeats_array[SLURM_ARRAY_TASK_ID]}
-no_lams=${win_array[SLURM_ARRAY_TASK_ID]}
-eng=${eng_array[SLURM_ARRAY_TASK_ID]}
+no_lams=$3
+eng=$2
 trans=$1
 
 # define the trans based on the slurm array
@@ -27,13 +27,9 @@ trans=$1
 echo "Folder for these runs is : $MAINDIRECTORY"
 echo "The transformation is $trans using $no_lams windows and $eng as the MD engine for repeat $rep"
 
-# TODO some way to get these from the execution model also ? as is in the network.dat
-# define no of windows based on sys arg 2
-if [ $no_lams = 11 ]; then
-# lamvals=( 0.0000 )
-lamvals=( 0.0000 0.1000 0.2000 0.3000 0.4000 0.5000 0.6000 0.7000 0.8000 0.9000 1.0000 )
-fi
-
+# define no of windows based on the assosciative array generated from reading the net_file in extract execution model
+IFS=","
+read -r -a lamvals <<< "${wins_array[$3]}"
 
 # change to the trans dir, abort and message if not there
 cd $MAINDIRECTORY/outputs_reverse/$eng/$trans

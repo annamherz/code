@@ -202,5 +202,3 @@ done
 fi
 
 echo "Done deleting."
-
-# TODO fix so can pick tranjectories at only certain lambda windows ?

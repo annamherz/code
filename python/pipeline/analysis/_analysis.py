@@ -109,6 +109,10 @@ class analyse:
         self.freenrg_val = None
         self.freenrg_err = None
 
+        # list for the successful calculations
+        self.bound_calculated = []
+        self.free_calculated = []
+
         if analysis_prot:
             analysis_prot = analysis_protocol(analysis_prot, auto_validate=True)
             self.set_options(analysis_prot)
@@ -351,26 +355,21 @@ class analyse:
 
         self._b_folders, self._f_folders = get_repeat_folders(self._work_dir)
 
-        no_of_b_repeats = len(self._b_folders)
-        no_of_f_repeats = len(self._f_folders)
-        self._b_repeats = list(range(no_of_b_repeats))
-        self._f_repeats = list(range(no_of_f_repeats))
+        self._no_of_b_repeats = len(self._b_folders)
+        self._no_of_f_repeats = len(self._f_folders)
+        self._b_repeats = list(range(self._no_of_b_repeats))
+        self._f_repeats = list(range(self._no_of_f_repeats))
 
-        if no_of_b_repeats != no_of_f_repeats:
+        if self._no_of_b_repeats != self._no_of_f_repeats:
             print(
-                f"There are a different number of repeats for bound ({no_of_b_repeats}) and free ({no_of_f_repeats}) for {self._work_dir}."
+                f"There are a different number of repeats for bound ({self._no_of_b_repeats}) and free ({self._no_of_f_repeats}) for {self._work_dir}."
                 + f"these are {self._b_folders} and {self._f_folders}."
             )
         else:
             print(
-                f"There are {no_of_b_repeats} repeats for each the bound and the free for {self._work_dir}."
+                f"There are {self._no_of_b_repeats} repeats for each the bound and the free for {self._work_dir}."
                 + f"these are {self._b_folders} and {self._f_folders}."
             )
-
-        self._b_repeats = self._b_repeats
-        self._f_repeats = self._f_repeats
-        self._no_of_b_repeats = no_of_b_repeats
-        self._no_of_f_repeats = no_of_f_repeats
 
     def _check_pickle(self):
         """check if there are all the pickle files present in the pickle folder.
@@ -436,14 +435,14 @@ class analyse:
         """
 
         if self._try_pickle:
-            do_pickle = analyse._check_pickle(self)
+            do_pickle = self._check_pickle()
         else:
             do_pickle = False
 
         if do_pickle:
-            freenrg_rel, repeats_tuple_list = analyse._analyse_all_repeats_pickle(self)
+            freenrg_rel, repeats_tuple_list = self._analyse_all_repeats_pickle()
         else:
-            freenrg_rel, repeats_tuple_list = analyse._analyse_all_repeats_normal(self)
+            freenrg_rel, repeats_tuple_list = self._analyse_all_repeats_normal()
 
         # set the average and error
         self.freenrg = freenrg_rel[0]
@@ -452,14 +451,14 @@ class analyse:
         self.is_analysed = True
 
         if self._check_overlap:
-            analyse.check_overlap(self)
+            self.check_overlap()
 
         if self._save_pickle:
             if do_pickle:
                 print("already using pickles, will not be saving again.")
             else:
                 print("saving the pmf dictionaries for bound and free as pickles.")
-                analyse.save_pickle(self)
+            self.save_pickle()
 
         return (freenrg_rel[0], freenrg_rel[1], repeats_tuple_list)
 
@@ -470,9 +469,9 @@ class analyse:
             tuple: (freenrg_rel, repeats_tuple_list)
         """
 
-        # list for the successful calculations
-        bound_calculated = []
-        free_calculated = []
+        # remake list for the successful calculations
+        self.bound_calculated = []
+        self.free_calculated = []
 
         process_dict = {
             "auto equilibration": self._auto_equilibration,
@@ -494,7 +493,7 @@ class analyse:
                 )
                 self._bound_pmf_dict.update({name: pmf_bound})
                 self._bound_matrix_dict.update({name: overlap_matrix_bound})
-                bound_calculated.append(name)
+                self.bound_calculated.append(name)
             except Exception as e:
                 print(e)
                 print(
@@ -512,7 +511,7 @@ class analyse:
                 )
                 self._free_pmf_dict.update({name: pmf_free})
                 self._free_matrix_dict.update({name: overlap_matrix_free})
-                free_calculated.append(name)
+                self.free_calculated.append(name)
             except Exception as e:
                 print(e)
                 print(
@@ -523,14 +522,27 @@ class analyse:
         for r in self._b_repeats:
             try:
                 bound_name = str(r) + "_bound"
-                bound_val = (self._bound_pmf_dict[bound_name])[-1][1] - (
-                    self._bound_pmf_dict[bound_name]
-                )[0][1]
-                # TODO change this so as in diff?
-                bound_err = (self._bound_pmf_dict[bound_name])[-1][2]
+                bound_val = (
+                    self._bound_pmf_dict[bound_name][-1][1]
+                    - self._bound_pmf_dict[bound_name][0][1]
+                )
+                bound_err = BSS.Types.Energy(
+                    _math.sqrt(
+                        (
+                            self._bound_pmf_dict[bound_name][-1][2].value()
+                            * self._bound_pmf_dict[bound_name][-1][2].value()
+                        )
+                        + (
+                            self._bound_pmf_dict[bound_name][0][2].value()
+                            * self._bound_pmf_dict[bound_name][0][2].value()
+                        )
+                    ),
+                    self._bound_pmf_dict[bound_name][-1][2].unit(),
+                )
                 self._bound_val_dict.update({bound_name: bound_val})
                 self._bound_err_dict.update({bound_name: bound_err})
-            except:
+            except Exception as e:
+                print(e)
                 print(
                     f"""Unable to compute values for {bound_name} in {self._work_dir}.\
                     Check earlier error message if these values could be analysed."""
@@ -538,22 +550,33 @@ class analyse:
         for r in self._f_repeats:
             try:
                 free_name = str(r) + "_free"
-                free_val = (self._free_pmf_dict[free_name])[-1][1] - (
-                    self._free_pmf_dict[free_name]
-                )[0][1]
-                # TODO change this so as in diff?
-                free_err = (self._free_pmf_dict[free_name])[-1][2]
+                free_val = (
+                    self._free_pmf_dict[free_name][-1][1]
+                    - self._free_pmf_dict[free_name][0][1]
+                )
+                free_err = BSS.Types.Energy(
+                    _math.sqrt(
+                        (
+                            self._free_pmf_dict[free_name][-1][2].value()
+                            * self._free_pmf_dict[free_name][-1][2].value()
+                        )
+                        + (
+                            self._free_pmf_dict[free_name][0][2].value()
+                            * self._free_pmf_dict[free_name][0][2].value()
+                        )
+                    ),
+                    self._free_pmf_dict[free_name][-1][2].unit(),
+                )
                 self._free_val_dict.update({free_name: free_val})
                 self._free_err_dict.update({free_name: free_err})
-            except:
+            except Exception as e:
+                print(e)
                 print(
                     f"""Unable to compute values for {free_name} in {self._work_dir}.\
                     Check earlier error message if these values could be analysed."""
                 )
 
-        freenrg_rel, repeats_tuple_list = analyse._calculate_freenrg(
-            self, free_calculated, bound_calculated
-        )
+        freenrg_rel, repeats_tuple_list = self._calculate_freenrg()
 
         return (freenrg_rel, repeats_tuple_list)
 
@@ -564,16 +587,16 @@ class analyse:
             tuple: (freenrg_rel, repeats_tuple_list)
         """
 
-        # list for the successful calculations
-        bound_calculated = []
-        free_calculated = []
+        # remake list for the successful calculations
+        self.bound_calculated = []
+        self.free_calculated = []
 
         # Analyse the results for each leg of the transformation.
         for b in self._b_repeats:
             try:
                 name = str(b) + "_bound"
                 if name in self._bound_pmf_dict.keys():
-                    bound_calculated.append(name)
+                    self.bound_calculated.append(name)
             except Exception as e:
                 print(e)
                 print(
@@ -584,120 +607,61 @@ class analyse:
             try:
                 name = str(f) + "_free"
                 if name in self._free_pmf_dict.keys():
-                    free_calculated.append(name)
+                    self.free_calculated.append(name)
             except Exception as e:
                 print(e)
                 print(
                     f"Unable to analyse values for {name} from pickle, which should be repeat {self._f_folders[f]} in {self._work_dir}."
                 )
 
-        freenrg_rel, repeats_tuple_list = analyse._calculate_freenrg(
-            self, free_calculated, bound_calculated
-        )
+        freenrg_rel, repeats_tuple_list = self._calculate_freenrg()
 
         return (freenrg_rel, repeats_tuple_list)
 
-    # TODO dont need free calculated and bound calcualted, can get from dict keys??
-    def _calculate_freenrg(self, free_calculated, bound_calculated):
-        """calculate the free energy. Will use the names of the list for the respective dictionaries.
-
-        Args:
-            free_calculated (list): list of free calculated names
-            bound_calculated (list): list of bound calculated names
+    def _calculate_freenrg(self):
+        """calculate the free energy.
 
         Returns:
-            tuple: (freenrg_rel, repeats_tuple_list)
+            tuple: ((freenrg, freenrg_err), repeats_tuple_list)
         """
 
         # list for all the repeats
         repeats_tuple_list = []
 
-        # get average of free energy values just calculated
-        # if there is only one repeat use the BSS difference function
-        if (
-            len(self._free_val_dict.values()) == 1
-            and len(self._bound_val_dict.values()) == 1
-        ):
-            bound_pmf = list(self._bound_pmf_dict.items())[0][1]
-            free_pmf = list(self._free_pmf_dict.items())[0][1]
-            freenrg_rel = BSS.FreeEnergy.Relative.difference(bound_pmf, free_pmf)
-            freenrg_val = freenrg_rel[0].value()
-            freenrg_err = freenrg_rel[1].value()
-            free_avg = free_pmf[-1][1]
-            free_err = free_pmf[-1][2]
-            bound_avg = bound_pmf[-1][1]
-            bound_err = bound_pmf[-1][2]
-
-        # if just one of the values has only one, need to propagate the error from this for the final result
-        elif (
-            len(self._free_val_dict.values()) == 1
-            and len(self._bound_val_dict.values()) > 1
-        ):
-            # get the singular result and error
-            free_avg = list(
-                val / _Units.Energy.kcal_per_mol for val in self._free_val_dict.values()
-            )[0]
-            free_err = list(
-                val / _Units.Energy.kcal_per_mol for val in self._free_err_dict.values()
-            )[0]
-
-            bound_vals = list(
-                val / _Units.Energy.kcal_per_mol
-                for val in self._bound_val_dict.values()
-            )
-            bound_avg = _np.mean(bound_vals)
-            bound_err = sem(bound_vals)
-            freenrg_val = bound_avg - free_avg
-            freenrg_err = _math.sqrt(_math.pow(bound_err, 2) + _math.pow(free_err, 2))
-            freenrg_rel = (
-                freenrg_val * _Units.Energy.kcal_per_mol,
-                freenrg_err * _Units.Energy.kcal_per_mol,
-            )
-
-        elif (
-            len(self._bound_val_dict.values()) == 1
-            and len(self._free_val_dict.values()) > 1
-        ):
-            free_vals = list(
-                val / _Units.Energy.kcal_per_mol for val in self._free_val_dict.values()
-            )
-            free_avg = _np.mean(free_vals)
-            free_err = sem(free_vals)
-
-            bound_avg = list(
-                val / _Units.Energy.kcal_per_mol
-                for val in self._bound_val_dict.values()
-            )[0]
-            bound_err = list(
-                val / _Units.Energy.kcal_per_mol
-                for val in self._bound_err_dict.values()
-            )[0]
-
-            freenrg_val = bound_avg - free_avg
-            freenrg_err = _math.sqrt(_math.pow(bound_err, 2) + _math.pow(free_err, 2))
-            freenrg_rel = (
-                freenrg_val * _Units.Energy.kcal_per_mol,
-                freenrg_err * _Units.Energy.kcal_per_mol,
-            )
-        # otherwise, calculate the average and the SEM
+        # first check if there are calculated values for each.
+        if len(self.bound_calculated) == 0:
+            print("there are no results for the bound leg.")
+            missing_results = True
+        elif len(self.free_calculated) == 0:
+            print("there are no results for the free leg.")
+            missing_results = True
         else:
-            free_vals = list(
-                val / _Units.Energy.kcal_per_mol for val in self._free_val_dict.values()
-            )
-            free_avg = _np.mean(free_vals)
+            missing_results = False
+
+        if missing_results:
+            return (np.nan, np.nan), repeats_tuple_list
+
+        # list of values for each leg
+        free_vals = [val.value() for val in self._free_val_dict.values()]
+        bound_vals = [val.value() for val in self._bound_val_dict.values()]
+        free_avg = _np.mean(free_vals)
+        bound_avg = _np.mean(bound_vals)
+        # errors depending on how many results
+        if len(self.free_calculated) == 1:
+            free_err = self._free_err_dict[self.free_calculated[0]].value()
+        else:
             free_err = sem(free_vals)
-            bound_vals = list(
-                val / _Units.Energy.kcal_per_mol
-                for val in self._bound_val_dict.values()
-            )
-            bound_avg = _np.mean(bound_vals)
+        if len(self.bound_calculated) == 1:
+            bound_err = self._bound_err_dict[self.bound_calculated[0]].value()
+        else:
             bound_err = sem(bound_vals)
-            freenrg_val = bound_avg - free_avg
-            freenrg_err = _math.sqrt(_math.pow(bound_err, 2) + _math.pow(free_err, 2))
-            freenrg_rel = (
-                freenrg_val * _Units.Energy.kcal_per_mol,
-                freenrg_err * _Units.Energy.kcal_per_mol,
-            )
+        # freenerg values
+        freenrg_val = bound_avg - free_avg
+        freenrg_err = _math.sqrt(_math.pow(bound_err, 2) + _math.pow(free_err, 2))
+        freenrg_rel = (
+            freenrg_val * _Units.Energy.kcal_per_mol,
+            freenrg_err * _Units.Energy.kcal_per_mol,
+        )
 
         # set the average bound and free values and their error
         self.free_val = free_avg
@@ -709,59 +673,44 @@ class analyse:
 
         # create tuple list of each repeat that was calculated
         # first check the length of the calculated values and check if this is also the length of the folders found
-        # TODO here use dict values?
-        if len(bound_calculated) != self._no_of_b_repeats:
+        if len(self.bound_calculated) != self._no_of_b_repeats:
             print(
                 "the number of calculated values for bound does not match the number of bound folders.\n maybe try reanalysing/check errors?"
             )
-        if len(free_calculated) != self._no_of_f_repeats:
+        if len(self.free_calculated) != self._no_of_f_repeats:
             print(
                 "the number of calculated values for free does not match the number of free folders.\n maybe try reanalysing/check errors?"
             )
 
         # if the numebr of calculated values is the same, match these evenly
-        if len(bound_calculated) == len(free_calculated):
+        if len(self.bound_calculated) == len(self.free_calculated):
             print(
-                f"There are {len(bound_calculated)} calculated values for each the bound and the free leg for the folders in {self._work_dir}."
+                f"There are {len(self.bound_calculated)} calculated values for each the bound and the free leg for the folders in {self._work_dir}."
             )
-            no_of_repeats = len(bound_calculated)
-            repeats = list(range(no_of_repeats))
-            for r in repeats:
-                freenrg_rel_rep = BSS.FreeEnergy.Relative.difference(
-                    self._bound_pmf_dict[bound_calculated[r]],
-                    self._free_pmf_dict[free_calculated[r]],
-                )
-                freenrg_val = freenrg_rel_rep[0]
-                freenrg_err = freenrg_rel_rep[1]
-                repeats_tuple_list.append(
-                    (f"{str(r)}_repeat", freenrg_val, freenrg_err)
-                )
+            no_of_repeats = len(self.bound_calculated)
 
-        elif len(bound_calculated) != len(free_calculated):
+        elif len(self.bound_calculated) != len(self.free_calculated):
             print(
-                f"There are {len(bound_calculated)} calculated values for the bound and \
-            {len(free_calculated)} calculated values for the free leg for the folders in {self._work_dir}."
+                f"There are {len(self.bound_calculated)} calculated values for the bound and {len(self.free_calculated)} calculated values for the free leg for the folders in {self._work_dir}."
             )
             # use the shorter calculated values as the number of complete repeats
-            if len(bound_calculated) < len(free_calculated):
-                no_of_repeats = len(bound_calculated)
+            if len(self.bound_calculated) < len(self.free_calculated):
+                no_of_repeats = len(self.bound_calculated)
             else:
-                no_of_repeats = len(free_calculated)
-            print(
-                f"The number of calculated values do not match. {no_of_repeats} repeats will be calculated."
+                no_of_repeats = len(self.free_calculated)
+
+        # calculate
+        print(f"{no_of_repeats} repeats will be calculated.")
+        r = 0
+        for b, f in zip(self.bound_calculated, self.free_calculated):
+            print(f"calculating repeat {r} as {b} and {f}.")
+            freenrg_rel_rep = BSS.FreeEnergy.Relative.difference(
+                self._bound_pmf_dict[b], self._free_pmf_dict[f]
             )
-            r = 0
-            for b, f in zip(bound_calculated, free_calculated):
-                print(f"calculating repeat {r} as {b} and {f}.")
-                freenrg_rel_rep = BSS.FreeEnergy.Relative.difference(
-                    self._bound_pmf_dict[b], self._free_pmf_dict[f]
-                )
-                freenrg_val = freenrg_rel_rep[0]
-                freenrg_err = freenrg_rel_rep[1]
-                repeats_tuple_list.append(
-                    (f"{str(r)}_repeat", freenrg_val, freenrg_err)
-                )
-                r += 1
+            freenrg_val = freenrg_rel_rep[0]
+            freenrg_err = freenrg_rel_rep[1]
+            repeats_tuple_list.append((f"{str(r)}_repeat", freenrg_val, freenrg_err))
+            r += 1
 
         return freenrg_rel, repeats_tuple_list
 

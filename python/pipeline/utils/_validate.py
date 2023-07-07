@@ -193,6 +193,13 @@ class validate:
                     engines = validate.string(engines)
                     if engines.upper() == "ALL":
                         engines = BSS.FreeEnergy.engines()
+                    elif "," in engines:
+                        engines_list = engines.split(",")
+                        val_engines = []
+                        for engine in engines_list:
+                            engine_val = validate.engine(engine)
+                            val_engines.append(engine_val)
+                        engines = val_engines
                     else:
                         engines = validate.engine(engines)
                         engines = [engines]
@@ -835,8 +842,7 @@ class validate:
             BioSimSpace.Protocol: the BSS protocol.
         """
 
-        # TODO this is a very hacky way and not ideal
-
+        # this is a very hacky way and not ideal
         ty = type(protocol)
 
         if "BioSimSpace.Protocol" not in str(ty):

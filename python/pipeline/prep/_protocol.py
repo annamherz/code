@@ -463,7 +463,6 @@ class pipeline_protocol(protocol):
         """
 
         if value:
-            # TODO make list from csv str
             value = validate.engines(value)
             self._query_dict["engines"] = value
             self._engines = value
@@ -962,7 +961,9 @@ class pipeline_protocol(protocol):
     def config_options(self, value=None):
         if value:
             try:
-                print("trying to read config options as a file / read the file for this...")
+                print(
+                    "trying to read config options as a file / read the file for this..."
+                )
                 value = validate.file_path(value)
                 value_dict = self._read_config_file(file=value)
                 self._query_dict["config options file"] = value

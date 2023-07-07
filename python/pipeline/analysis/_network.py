@@ -12,7 +12,7 @@ import csv
 import numpy as np
 import pandas as pd
 
-from ..utils import *
+from ..utils._validate import *
 
 
 def get_ligands_from_perts(perturbations):
@@ -347,7 +347,3 @@ class net_graph:
 
         # no of possible paths between each two nodes on average
         return np.average(paths_per_nodepair_combination)
-
-
-# TODO in new - use functions from network and dictionary to make the results object
-# this would also incl the plotting which uses the network as well

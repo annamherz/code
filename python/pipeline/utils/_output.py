@@ -1,5 +1,6 @@
 import os
 import shutil
+import subprocess
 
 import MDAnalysis as mda
 import MDAnalysis.transformations as trans
@@ -90,6 +91,7 @@ def add_header_simfile(trans_dir):
                     if line_counter == 15:
                         break
 
+            sim_okay = False
             if not sim_okay:
                 print(f"will write header for simfiles in {direc}")
                 try:
@@ -117,11 +119,32 @@ def add_header_simfile(trans_dir):
 
                 except:
                     continue
-                if os.path.exists(f"{direc}/simfile_header.dat"):
-                    file = open(f"{direc}/simfile_header.dat", "w")
-                else:
-                    file = open(f"{direc}/simfile_header.dat", "a")
-                # TODO fix so get info from simfile if possible eg re length
+
+                # get the timestep from the somd.cfg
+                try:
+                    with open(f"{direc}/somd.cfg", "r") as file:
+                        for line in file.readlines():
+                            if "timestep" in line:
+                                timestep = float(
+                                    line.split("=")[-1].strip().split(" ")[0]
+                                )
+                                break
+
+                    last_line = (
+                        subprocess.check_output(
+                            ["tail", "-1", f"{direc}/old_old_simfile.dat"], timeout=3
+                        )
+                        .decode("utf-8")
+                        .strip()
+                    )
+                    final_step = float(last_line.strip().split(" ")[0].strip()) + 200
+                    sim_time = final_step * timestep / 1000
+                    extr_timestep = True
+                except:
+                    extr_timestep = False
+
+                file = open(f"{direc}/simfile_header.dat", "w")
+
                 file.write("#This file was generated to fix the header \n")
                 file.write(
                     "#Using the somd command, of the molecular library Sire version <2022.3.0> \n"
@@ -131,9 +154,14 @@ def add_header_simfile(trans_dir):
                 )
                 file.write("# \n")
                 file.write("#General information on simulation parameters: \n")
-                file.write(
-                    "#Simulation used 250000 moves, 4 cycles and 4000 ps of simulation time \n"
-                )
+                if extr_timestep:
+                    file.write(
+                        f"#Simulation used {int(final_step)} moves, 1 cycles and {int(sim_time)} ps of simulation time \n"
+                    )
+                else:
+                    file.write(
+                        f"#Simulation used 250000 moves, 4 cycles and 4000 ps of simulation time \n"
+                    )
                 file.write(f"#Generating lambda is		 {lam}\n")
                 file.write(f"#Alchemical array is		 {(', ').join(lambdas)}\n")
                 file.write("#Generating temperature is 	300 t\n")
