@@ -148,7 +148,9 @@ class analysis_network:
 
         # get info from the network
         self.perturbations = None
+        self._perturbations_dict = {}
         self.ligands = None
+        self._ligands_dict = {}
         self._set_network()  # get network info
 
         # read the extra options
@@ -253,6 +255,7 @@ class analysis_network:
             )
             file_names = [res_file for sublist in results_lists for res_file in sublist]
 
+        # for all
         values = get_info_network(
             results_files=file_names,
             net_file=self._net_file,
@@ -261,6 +264,23 @@ class analysis_network:
 
         self.perturbations = values[0]
         self.ligands = values[1]
+
+        # for individual engines
+        for eng in self.engines:
+            values = get_info_network(
+                results_files=file_names,
+                net_file=self._net_file,
+                extra_options={"engines": eng},
+            )
+            
+            # check if there are any values for this engine, if not assume it is the entire network from before
+            # as dont want this to be none in later functions
+            if not values[0]:
+                self._perturbations_dict[eng] = self.perturbations
+                self._ligands_dict[eng] = self.ligands
+            else:
+                self._perturbations_dict[eng] = values[0]
+                self._ligands_dict[eng] = values[1]            
 
     def _set_default_options(self):
         """set the default options for the analysis."""
@@ -276,6 +296,8 @@ class analysis_network:
         # set all the dicts for analysis
         # per engine dicts (also used for other results)
         self.calc_pert_dict = {}  # diff from the results repeat files, average
+        self.calc_bound_dict = {}
+        self.calc_free_dict = {}
         self.cinnabar_calc_val_dict = {}  # from the cinnabar network analysis
         self.cinnabar_exper_val_dict = (
             {}
@@ -418,7 +440,26 @@ class analysis_network:
 
         return pert_dict
 
-    def remove_perturbations(self, perts):
+    def _validate_in_names_list(self, name):
+        """validate if the name is in the names list
+
+        Args:
+            name (str): the name to validate
+
+        Raises:
+            ValueError: if not in names list
+
+        Returns:
+            str: the validated name
+        """
+
+        name = validate.string(name)
+        if name not in (self.engines + self.other_results_names):
+            raise ValueError(f"{name} must be in {[self.engines + self.other_results_names]}")
+
+        return name
+    
+    def remove_perturbations(self, perts, name=None, use_cinnabar=False):
         """remove perturbations from the network used.
 
         Args:
@@ -427,18 +468,25 @@ class analysis_network:
 
         perts = validate.is_list(perts, make_list=True)
 
-        for pert in perts:
-            self.perturbations.remove(pert)
+        if not name:
+            for pert in perts:
+                if pert in self.perturbations:
+                    self.perturbations.remove(pert)
+        else:
+            name = self._validate_in_names_list(name)
+            for pert in perts:
+                if pert in self._perturbations_dict[name]:
+                    self._perturbations_dict[name].remove(pert)
 
         if self._is_computed_dicts:
             # recompute dicts
-            self._compute_dicts(use_cinnabar=True)
+            self._compute_dicts(use_cinnabar=use_cinnabar)
         # remove plotting object as needs to be reintialised with new perturbations
         self._plotting_object = None
         self._histogram_object = None
         self._stats_object = None
 
-    def remove_ligands(self, ligs):
+    def remove_ligands(self, ligs, name=None, use_cinnabar=False):
         """remove ligand and assosciated perturbations from the network used.
 
         Args:
@@ -447,15 +495,26 @@ class analysis_network:
 
         ligs = validate.is_list(ligs, make_list=True)
 
-        for lig in ligs:
-            self.ligands.remove(lig)
+        if not name:
+            for lig in ligs:
+                if lig in self.ligands:
+                    self.ligands.remove(lig)
 
-            for pert in self.perturbations:
-                if lig in pert:
-                    self.perturbations.remove(pert)
+                for pert in self.perturbations:
+                    if lig in pert:
+                        self.perturbations.remove(pert)
+        else:
+            name = self._validate_in_names_list(name)
+            for lig in ligs:
+                if lig in self._ligands_dict[name]:
+                    self._ligands_dict[name].remove(lig)
+
+                for pert in self._perturbations_dict[name]:
+                    if lig in pert:
+                        self._perturbations_dict[name].remove(pert)
 
         if self._is_computed_dicts:
-            self._compute_dicts(use_cinnabar=True)
+            self._compute_dicts(use_cinnabar=use_cinnabar)
         # remove plotting object as needs to be reintialised with new perturbations
         self._plotting_object = None
         self._histogram_object = None
@@ -470,7 +529,11 @@ class analysis_network:
         """
 
         dict_list = [
+            self._perturbations_dict,
+            self._ligands_dict,
             self.calc_pert_dict,
+            self.calc_bound_dict,
+            self.calc_free_dict,
             self.cinnabar_calc_val_dict,
             self.cinnabar_exper_val_dict,
             self.cinnabar_calc_pert_dict,
@@ -558,12 +621,27 @@ class analysis_network:
                 files = self._results_files[eng]
 
             calc_diff_dict = make_dict.comp_results(
-                files, self.perturbations, eng, method=self.method
+                files, self._perturbations_dict[eng], eng, method=self.method
             )  # older method
             self.calc_pert_dict.update({eng: calc_diff_dict})
 
+            # calc the free and bound leg dicts for the eng
+            try:
+                calc_bound_dict = make_dict.comp_results(
+                self._results_bound_repeat_files[eng], self._perturbations_dict[eng], eng, method=self.method
+                )  # older method
+                self.calc_bound_dict.update({eng: calc_bound_dict})
+                calc_free_dict = make_dict.comp_results(
+                self._results_free_repeat_files[eng], self._perturbations_dict[eng], eng, method=self.method
+                )  # older method
+                self.calc_free_dict.update({eng: calc_free_dict})
+            except Exception as e:
+                print(e)
+                print("Could not calculate dicts for bound/free legs.")
+
             if use_cinnabar:
                 self._compute_cinnabar_dict(files, eng, method=self.method)
+
 
     def _compute_cinnabar_dict(self, files, eng, method=None):
         """compute cinnabar and get the dictionaries from it."""
@@ -637,7 +715,7 @@ class analysis_network:
                 writer.writerow([key, value[0], value[1], eng, ana, method])
 
     def compute_other_results(
-        self, file_names=None, name=None, method=None, use_cinnabar=True
+        self, file_names=None, name=None, method=None, use_cinnabar=True, bound_files=None, free_files=None
     ):
         """compute other results in a similar manner to the engine results.
 
@@ -676,16 +754,37 @@ class analysis_network:
             method=method,
             output_file=new_file_path,
         )
+        # set info to dicts etc
         self.calc_pert_dict.update({name: calc_diff_dict})
         self._results_files[name] = f"{new_file_path}.csv"
+        perts, ligs = get_info_network_from_dict(calc_diff_dict)
+        self._perturbations_dict[name] = perts
+        self._ligands_dict[name] = ligs
+
+        if bound_files and free_files:
+
+            bound_files = validate.is_list(bound_files, make_list=True)
+            free_files = validate.is_list(free_files, make_list=True)
+            for file in bound_files + free_files:
+                validate.file_path(file)
+            calc_bound_dict = make_dict.comp_results(
+            bound_files, perts, engine=None, name=name, method=method)
+            self.calc_bound_dict.update({name: calc_bound_dict})
+            calc_free_dict = make_dict.comp_results(
+            free_files, perts, engine=None, name=name, method=method)
+            self.calc_free_dict.update({name: calc_free_dict})
+
+        else:
+            self.calc_free_dict.update({name: None})
+            self.calc_bound_dict.update({name: None})
 
         use_cinnabar = validate.boolean(use_cinnabar)
         if use_cinnabar:
             self._compute_cinnabar_dict(files=f"{new_file_path}.csv", eng=name)
 
         # initialise plotting and stats objects again so theyre added
-        self._initialise_plotting_object(verbose=self._is_verbose)
-        self._initialise_stats_object()
+        self._initialise_plotting_object(check=False, verbose=self._is_verbose)
+        self._initialise_stats_object(check=False)
 
     def compute_convergence(self, main_dir):
         main_dir = validate.folder_path(main_dir)
@@ -880,12 +979,12 @@ class analysis_network:
             ]
 
             for pert in perts:
-                del self.calc_pert_dict[name][pert]
+                self.remove_perturbations(pert, name=name)
 
                 if verbose:
-                    print(f"removed {pert} for {name}.")
+                    print(f"removed {pert} from perturbations as outlier for {name}.")
 
-            self._compute_dicts(use_cinnabar=use_cinnabar, recompute=True)
+            self._compute_dicts(use_cinnabar=use_cinnabar)
 
         # remove plotting object as needs to be reintialised with new perturbations
         self._plotting_object = None
@@ -1047,6 +1146,20 @@ class analysis_network:
             check=True, verbose=self._is_verbose
         )
         plot_obj.bar(pert_val="val", names=engine, **kwargs)
+
+    def plot_bar_leg(self, engine, leg="bound", **kwargs):
+
+        engine = validate.is_list(engine, make_list=True)
+
+        plot_obj = self._initialise_plotting_object(
+            check=True, verbose=self._is_verbose
+        )
+
+        plotting_dict = {"title":f"{leg} for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}"}
+        for key,value in kwargs.items():
+            plotting_dict[key] = value
+
+        plot_obj.bar(pert_val=leg, names=engine, **plotting_dict)
 
     def plot_scatter_pert(self, engine=None, use_cinnabar=False, **kwargs):
         """plot the scatter plot of the perturbations.

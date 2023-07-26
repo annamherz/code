@@ -93,7 +93,10 @@ class make_dict:
             res_df = pd.read_csv(res_file)
             # drop any none values in freenrg
             res_df = res_df.dropna()
-            res_df = res_df[res_df["freenrg"].str.contains("nan") == False]
+            try:
+                res_df = res_df[res_df["freenrg"].str.contains("nan") == False]
+            except:
+                pass
             for index, row in res_df.iterrows():
                 if method:
                     if method.lower() == row["method"].strip().lower():

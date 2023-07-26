@@ -35,7 +35,7 @@ class stats_engines(plotting_engines):
 
         # make stats dict for each name and each stat
         self.statistics_dict = {}
-        for pert_val in ["pert", "val"]:
+        for pert_val in ["pert", "val","bound","free"]:
             self.statistics_dict[pert_val] = {}
             for namex in self.names_list:
                 self.statistics_dict[pert_val][namex] = {}

@@ -48,7 +48,7 @@ class plotting_engines:
             )
 
         # set the colours
-        self.colours = plotting_engines.set_colours(self.other_results_names)
+        self.colours = plotting_engines.set_colours(other_results_names=self.other_results_names)
 
         # convert the dictionaries into dataframes for plotting
         self._analysis_dicts_to_df()
@@ -94,6 +94,9 @@ class plotting_engines:
             self.calc_val_dict = {}
             self.exper_val_dict = {}
             self.calc_pert_dict = ana_obj.calc_pert_dict
+
+        self.calc_bound_dict = ana_obj.calc_bound_dict
+        self.calc_free_dict = ana_obj.calc_free_dict
 
         # experimental calculated directly from exp values (for bar)
         self.all_exper_pert_dict = ana_obj.exper_pert_dict
@@ -238,11 +241,21 @@ class plotting_engines:
                 values_dict[eng]["ligs"] = pert_lig[1]
                 # put results into values dict
                 values_dict[eng]["pert_results"] = self.calc_pert_dict[eng]
+                if self.calc_bound_dict[eng]:
+                    values_dict[eng]["bound_results"] = self.calc_bound_dict[eng]
+                else:
+                    values_dict[eng]["bound_results"] = {x: (None,None) for x in self.calc_pert_dict[eng]}
+                if self.calc_free_dict[eng]:
+                    values_dict[eng]["free_results"] = self.calc_free_dict[eng]
+                else:
+                    values_dict[eng]["free_results"] = {x: (None,None) for x in self.calc_pert_dict[eng]}
 
             except Exception as e:
                 values_dict[eng]["perts"] = [None]
                 values_dict[eng]["ligs"] = [None]
                 values_dict[eng]["pert_results"] = [None]
+                values_dict[eng]["bound_results"] = [None]
+                values_dict[eng]["free_results"] = [None]
                 print(e)
                 print(
                     f"could not convert {eng} values for plotting. None will be used. Was earlier analysis okay?"
@@ -263,6 +276,9 @@ class plotting_engines:
         values_dict["experimental"][
             "val_results"
         ] = self.all_exper_val_dict  # normalised data
+        # all bound and free values as None for matching df later.
+        values_dict["experimental"]["bound_results"] = {x: (None,None) for x in self.all_exper_pert_dict}
+        values_dict["experimental"]["free_results"] = {x: (None,None) for x in self.all_exper_pert_dict}
 
         self.values_dict = values_dict
 
@@ -297,11 +313,13 @@ class plotting_engines:
 
         # construct dict with experimental freenrg and error and computed
         for name in to_convert_list:  # will do this for engines and other results
-            for pv in ["pert", "val"]:
+            for pv in ["pert", "val","bound","free"]:
                 if pv == "pert":
                     which_list = "perts"
                 elif pv == "val":
                     which_list = "ligs"
+                else:
+                    which_list = "perts"
 
                 freenrg_df = self.match_dicts_to_df(
                     self.values_dict[x_name][f"{pv}_results"],
@@ -437,12 +455,12 @@ class plotting_engines:
             "gold",
             "mediumpurple",
             "darkred",
-            "papayawhip",
-            "honeydew",
             "grey",
             "lightsteelblue",
             "peru",
             "plum",
+            "papayawhip",
+            "honeydew",
         ]
 
         if other_results_names:
@@ -666,6 +684,8 @@ class plotting_engines:
                 values = self.perturbations
             elif pert_val == "val":
                 values = self.ligands
+            else:
+                values = self.perturbations
         else:
             values = validate.is_list(values)
 

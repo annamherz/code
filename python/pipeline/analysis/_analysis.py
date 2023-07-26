@@ -639,7 +639,7 @@ class analyse:
             missing_results = False
 
         if missing_results:
-            return (np.nan, np.nan), repeats_tuple_list
+            return (_np.nan, _np.nan), repeats_tuple_list
 
         # list of values for each leg
         free_vals = [val.value() for val in self._free_val_dict.values()]
@@ -998,18 +998,21 @@ class analyse:
 
     def plot_convergence(self):
         try:
-            sdf = analyse.single_pert_dict_into_df(self.spert_results_dict)
-            edf = analyse.single_pert_dict_into_df(self.epert_results_dict)
-            # plot individually for perts
-            print(
-                f"plotting for {self.perturbation}, {self.engine} in {self._graph_dir}/forward_reverse_{self.perturbation}.png..."
-            )
-            analyse.plot_truncated(
-                sdf,
-                edf,
-                file_path=f"{self._graph_dir}/forward_reverse_{self.perturbation}_{self.file_extension.split('truncate')[0]}.png",
-                plot_difference=False,
-            )
+            for from_start,from_end,leg in zip([self.spert_results_dict, self.spert_bound_dict, self.spert_free_dict],[self.epert_results_dict, self.epert_bound_dict, self.epert_free_dict],["freenerg","bound","free"]):
+                
+                sdf = analyse.single_pert_dict_into_df(from_start)
+                edf = analyse.single_pert_dict_into_df(from_end)
+                # plot individually for perts
+                print(
+                    f"plotting for {leg}, {self.perturbation}, {self.engine} in {self._graph_dir}..."
+                )
+                analyse.plot_truncated(
+                    sdf,
+                    edf,
+                    file_path=f"{self._graph_dir}/forward_reverse_{leg}_{self.perturbation}_{self.file_extension.split('truncate')[0]}.png",
+                    plot_difference=False,
+                )
+
         except Exception as e:
             print(e)
             print("failed to plot convergence, please check Exception message.")
@@ -1082,6 +1085,7 @@ class analyse:
             alpha=0.8,
         )
         lines += plt.plot(0, 0, c="c", label="final estimate")
+
         scatterplot = [plt.plot(sdf.index, sdf["avg"], c="lightcoral")]
         plt.fill_between(
             sdf.index,
@@ -1091,6 +1095,7 @@ class analyse:
             alpha=0.4,
         )
         lines += plt.plot(0, 0, c="lightcoral", label="forward")
+        
         scatterplot = [plt.plot(edf.index, edf["avg"], c="cornflowerblue")]
         plt.fill_between(
             edf.index,

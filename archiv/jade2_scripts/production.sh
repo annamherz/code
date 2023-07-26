@@ -9,6 +9,9 @@
 #SBATCH -o ../slurm_logs/prod_%A_%a.out
 #SBATCH -e ../slurm_logs/prod_%A_%a.err
 
+# bashrc to load modules
+source ~/.bashrc
+
 # sourcing done at each engine
 source $scripts_dir/extract_execution_model_bash.sh
 
@@ -29,12 +32,12 @@ echo "The transformation is $trans using $no_lams windows and $eng as the MD eng
 
 # define no of windows based on the assosciative array generated from reading the net_file in extract execution model
 IFS=","
-read -r -a lamvals <<< "${wins_array[$3]}"
+read -r -a lamvals <<< "${wins_array[$no_lams]}"
 
 # change to the trans dir, abort and message if not there
-cd $MAINDIRECTORY/outputs_reverse/$eng/$trans
-if [[ ! -d $MAINDIRECTORY/outputs_reverse/$eng/$trans ]]; then
-    echo "$MAINDIRECTORY/outputs_reverse/$eng/$trans does not exist. Production run aborted..."
+cd $MAINDIRECTORY/outputs/$eng/$trans
+if [[ ! -d $MAINDIRECTORY/outputs/$eng/$trans ]]; then
+    echo "$MAINDIRECTORY/outputs/$eng/$trans does not exist. Production run aborted..."
     exit
 fi
 trans_dir=$(pwd)
@@ -43,7 +46,7 @@ trans_dir=$(pwd)
 for dir in 'bound' 'free'; do
 for lam in "${lamvals[@]}" ; do
 repeat=${dir}_$rep
-cd $MAINDIRECTORY/outputs_reverse/$eng/$trans/$repeat
+cd $MAINDIRECTORY/outputs/$eng/$trans/$repeat
 repeat_dir=$(pwd)
 
 echo "Running in $repeat_dir"
@@ -68,7 +71,6 @@ nvidia-smi
 
 #eval "$(/jmain02/home/J2AD004/sxk13/axh37-sxk13/anaconda3/bin/conda 'shell.bash' 'hook')"
 #conda init
-source ~/.bashrc
 source ~/anaconda3/etc/profile.d/conda.sh
 conda activate sire
 #export PYTHONPATH="$HOMEDIR/BioSimSpace/python"
@@ -98,16 +100,7 @@ fi
 
 if [ $eng = "GROMACS" ]; then
 
-module load gromacs/2022.2
-
-min_counter=0
-# echo "emstep = 0.001" | tee -a min/lambda_$lam/gromacs.mdp
-
-while [ $min_counter != 5 ]; do
-
-if [ ! -s heat/lambda_$lam/gromacs.xvg ]; then
-echo "min attempt $min_counter"
-min_counter=$((min_counter+1))
+module load gromacs/2023.1
 
 echo "min"
 gmx grompp -f min/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p min/lambda_$lam/gromacs.top -o min/lambda_$lam/gromacs.tpr
@@ -116,13 +109,6 @@ gmx mdrun -deffnm min/lambda_$lam/gromacs ;
 echo "heat"
 gmx grompp -f heat/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p heat/lambda_$lam/gromacs.top -o heat/lambda_$lam/gromacs.tpr
 gmx mdrun -deffnm heat/lambda_$lam/gromacs ;
-
-else
-echo "heat managed to proceed okay"
-min_counter=5
-fi
-
-done
 
 echo "eq"
 gmx grompp -f eq/lambda_$lam/gromacs.mdp -c heat/lambda_$lam/gromacs.gro -p eq/lambda_$lam/gromacs.top -t heat/lambda_$lam/gromacs.cpt  -o eq/lambda_$lam/gromacs.tpr
@@ -147,7 +133,6 @@ echo "prod"
     pmemd.cuda -i lambda_$lam/amber.cfg -c eq/lambda_$lam/amber.rst7 -ref eq/lambda_$lam/amber.rst7 -p lambda_$lam/amber.prm7 -O -o lambda_$lam/amber.out -inf lambda_$lam/amber.info -e lambda_$lam/amber.en -r lambda_$lam/amber.rst7 -x lambda_$lam/amber.nc -l lambda_$lam/amber.log ;
 
 fi
-
 
 done
 done

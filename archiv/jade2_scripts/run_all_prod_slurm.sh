@@ -4,14 +4,11 @@
 
 # export important file locations
 export HOMEDIR="/jmain02/home/J2AD004/sxk13/axh37-sxk13"
-export MAINDIRECTORY="$HOMEDIR/benchmark_mcl1" # Set file path for protein
+export MAINDIRECTORY="$HOMEDIR/GROMACS_reruns/tyk2" # Set file path for protein
 export scripts_dir="$HOMEDIR/scripts" # choose location of scripts
-export protein_file="$HOMEDIR/benchmark/inputs/tyk2/tyk2_parameterised" # this should be the prm7 and rst7 file name. best as input folder 
-export ligands_folder="$HOMEDIR/benchmark/inputs/tyk2/ligands"
 
 # export all execution model files for later scripts
-export lig_file="$MAINDIRECTORY/execution_model/ligands.dat"
-export net_file="$MAINDIRECTORY/execution_model/network_combined_reverse.dat"
+export net_file="$MAINDIRECTORY/execution_model/network_combined_gromacs.dat"
 export prot_file="$MAINDIRECTORY/execution_model/protocol.dat"
 
 # sourcing - as needed in the othe sh scripts
@@ -28,7 +25,7 @@ for i in "${!trans_array[@]}"; do
 var1=$(squeue -u axh37-sxk13 | grep "PD")
 var2=$(squeue -u axh37-sxk13 | grep "axh37-sx  R")
 var=$((${#var1}*3 + ${#var2} ))
-echo "for this $trans, var is $var"
+echo "for this ${trans_array[i]}, var is $var"
 
 until [ $var -lt 2500 ] ; do
 date
