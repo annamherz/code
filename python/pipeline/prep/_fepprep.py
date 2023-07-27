@@ -2,6 +2,12 @@ import BioSimSpace as BSS
 from distutils.dir_util import copy_tree, remove_tree
 import warnings as _warnings
 
+try:
+    amber_version = BSS._amber_version
+except:
+    # assume the amber version is 22
+    amber_version = 22
+
 from ..utils import *
 from ._merge import *
 from ._ligprep import *
@@ -486,6 +492,10 @@ class fepprep:
             kwarg_dict = {"PRUNEPERTURBEDCONSTRAINTS": True}
         else:
             kwarg_dict = {}
+        
+        if amber_version < 22:
+            if self._pipeline_protocol.hmr:
+                kwarg_dict["PRUNECROSSINGCONSTRAINTS"] = True
 
         # any pipeline kwargs overwrite this
         for key, value in self._pipeline_protocol.kwargs().items():
