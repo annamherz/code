@@ -83,17 +83,12 @@ class plotting_engines:
         ana_obj = self._analysis_object
 
         # dictionaries of engines for plotting from cinnabar
-        if ana_obj.cinnabar_calc_pert_dict:
-            self.calc_val_dict = ana_obj.cinnabar_calc_val_dict
-            self.exper_val_dict = ana_obj.cinnabar_exper_val_dict
-            self.calc_pert_dict = ana_obj.cinnabar_calc_pert_dict
-        else:
-            print(
-                "no cinnabar calculation has been performed. Can only plot 'pert' values."
-            )
-            self.calc_val_dict = {}
-            self.exper_val_dict = {}
-            self.calc_pert_dict = ana_obj.calc_pert_dict
+        self.calc_val_dict = ana_obj.cinnabar_calc_val_dict
+        self.exper_val_dict = ana_obj.cinnabar_exper_val_dict
+        # if these have failed to compute the dict value will be empty for that engine.
+
+        # make pert dict from the self computed pert values
+        self.calc_pert_dict = ana_obj.calc_pert_dict
 
         self.calc_bound_dict = ana_obj.calc_bound_dict
         self.calc_free_dict = ana_obj.calc_free_dict
@@ -250,24 +245,18 @@ class plotting_engines:
                 else:
                     values_dict[eng]["free_results"] = {x: (None,None) for x in self.calc_pert_dict[eng]}
 
+                values_dict[eng]["val_results"] = self.calc_val_dict[eng]
+
             except Exception as e:
                 values_dict[eng]["perts"] = [None]
                 values_dict[eng]["ligs"] = [None]
                 values_dict[eng]["pert_results"] = [None]
                 values_dict[eng]["bound_results"] = [None]
                 values_dict[eng]["free_results"] = [None]
-                print(e)
-                print(
-                    f"could not convert {eng} values for plotting. None will be used. Was earlier analysis okay?"
-                )
-
-            try:
-                values_dict[eng]["val_results"] = self.calc_val_dict[eng]
-            except Exception as e:
                 values_dict[eng]["val_results"] = [None]
                 print(e)
                 print(
-                    f"could not convert val {eng} values for plotting. None will be used. Was cinnabar analysis carried out correctly?"
+                    f"could not convert {eng} values for plotting. None will be used. Was earlier analysis okay?"
                 )
 
         values_dict["experimental"]["perts"] = self.perturbations

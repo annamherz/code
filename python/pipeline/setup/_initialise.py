@@ -1,4 +1,5 @@
 import glob
+import warnings
 import BioSimSpace as BSS
 
 from ..utils._validate import *
@@ -129,12 +130,12 @@ class initialise_pipeline:
         return self._protein_path
 
     @staticmethod
-    def _setup_ligands(path_to_ligands, exec_folder):
+    def _setup_ligands(path_to_ligands, file_name):
         """setup the ligands based on the folder.
 
         Args:
             path_to_ligands (str): folder path to ligands folder.
-            exec_folder (str): execution model folder to write the ligands file to.
+            file_name (str): file name to write the ligands file to.
 
         Returns:
             ligands: list of BSS ligand molecules
@@ -165,12 +166,16 @@ class initialise_pipeline:
             print(lig)
 
         # write ligands file.
-        write_ligands(ligand_names, f"{exec_folder}/ligands.dat")
+        write_ligands(ligand_names, file_name)
 
         return ligands, ligand_names, ligands_dict
 
-    def setup_ligands(self):
+    def setup_ligands(self, file_name=None):
         """setup the ligands
+
+        Args:
+            file_name (str): file name to write the ligands file to. Default is in the execution model folder as ligands.dat .
+                             This setting should not be changed usually as then it's not compatible with later scripts.
 
         Raises:
             ValueError: need to have previously set a ligands folder
@@ -186,8 +191,15 @@ class initialise_pipeline:
                 "please provide an execution model folder first using .exec_folder(path_to_exec) or create it using the .main_folder(path, create_exec_folder=True)"
             )
 
+        if not file_name:
+            file_name = f"{self._exec_folder}/ligands.dat"
+        else:
+            warnings.warn("The file name should not be changed usually as then it's not compatible with later scripts.")
+            file_name = validate.string(file_name)
+            validate.folder_path(("/").join(file_name.split("/")[:-1]), create=True)
+
         ligands, ligand_names, ligands_dict = initialise_pipeline._setup_ligands(
-            self._ligands_folder, self._exec_folder
+            self._ligands_folder, file_name
         )
 
         self.ligands = ligands
@@ -282,7 +294,7 @@ class initialise_pipeline:
         self.perturbations = [f"{key[0]}~{key[1]}" for key in pert_network_dict.keys()]
 
         write_lomap_scores(
-            pert_network_dict, f"{self.exec_folder()}/network_scores.dat"
+            pert_network_dict, f"{self.exec_folder()}/{folder}/network_scores.dat"
         )
 
         self._is_network_setup = True
@@ -408,6 +420,9 @@ class initialise_pipeline:
             if not file_path:
                 file_path = f"{self.exec_folder()}/network.dat"
             write_network(self.pert_network_dict, self.protocol, file_path)
+            write_lomap_scores(
+                self.pert_network_dict, f"{self.exec_folder()}/network_scores.dat"
+            )
 
         else:
             print("please setup network first before writing the network file.")

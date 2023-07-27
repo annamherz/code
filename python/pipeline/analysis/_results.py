@@ -459,7 +459,7 @@ class analysis_network:
 
         return name
     
-    def remove_perturbations(self, perts, name=None, use_cinnabar=False):
+    def remove_perturbations(self, perts, name=None):
         """remove perturbations from the network used.
 
         Args:
@@ -480,13 +480,13 @@ class analysis_network:
 
         if self._is_computed_dicts:
             # recompute dicts
-            self._compute_dicts(use_cinnabar=use_cinnabar)
+            self._compute_dicts()
         # remove plotting object as needs to be reintialised with new perturbations
         self._plotting_object = None
         self._histogram_object = None
         self._stats_object = None
 
-    def remove_ligands(self, ligs, name=None, use_cinnabar=False):
+    def remove_ligands(self, ligs, name=None):
         """remove ligand and assosciated perturbations from the network used.
 
         Args:
@@ -514,7 +514,7 @@ class analysis_network:
                         self._perturbations_dict[name].remove(pert)
 
         if self._is_computed_dicts:
-            self._compute_dicts(use_cinnabar=use_cinnabar)
+            self._compute_dicts()
         # remove plotting object as needs to be reintialised with new perturbations
         self._plotting_object = None
         self._histogram_object = None
@@ -569,17 +569,16 @@ class analysis_network:
         self._histogram_object = None
         self._stats_object = None
 
-    def compute_results(self, use_cinnabar=True):
+    def compute_results(self):
         """compute the dictionaries for analysis and those passed to the plotting object.
 
         Args:
             cycle_closure (bool, optional): whether to compute the cycle closures. Defaults to True.
             statistics (bool, optional): whether to calculate the statistics. Defaults to True.
-            use_cinnabar (bool, optional): whether to use cinnabar during the analysis. Defaults to True.
         """
 
         # get all the dictionaries needed for plotting
-        self._compute_dicts(use_cinnabar=use_cinnabar)
+        self._compute_dicts()
 
         # initialise plotting and stats objects
         self._initialise_plotting_object(verbose=self._is_verbose)
@@ -597,19 +596,14 @@ class analysis_network:
     def compute_cycle_closures(self):
         self._compute_cycle_closures()
 
-    def _compute_dicts(self, use_cinnabar=True):
+    def _compute_dicts(self):
         """calculate the perturbation dicts from the previously passed repeat files.
-        If use_cinnabar, calculate the the cinnabar network and the computed values.
 
-        Args:
-            use_cinnabar (bool, optional): whether to use cinnabar. Defaults to True.
         """
-
-        use_cinnabar = validate.boolean(use_cinnabar)
 
         # compute the experimental for perturbations
         self.get_experimental()  # get experimental val dict and normalised dict
-        self.get_experimental_pert()  # from cinnabar expeirmental diff ? make_dict class
+        self.get_experimental_pert()
 
         # for self plotting of per pert
         for eng in (
@@ -639,8 +633,7 @@ class analysis_network:
                 print(e)
                 print("Could not calculate dicts for bound/free legs.")
 
-            if use_cinnabar:
-                self._compute_cinnabar_dict(files, eng, method=self.method)
+            self._compute_cinnabar_dict(files, eng, method=self.method)
 
 
     def _compute_cinnabar_dict(self, files, eng, method=None):
@@ -700,6 +693,12 @@ class analysis_network:
         except Exception as e:
             print(e)
             print(f"could not create cinnabar network for {eng}")
+            self._cinnabar_networks.update({eng: None})
+            self.cinnabar_calc_pert_dict.update({eng: None})
+            self.cinnabar_exper_pert_dict.update({eng: None})
+            self.cinnabar_calc_val_dict.update({eng: None})
+            self.cinnabar_exper_val_dict.update({eng: None})
+
 
     @staticmethod
     def write_vals_file(val_dict, file_path, eng=None, ana=None, method=None):
@@ -715,7 +714,7 @@ class analysis_network:
                 writer.writerow([key, value[0], value[1], eng, ana, method])
 
     def compute_other_results(
-        self, file_names=None, name=None, method=None, use_cinnabar=True, bound_files=None, free_files=None
+        self, file_names=None, name=None, method=None, bound_files=None, free_files=None
     ):
         """compute other results in a similar manner to the engine results.
 
@@ -723,7 +722,6 @@ class analysis_network:
             file_names (list, optional): list of other results. Defaults to None.
             name (str, optional): name of these other results (for files and graphs and identification). Defaults to None.
             method (str, optional): method in the input files to include only. Defaults to None.
-            use_cinnabar (bool, optional): whether to use cinnabar. Defaults to True.
         """
 
         file_names = validate.is_list(file_names, make_list=True)
@@ -778,9 +776,7 @@ class analysis_network:
             self.calc_free_dict.update({name: None})
             self.calc_bound_dict.update({name: None})
 
-        use_cinnabar = validate.boolean(use_cinnabar)
-        if use_cinnabar:
-            self._compute_cinnabar_dict(files=f"{new_file_path}.csv", eng=name)
+        self._compute_cinnabar_dict(files=f"{new_file_path}.csv", eng=name)
 
         # initialise plotting and stats objects again so theyre added
         self._initialise_plotting_object(check=False, verbose=self._is_verbose)
@@ -936,7 +932,7 @@ class analysis_network:
             self.network_graph.draw_perturbation(pert)
 
     def remove_outliers(
-        self, threshold=10, name=None, verbose=False, use_cinnabar=True
+        self, threshold=10, name=None, verbose=False
     ):
         """remove outliers above a certain difference to the experimental.
 
@@ -944,7 +940,6 @@ class analysis_network:
             threshold (float, optional): difference threshold above which to remove. Defaults to 10.
             name (str, optional): name of the data (engine or other results). Defaults to None.
             verbose (bool, optional): whether to verbose output which pert is removed. Defaults to False.
-            use_cinnabar (bool, optional): whether to use cinnabar. This should be consistent with what was used earlier.
         """
 
         # can get from dict or dataframe
@@ -984,12 +979,34 @@ class analysis_network:
                 if verbose:
                     print(f"removed {pert} from perturbations as outlier for {name}.")
 
-            self._compute_dicts(use_cinnabar=use_cinnabar)
+            self._compute_dicts()
 
         # remove plotting object as needs to be reintialised with new perturbations
         self._plotting_object = None
         self._histogram_object = None
         self._stats_object = None
+
+    def sort_ligands_by_binding_affinity(self, engine=None):
+
+        if not self._is_computed_dicts:
+            self._compute_dicts()
+        
+        if engine:
+            engines = validate.engines(engine)
+        else:
+            engines = self.engines
+
+        for eng in engines:
+            print(f"Sorted ligands for {eng}...")
+            df = pd.DataFrame(self.cinnabar_calc_val_dict[eng], index=["value","error"]).transpose()
+
+        return df.sort_values(by="value", ascending=True)
+
+    def sort_ligands_by_experimental_binding_affinity(self):
+
+        df = pd.DataFrame(self.exper_val_dict, index=["value","error"]).transpose()
+
+        return df.sort_values(by="value", ascending=True)
 
     def _initialise_graph_object(self, check=False):
         """intialise the graph object
@@ -1171,14 +1188,7 @@ class analysis_network:
 
         if use_cinnabar:
             if engine:
-                try:
-                    engine = validate.engine(engine)
-                    engines = [engine]
-                except:
-                    print(
-                        "for cinnabar plotting, can only have one engine. Please use the engine keyword to define, or leave blank to autoidentify available engines."
-                    )
-                    return
+                engines = validate.engines(engine)
 
             else:
                 print(
@@ -1210,14 +1220,7 @@ class analysis_network:
 
         if use_cinnabar:
             if engine:
-                try:
-                    engine = validate.engine(engine)
-                    engines = [engine]
-                except:
-                    print(
-                        "for cinnabar plotting, can only have one engine. Please use the engine keyword to define, or leave blank to autoidentify available engines."
-                    )
-                    return
+                engines = validate.engines(engine)
 
             else:
                 print(
