@@ -122,7 +122,7 @@ def main():
         "--prep_folder",
         type=str,
         default=None,
-        help="main folder path where runs are",
+        help="were the prepped files are",
     )
     parser.add_argument(
         "-net", "--net_file", type=str, default=None, help="network file"
@@ -168,12 +168,13 @@ def main():
             folder = f"{mf}/outputs_extracted/{eng}/{pert}"
             pert_atoms = no_perturbing_atoms(pert, prep)
             try:
-                ana_obj = pipeline.analysis.analyse(folder, analysis_protocol=ana_prot)
+                ana_obj = pipeline.analysis.analyse(folder, analysis_prot=ana_prot)
                 avg, error, repeats_tuple_list = ana_obj.analyse_all_repeats()
                 percen_okay, too_smalls_avg = ana_obj.check_overlap()
                 diff = abs(pert_dict[pert][0] - avg.value())
                 err = error.value()
-            except:
+            except Exception as e:
+                print(e)
                 percen_okay = None
                 too_smalls_avg = None
                 diff = None

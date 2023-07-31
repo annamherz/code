@@ -70,6 +70,12 @@ fi
 
 if [ $2 = "GROMACS" ]; then
 
+if [ -z ${gmx23+x} ]; then
+gmxexec=gmx23
+else
+gmxexec=gmx
+fi
+
 min_counter=0
 cp min/lambda_$lam/gromacs.gro min/lambda_$lam/initial_gromacs.gro
 
@@ -82,12 +88,12 @@ cp min/lambda_$lam/gromacs.gro min/lambda_$lam/initial_gromacs.gro
 # min_counter=$((min_counter+1))
 
 echo "min"
-gmx grompp -f min/lambda_$lam/gromacs.mdp -c min/lambda_$lam/initial_gromacs.gro -p min/lambda_$lam/gromacs.top -o min/lambda_$lam/gromacs.tpr
-gmx mdrun -ntmpi 1 -deffnm min/lambda_$lam/gromacs ;
+$gmxexec grompp -f min/lambda_$lam/gromacs.mdp -c min/lambda_$lam/initial_gromacs.gro -p min/lambda_$lam/gromacs.top -o min/lambda_$lam/gromacs.tpr
+$gmxexec mdrun -ntmpi 1 -deffnm min/lambda_$lam/gromacs ;
 
 echo "heat"
-gmx grompp -f heat/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p heat/lambda_$lam/gromacs.top -o heat/lambda_$lam/gromacs.tpr
-gmx mdrun -ntmpi 1 -deffnm heat/lambda_$lam/gromacs ;
+$gmxexec grompp -f heat/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p heat/lambda_$lam/gromacs.top -o heat/lambda_$lam/gromacs.tpr
+$gmxexec mdrun -ntmpi 1 -deffnm heat/lambda_$lam/gromacs ;
 
 # else
 # echo "heat managed to proceed okay with $min_counter minimisations."
@@ -97,11 +103,11 @@ gmx mdrun -ntmpi 1 -deffnm heat/lambda_$lam/gromacs ;
 # done
 
 echo "eq"
-gmx grompp -f eq/lambda_$lam/gromacs.mdp -c heat/lambda_$lam/gromacs.gro -p eq/lambda_$lam/gromacs.top -t heat/lambda_$lam/gromacs.cpt  -o eq/lambda_$lam/gromacs.tpr
-gmx mdrun -ntmpi 1 -deffnm eq/lambda_$lam/gromacs ;
+$gmxexec grompp -f eq/lambda_$lam/gromacs.mdp -c heat/lambda_$lam/gromacs.gro -p eq/lambda_$lam/gromacs.top -t heat/lambda_$lam/gromacs.cpt  -o eq/lambda_$lam/gromacs.tpr
+$gmxexec mdrun -ntmpi 1 -deffnm eq/lambda_$lam/gromacs ;
 echo "prod"
-gmx grompp -f lambda_$lam/gromacs.mdp -c eq/lambda_$lam/gromacs.gro -p lambda_$lam/gromacs.top -t eq/lambda_$lam/gromacs.cpt -o lambda_$lam/gromacs.tpr
-gmx mdrun -ntmpi 1 -deffnm lambda_$lam/gromacs ;
+$gmxexec grompp -f lambda_$lam/gromacs.mdp -c eq/lambda_$lam/gromacs.gro -p lambda_$lam/gromacs.top -t eq/lambda_$lam/gromacs.cpt -o lambda_$lam/gromacs.tpr
+$gmxexec mdrun -ntmpi 1 -deffnm lambda_$lam/gromacs ;
 
 # delete simulation data 
 if [[ $keep_traj == "None" ]]; then

@@ -187,24 +187,31 @@ class plotting_engines:
 
         return names_list
 
-    def _validate_in_names_list(self, name):
+    def _validate_in_names_list(self, name, make_list=False):
         """validate if the name is in the names list
 
         Args:
             name (str): the name to validate
+            make_list (bool, optional): whether to make into a list, default is False.
 
         Raises:
             ValueError: if not in names list
 
         Returns:
-            str: the validated name
+            str: the validated name or names list.
         """
 
-        name = validate.string(name)
-        if name not in self.names_list:
-            raise ValueError(f"{name} must be in {self.names_list}")
+        names = validate.is_list(name, make_list=True)
+      
+        for name in names:
+            name = validate.string(name)
+            if name not in (self.names_list):
+                raise ValueError(f"{name} must be in {self.names_list}")
+        
+        if not make_list:
+            names = names[0]
 
-        return name
+        return names
 
     def _analysis_dicts_to_df(self):
         """turn the dicts from the analysis network to ones for the plotting object"""
@@ -817,8 +824,7 @@ class plotting_engines:
         if y_names:
             y_names = validate.is_list(y_names, make_list=True)
             for y_name in y_names:
-                if y_name not in self.names_list:
-                    raise ValueError("name must be in calc names")
+                y_name = self._validate_in_names_list(y_name)
         else:
             y_names = self.names_list
             y_names.remove(x_name)
@@ -881,7 +887,7 @@ class plotting_engines:
 
                 # find the n ligand names that are outliers.
                 outlier_names = mue_values.nlargest(
-                    number_outliers_to_annotate
+                    no_outliers
                 ).index.values.tolist()
                 print(outlier_names)
 
@@ -1110,10 +1116,13 @@ class plotting_engines:
                     ind = 1
                 else:
                     ind = 0
-                if plot_difference:
-                    y_val = df.iloc[-1][pert][ind] - a[ind]
-                else:
-                    y_val = a[ind]
+                try:
+                    if plot_difference:
+                        y_val = df.iloc[-1][pert][ind] - a[ind]
+                    else:
+                        y_val = a[ind]
+                except:
+                    y_val = None
                 if not index_dict[x]:
                     index_dict[x] = [y_val]
                 else:
@@ -1180,7 +1189,7 @@ class plotting_histogram(plotting_engines):
                 f"{output_folder}/graphs", create=True
             )
         # set the colours
-        self.colours = plotting_engines.set_colours(self.other_results_names)
+        self.colours = plotting_engines.set_colours(other_results_names=self.other_results_names)
 
         # set the dictionary for histograms
         self.files_into_error_lists()
@@ -1198,7 +1207,6 @@ class plotting_histogram(plotting_engines):
         self._results_free_repeat_files = ana_obj._results_free_repeat_files
         self._results_bound_repeat_files = ana_obj._results_bound_repeat_files
         self._results_value_files = ana_obj._results_value_files
-        print(self._results_value_files)
 
     def files_into_error_lists(self):
         self.error_dict = {}
@@ -1219,7 +1227,7 @@ class plotting_histogram(plotting_engines):
                     error_list = make_dict.value_list_from_files(dtu[name])
                     self.error_dict[err][name] = error_list
                 except:
-                    self.error_dict[err][name] = None
+                    self.error_dict[err][name] = []
 
     def histogram(self, name=None, type_error="SEM_pert"):
         if type_error not in self.error_type:
@@ -1232,8 +1240,12 @@ class plotting_histogram(plotting_engines):
         col = self.colours[name]
         x_list = self.error_dict[type_error][name]
         x = [x_val for x_val in x_list if str(x_val) != "nan"]
+        no_bins = abs(round(math.sqrt(len(x))))
 
-        no_bins = round(math.sqrt(len(x)))
+        if no_bins < 1:
+            self.best_fit_dict[type_error][name] = (([0], [0]), 0, 0)
+            print(f"could not plot the histogram for {name} for {type_error}. can it find the results files with the error?")
+            return
 
         # Fit a normal distribution to the data, mean and standard deviation
         mu, std = norm.fit(x)
@@ -1275,6 +1287,7 @@ class plotting_histogram(plotting_engines):
         fig, ax = plt.subplots(figsize=(10, 10))
 
         lines = []
+        mu_std_string = ""
 
         for name in names:
             col = self.colours[name]
@@ -1286,6 +1299,7 @@ class plotting_histogram(plotting_engines):
                 color=col,
             )
             lines += plt.plot(0, 0, c=col, label=name)
+            mu_std_string += f"\n{name} : mu = {self.best_fit_dict[type_error][name][1]:.3f} , std = {self.best_fit_dict[type_error][name][2]:.3f}"
 
         labels = [l.get_label() for l in lines]
         plt.legend(lines, labels, loc="upper right")
@@ -1294,7 +1308,7 @@ class plotting_histogram(plotting_engines):
         plt.ylabel("Frequency")
         eng_name = self._get_y_name(names)
         plt.title(
-            f"Distribution of error for {type_error}, {eng_name}, {self.net_ext.replace('_',', ')}"
+            f"Distribution of error for {type_error}, {eng_name}, {self.net_ext.replace('_',', ')}{mu_std_string}"
         )
         plt.savefig(
             f"{self.graph_folder}/normal_dist_{eng_name}_{type_error}_{self.file_ext}_{self.net_ext}.png",

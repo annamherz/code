@@ -440,24 +440,31 @@ class analysis_network:
 
         return pert_dict
 
-    def _validate_in_names_list(self, name):
+    def _validate_in_names_list(self, name, make_list=False):
         """validate if the name is in the names list
 
         Args:
             name (str): the name to validate
+            make_list (bool, optional): whether to make into a list, default is False.
 
         Raises:
             ValueError: if not in names list
 
         Returns:
-            str: the validated name
+            str: the validated name or names list.
         """
 
-        name = validate.string(name)
-        if name not in (self.engines + self.other_results_names):
-            raise ValueError(f"{name} must be in {[self.engines + self.other_results_names]}")
+        names = validate.is_list(name, make_list=True)
+      
+        for name in names:
+            name = validate.string(name)
+            if name not in (self.engines + self.other_results_names):
+                raise ValueError(f"{name} must be in {self.engines + self.other_results_names}")
+        
+        if not make_list:
+            names = names[0]
 
-        return name
+        return names
     
     def remove_perturbations(self, perts, name=None):
         """remove perturbations from the network used.
@@ -754,7 +761,7 @@ class analysis_network:
         )
         # set info to dicts etc
         self.calc_pert_dict.update({name: calc_diff_dict})
-        self._results_files[name] = f"{new_file_path}.csv"
+        self._results_files[name] = [f"{new_file_path}.csv"]
         perts, ligs = get_info_network_from_dict(calc_diff_dict)
         self._perturbations_dict[name] = perts
         self._ligands_dict[name] = ligs
@@ -768,9 +775,11 @@ class analysis_network:
             calc_bound_dict = make_dict.comp_results(
             bound_files, perts, engine=None, name=name, method=method)
             self.calc_bound_dict.update({name: calc_bound_dict})
+            self._results_bound_repeat_files.update({name: bound_files})
             calc_free_dict = make_dict.comp_results(
             free_files, perts, engine=None, name=name, method=method)
             self.calc_free_dict.update({name: calc_free_dict})
+            self._results_free_repeat_files.update({name: free_files})
 
         else:
             self.calc_free_dict.update({name: None})
@@ -915,17 +924,18 @@ class analysis_network:
         return failed_perts
 
     def disconnected_ligands(self, eng):
+        
         eng = validate.engine(eng)
-
-        self._initialise_graph_object(check=True)
-        ligs = self.network_graph.disconnected_ligands()
+        val, percen, perturbations = self.successful_runs(eng)
+        graph = net_graph(self.ligands, perturbations)
+        ligs = graph.disconnected_ligands()
 
         return ligs
 
     def draw_failed_perturbations(self, eng):
         eng = validate.engine(eng)
 
-        val, percen, perturbations = self.successful_runs(eng)
+        perturbations = self.failed_runs(eng)
 
         self._initialise_graph_object(check=True)
         for pert in perturbations:
@@ -951,7 +961,7 @@ class analysis_network:
         perts = []
 
         if name:
-            names = [plot_obj._validate_in_names_list(name)]
+            names = plot_obj._validate_in_names_list(name, make_list=True)
         else:
             names = self.other_results_names + self.engines
 
@@ -1008,7 +1018,7 @@ class analysis_network:
 
         return df.sort_values(by="value", ascending=True)
 
-    def _initialise_graph_object(self, check=False):
+    def _initialise_graph_object(self, check=False, ligands_folder=None):
         """intialise the graph object
 
         Args:
@@ -1020,30 +1030,31 @@ class analysis_network:
 
         # if not checking, always make
         if not check:
-            self.network_graph = net_graph(self.ligands, self.perturbations)
+            self.network_graph = net_graph(self.ligands, self.perturbations, ligands_folder=ligands_folder)
 
         # if checking, first see if it exists and if not make
         elif check:
             if not self.network_graph:
-                self.network_graph = net_graph(self.ligands, self.perturbations)
+                self.network_graph = net_graph(self.ligands, self.perturbations, ligands_folder=ligands_folder)
 
         return self.network_graph
 
-    def draw_graph(self, output_dir=None, use_cinnabar=False, engine=None):
+    def draw_graph(self, output_dir=None, use_cinnabar=False, engines=None, successful_runs=True):
         """draw the network graph.
 
         Args:
             output_dir (str, optional): folder to save the image in. Defaults to None.
             use_cinnabar (bool, optional): whether to use the cinnabar data or the self computed data. Defaults to False.
-            engine (str, optional): engine to draw the network for. Defaults to None, draws for each engine.
+            engines (str/list, optional): engine to draw the network for. Defaults to None, draws for each engine.
+            successful_runs (bool, optional): whether to only draw the successful runs. Only useable if cinnabar is set to False. Defaults to True.
         """
 
+        if engines:
+            engines = self._validate_in_names_list(engines, make_list=True)
+        else:
+            engines = self.engines
+            
         if use_cinnabar:
-            if engine:
-                engines = [engine]
-            else:
-                engines = self.engines
-
             for eng in engines:
                 if output_dir:
                     file_name = f"{output_dir}/cinnabar_network_{eng}_{self.file_ext}_{self.net_ext}.png"
@@ -1052,7 +1063,17 @@ class analysis_network:
                 self._cinnabar_networks[eng].draw_graph(file_name=file_name)
 
         else:
-            self._initialise_graph_object(check=True)
+            successful_runs = validate.boolean(successful_runs)
+
+            if successful_runs:
+                for eng in engines:
+                    val, percen, perturbations = self.successful_runs(eng)
+                    graph = net_graph(self.ligands, perturbations)
+                    graph.draw_graph(file_dir=output_dir)
+            else:
+                for eng in engines:
+                    graph = net_graph(self._ligands_dict[eng], self._perturbations_dict[eng])
+                    graph.draw_graph(file_dir=output_dir)
 
             self.network_graph.draw_graph(file_dir=output_dir)
 
@@ -1178,24 +1199,20 @@ class analysis_network:
 
         plot_obj.bar(pert_val=leg, names=engine, **plotting_dict)
 
-    def plot_scatter_pert(self, engine=None, use_cinnabar=False, **kwargs):
+    def plot_scatter_pert(self, engines=None, use_cinnabar=False, **kwargs):
         """plot the scatter plot of the perturbations.
 
         Args:
-            engine (str, optional): engine to plot for. Defaults to None, will use all.
+            engines (str, optional): engine to plot for. Defaults to None, will use all.
             use_cinnabar (bool, optional): whether to plot via cinnabar. Defaults to False.
         """
 
+        if engines:
+            engines = self._validate_in_names_list(engines, make_list=True)
+        else:
+            engines = self.engines
+
         if use_cinnabar:
-            if engine:
-                engines = validate.engines(engine)
-
-            else:
-                print(
-                    "no engine specified for plotting, will plot seperate graphs for each self.engines "
-                )
-                engines = self.engines
-
             for eng in engines:
                 plotting.plot_DDGs(
                     self._cinnabar_networks[eng].graph,
@@ -1208,26 +1225,22 @@ class analysis_network:
             plot_obj = self._initialise_plotting_object(
                 check=True, verbose=self._is_verbose
             )
-            plot_obj.scatter(pert_val="pert", y_names=engine, **kwargs)
+            plot_obj.scatter(pert_val="pert", y_names=engines, **kwargs)
 
-    def plot_scatter_lig(self, engine=None, use_cinnabar=False, **kwargs):
+    def plot_scatter_lig(self, engines=None, use_cinnabar=False, **kwargs):
         """plot the scatter plot of the values per ligand.
 
         Args:
-            engine (str, optional): engine to plot for. Defaults to None, will use all.
+            engines (str, optional): engine to plot for. Defaults to None, will use all.
             use_cinnabar (bool, optional): whether to plot via cinnabar. Defaults to False.
         """
 
+        if engines:
+            engines = self._validate_in_names_list(engines, make_list=True)
+        else:
+            engines = self.engines
+
         if use_cinnabar:
-            if engine:
-                engines = validate.engines(engine)
-
-            else:
-                print(
-                    "no engine specified for plotting, will plot seperate graphs for each self.engines "
-                )
-                engines = self.engines
-
             for eng in engines:
                 plotting.plot_DGs(
                     self._cinnabar_networks[eng].graph,
@@ -1240,7 +1253,7 @@ class analysis_network:
             plot_obj = self._initialise_plotting_object(
                 check=True, verbose=self._is_verbose
             )
-            plot_obj.scatter(pert_val="val", y_names=engine, **kwargs)
+            plot_obj.scatter(pert_val="val", y_names=engines, **kwargs)
 
     def plot_eng_vs_eng(self, engine_a=None, engine_b=None, pert_val="pert"):
         """plot scatter plot of engine_a vs engine_b
@@ -1270,38 +1283,7 @@ class analysis_network:
             pert_val=pert_val, y_names=engine_a, x_name=engine_b, **plotting_dict
         )
 
-    def plot_other_results(
-        self, name=None, engine=None, pert_val=None, outliers=None, **kwargs
-    ):
-        """plot any other results as a scatter plot
-
-        Args:
-            name (str, optional): name of the other results (that was used when it was added). Defaults to None.
-            engine (str, optional): engine to plot against other results. Defaults to None.
-            pert_val (str, optional): whether perturbations 'pert' or values per ligand 'val'. Defaults to None.
-            outliers (int, optional): number of outliers to identify. Defaults to None.
-
-        Raises:
-            NameError: if the name does not exist in the other results
-        """
-
-        name = validate.string(name)
-
-        # first, check if name exists in other dict
-        if name in self.other_results_names:
-            pass
-        else:
-            raise NameError(f"{name} does not exist as an added other results.")
-
-        plot_obj = self._initialise_plotting_object(
-            check=True, verbose=self._is_verbose
-        )
-
-        plot_obj.scatter(
-            pert_val=pert_val, y_names=engine, x_name=name, outliers=outliers, **kwargs
-        )
-
-    def plot_outliers(self, engine=None, no_outliers=5, pert_val="pert", **kwargs):
+    def plot_outliers(self, engines=None, no_outliers=5, pert_val="pert", **kwargs):
         """plot scatter plot with annotated outliers.
 
         Args:
@@ -1315,7 +1297,7 @@ class analysis_network:
             check=True, verbose=self._is_verbose
         )
         plot_obj.scatter(
-            pert_val=pert_val, y_names=engine, no_outliers=no_outliers, **kwargs
+            pert_val=pert_val, y_names=engines, outliers=True, no_outliers=no_outliers, **kwargs
         )
 
     def plot_histogram_sem(self, engines=None, pert_val="pert"):
@@ -1412,11 +1394,12 @@ class analysis_network:
 
         return self._stats_object
 
-    def calc_mad_engines(self, pert_val=None):
-        """calculate the Mean Absolute Error (MAE) for between all the engines.
+    def calc_mad_engines(self, pert_val=None, engines=None):
+        """calculate the Mean Absolute Deviation (MAE) for between all the engines.
 
         Args:
             pert_val (str, optional): whether plotting 'pert' ie perturbations or 'val' ie values (per ligand result). Defaults to None.
+            engines (list, optional): names of engines / other results names to calculate the MAD for.
 
         Returns:
             tuple: of dataframe of value and error (mae_pert_df, mae_pert_df_err)
@@ -1427,7 +1410,10 @@ class analysis_network:
         pv = validate.pert_val(pert_val)
 
         values_dict = stats_obj.values_dict
-        engines = self.engines
+        if engines:
+            engines = self._validate_in_names_list(engines, make_list=True)
+        else:
+            engines = self.engines + self.other_results_names
 
         mae_pert_df = pd.DataFrame(columns=engines, index=engines)
         mae_pert_df_err = pd.DataFrame(columns=engines, index=engines)

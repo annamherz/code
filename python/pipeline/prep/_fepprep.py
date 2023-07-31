@@ -190,7 +190,7 @@ class fepprep:
         """merge the systems based on whether aligning to the lambda 0.0 coordinates or the lmabda 1.0 coordinates.
 
         Args:
-            align_to (_type_): 'lig0' or 'lig1'.
+            align_to (str): 'lig0' or 'lig1'.
 
         Returns:
             BioSimSpace._SireWrappers.System: the free system and the bound system

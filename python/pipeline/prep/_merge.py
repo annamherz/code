@@ -26,7 +26,7 @@ class merge:
         # default ring breaking is not allowed
         allow_ring_breaking = False
         allow_ring_size_change = False
-        align_to = "lig0"
+        align_to = "LIG0"
         scoring_function = "rmsd_align"
         mapping = None
         inv_mapping = None
@@ -38,7 +38,7 @@ class merge:
             if key == "ALLOWRINGSIZECHANGE":
                 allow_ring_size_change = validate.boolean(value)
             if key == "ALIGNTO":
-                align_to = validate.string(value)
+                align_to = validate.string(value).upper()
             if key == "SCORINGFUNCTION":
                 scoring_function = validate.string(
                     value
@@ -76,7 +76,7 @@ class merge:
 
         inv_mapping = {v: k for k, v in mapping.items()}
 
-        if align_to == "lig0":
+        if align_to == "LIG0":
             # need inverse mapping to align
             # aligns atoms in first argument to atoms in second argument
             ligand_1_a = align_func(ligand_1, ligand_0, inv_mapping)
@@ -89,7 +89,7 @@ class merge:
                 allow_ring_size_change=allow_ring_size_change,
             )
 
-        elif align_to == "lig1":
+        elif align_to == "LIG1":
             # align ligand 0 to ligand 1
             ligand_0_a = align_func(ligand_0, ligand_1, mapping)
             # Generate merged molecule.
@@ -151,12 +151,13 @@ class merge:
         """
 
         # default arguments
-        align_to = "lig0"
+        align_to = "LIG0"
 
         # check kwargs
         for key, value in kwargs.items():
-            if key == "align to":
-                align_to = validate.string(value)
+            key = key.upper().replace(" ", "").replace("_", "").strip()
+            if key == "ALIGNTO":
+                align_to = validate.string(value).upper()
 
         system_0 = validate.system(system0).copy()
         system_1 = validate.system(system1).copy()
@@ -172,15 +173,15 @@ class merge:
             )
 
         # merge the ligands based on the engine.
-        print("mapping, aligning and merging the ligands...")
+        print(f"mapping, aligning and merging the ligands according to {align_to}...")
         merged_trans = merge.merge_ligands(ligand_0, ligand_1, **kwargs)
 
-        if align_to == "lig0":
+        if align_to == "LIG0":
             # put the merged ligand into the system_0 in place of ligand_0
             system_0.removeMolecules(ligand_0)
             system_final = merged_trans + system_0
 
-        elif align_to == "lig1":
+        elif align_to == "LIG1":
             # put the merged ligand into the system_0 in place of ligand_0
             system_1.removeMolecules(ligand_1)
             system_final = merged_trans + system_1
