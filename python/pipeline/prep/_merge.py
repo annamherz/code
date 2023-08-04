@@ -75,7 +75,7 @@ class merge:
             )
 
         inv_mapping = {v: k for k, v in mapping.items()}
-
+        print(f"aligning and merging the ligands according to align to {align_to}, allow ring breaking {allow_ring_breaking}, allow ring size change {allow_ring_size_change}...")
         if align_to == "LIG0":
             # need inverse mapping to align
             # aligns atoms in first argument to atoms in second argument
@@ -173,7 +173,7 @@ class merge:
             )
 
         # merge the ligands based on the engine.
-        print(f"mapping, aligning and merging the ligands according to {align_to}...")
+        print(f"mapping, aligning and merging the ligands...")
         merged_trans = merge.merge_ligands(ligand_0, ligand_1, **kwargs)
 
         if align_to == "LIG0":
@@ -218,7 +218,7 @@ class merge:
                 complete_rings = validate.boolean(value)
             if key == "PRUNEPERTURBEDCONSTRAINTS":
                 prune_perturbed_constraints = validate.boolean(value)
-            if key == "PRUNECROSSINGRESTRAINTS":
+            if key == "PRUNECROSSINGCONSTRAINTS":
                 prune_crossing_constraints = validate.boolean(value)
             if key == "SCORINGFUNCTION":
                 scoring_function = validate.string(
@@ -257,6 +257,7 @@ class merge:
             except:
                 pass
 
+        print(f"mapping atoms using {scoring_function}, complete rings {complete_rings}, prune perturbed constraints {prune_perturbed_constraints}, prune crossing constraints {prune_crossing_constraints} and prematch {prematch}")
         # Align ligand2 on ligand1
         # get the mapping of ligand0 to atoms in ligand1
         mapping = BSS.Align.matchAtoms(

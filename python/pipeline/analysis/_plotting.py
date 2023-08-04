@@ -1134,8 +1134,9 @@ class plotting_engines:
             try:
                 val_list = [x for x in index_dict[x] if pd.notna(x)]
                 avg = np.mean(val_list)
-                min_val = min(val_list)
-                max_val = max(val_list)
+                # bc of how its plotted later (ie as inbetween a min and a max added to the avg), need this as the difference to the mean
+                min_val = min(val_list) - avg # is a negative value
+                max_val = max(val_list) - avg # is a positive value
             except:
                 avg = None
                 min_val = None
@@ -1316,3 +1317,181 @@ class plotting_histogram(plotting_engines):
             bbox_inches="tight",
         )
         plt.show()
+
+
+
+
+
+# class plot_convergence():
+#     """class to plot convergence
+#     """
+
+#     def __init__(self, outputs_dir, perturbations=None, engines=None, file_ext=None, res_folder=None):
+#         """ plot convergence for the different perturbations.
+
+#         Args:
+#             outputs_dir (str): folder where the outputs to plot are located.
+#             perturbations (list, optional): list of perturbations to consider. Defaults to None.
+#             engines (list, optional): list of engines to plot for. Defaults to None.
+#             file_ext (str, optional): file extension to use. Defaults to None.
+#             res_folder (str, optional): directory to save the plots. Defaults to None.
+
+#         Raises:
+#             ValueError: need to include the perturbations
+#         """
+
+#         # need the outputs directory
+#         self.outputs_dir = validate.folder_path(outputs_dir)
+#         self.engines = validate.engines(engines)
+
+#         self.file_ext = validate.string(file_ext)
+
+#         if not perturbations:
+#             raise ValueError("please include perturbations")
+#         else:
+#             self.perturbations = validate.is_list(perturbations)
+
+#         if not res_folder:
+#             self.res_folder = validate.folder_path(f"{outputs_dir}/convergence", create=True)
+#         else:
+#             self.res_folder = validate.folder_path(res_folder, create=True)
+
+#         self.set_colours()
+
+#     def set_colours(self, colour_dict=None):
+#         """set the colours for the convergence. Use the default colours from plotting if not provided.
+
+#         Args:
+#             colour_dict (dict, optional): dicitonary of colours for the engines. Defaults to None.
+
+#         Returns:
+#            dict: colour dictionary
+#         """
+        
+#         set_colour_dict = plotting_engines._set_colours(colour_dict)
+#         self.colours = set_colour_dict
+
+#         return set_colour_dict
+
+#     def plot_convergence_all(self):
+#         """plot convergence for all perturbations
+#         """
+
+#         for pert in self.perturbations:
+#             lig_0 = pert.split("~")[0]
+#             lig_1 = pert.split("~")[1]
+
+#             self.plot_convergence_single(pert, engines=self.engines)
+
+
+#     def plot_convergence_single(self, perturbation, engines=None):
+#         """plot convergence for a single perturbation
+
+#         Args:
+#             perturbation (str): name of the perturbation
+#             engines (list, optional): list of the engines. Defaults to None.
+#         """
+
+#         for leg in [ 'free','bound']:
+            
+#             plt.figure()
+#             lines = []
+            
+#             for eng in engines:
+#                 col = self.colours[eng]
+#                 with open (f'{self.outputs_dir}/{eng}/{perturbation}/pickle/{leg}_pmf_{perturbation}_{eng}_{self.file_ext}.pickle', 'rb') as handle:
+#                     pmf_dict = pickle.load(handle)
+#                 lines += plt.plot(0,0,c=col, label=eng)
+#                 for repeat in pmf_dict:
+#                     pmf = pmf_dict[repeat]
+#                     x =[]
+#                     y=[]
+#                     yerr = []
+#                     for p in pmf:
+#                         x.append(p[0])
+#                         y.append(p[1]*(1/BSS.Units.Energy.kcal_per_mol))
+#                         yerr.append(p[2]*(1/BSS.Units.Energy.kcal_per_mol))
+#                     plt.errorbar(x,y,yerr=yerr,color=col)
+#             plt.xlim(xmin=0,xmax=1)
+#             plt.ylabel("Computed $\Delta$G$_{transformation}$ / kcal$\cdot$mol$^{-1}$")
+#             plt.xlabel("Lambda")
+#             labels = [l.get_label() for l in lines]
+#             plt.legend(lines, labels)
+#             plt.title(f"Convergence, {leg} for {perturbation}")
+#             plt.savefig(f'{self.res_folder}/{perturbation}_convergence_{leg}.png')
+
+#         # plotting delta delta G
+
+#         plt.figure()
+#         lines = []
+#         for eng in engines:
+#             # open the pickles
+#             with open (f'{self.outputs_dir}/{eng}/{perturbation}/pickle/bound_pmf_{perturbation}_{eng}_{self.file_ext}.pickle', 'rb') as handle:
+#                 bound_pmf_dict = pickle.load(handle)
+#             with open (f'{self.outputs_dir}/{eng}/{perturbation}/pickle/free_pmf_{perturbation}_{eng}_{self.file_ext}.pickle', 'rb') as handle:
+#                 free_pmf_dict = pickle.load(handle)
+#             lines += plt.plot(0,0,c=self.colours[eng], label=eng)
+#             for repf,repb in zip(free_pmf_dict,bound_pmf_dict):
+#                 bound_pmf = bound_pmf_dict[repb]
+#                 free_pmf = free_pmf_dict[repf]
+#                 x = []
+#                 y = []
+#                 yerr = []
+#                 for pb,pf in zip(bound_pmf,free_pmf):
+#                     x.append(pb[0])
+#                     y.append((pb[1]*(1/BSS.Units.Energy.kcal_per_mol))-(pf[1]*(1/BSS.Units.Energy.kcal_per_mol)))
+#                     yerr.append((pb[2]*(1/BSS.Units.Energy.kcal_per_mol))+(pf[2]*(1/BSS.Units.Energy.kcal_per_mol)))
+#                 plt.errorbar(x,y,yerr=yerr,color=self.colours[eng])
+#         plt.xlim(xmin=0,xmax=1)
+#         plt.ylabel("Computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+#         plt.xlabel("Lambda")
+#         labels = [l.get_label() for l in lines]
+#         plt.legend(lines, labels)
+#         plt.title(f"Convergence for {perturbation}")
+#         plt.savefig(f'{self.res_folder}/{perturbation}_convergence_deltadeltaG.png')
+
+
+#         # TODO plot average of each window
+
+#         plt.figure()
+#         lines = []
+#         for eng in engines:
+#             with open (f'{self.outputs_dir}/{eng}/{perturbation}/pickle/bound_pmf_{perturbation}_{eng}_{self.file_ext}.pickle', 'rb') as handle:
+#                 bound_pmf_dict = pickle.load(handle)
+#             with open (f'{self.outputs_dir}/{eng}/{perturbation}/pickle/free_pmf_{perturbation}_{eng}_{self.file_ext}.pickle', 'rb') as handle:
+#                 free_pmf_dict = pickle.load(handle)
+#             lines += plt.plot(0,0,c=self.colours[eng], label=eng)
+
+#             # get the x (lambda) windows
+#             x = []
+#             for pf in free_pmf_dict[0]:
+#                 x.append(pf[0])
+
+#             y_avg = []
+#             y_err = []
+
+#             for val in x:
+
+#                 y = []
+#                 yerr = []
+
+#             for repf,repb in zip(free_pmf_dict,bound_pmf_dict):
+#                 bound_pmf = bound_pmf_dict[repb]
+#                 free_pmf = free_pmf_dict[repf]
+                
+#                 for pb,pf in zip(bound_pmf,free_pmf):
+#                     y.append((pb[1]*(1/BSS.Units.Energy.kcal_per_mol))-(pf[1]*(1/BSS.Units.Energy.kcal_per_mol)))
+#                     yerr.append((pb[2]*(1/BSS.Units.Energy.kcal_per_mol))+(pf[2]*(1/BSS.Units.Energy.kcal_per_mol)))
+                
+
+
+                
+#             plt.errorbar(x,y_avg,yerr=yerr,color=self.colours[eng])
+        
+#         plt.xlim(xmin=0,xmax=1)
+#         plt.ylabel("Computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
+#         plt.xlabel("Lambda")
+#         labels = [l.get_label() for l in lines]
+#         plt.legend(lines, labels)
+#         plt.title(f"Convergence for {perturbation}")
+#         plt.savefig(f'{self.res_folder}/{perturbation}_convergence_deltadeltaG.png')

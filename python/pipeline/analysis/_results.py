@@ -10,12 +10,12 @@ from ._plotting import *
 from ._statistics import *
 from ._dictionaries import *
 from ._convert import *
+from ..prep import *
 
 import cinnabar
 from cinnabar import wrangle, plotting, stats
 
 from math import isnan
-
 
 class analysis_network:
     """class to analyse results files and plot"""
@@ -324,6 +324,7 @@ class analysis_network:
         self._cinnabar_networks = {}
         # overall graph
         self.network_graph = None
+        self.ligands_folder = None
         # cycles
         self.cycle_dict = {}
 
@@ -1018,7 +1019,16 @@ class analysis_network:
 
         return df.sort_values(by="value", ascending=True)
 
-    def _initialise_graph_object(self, check=False, ligands_folder=None):
+    def add_ligands_folder(self, folder):
+        """add a ligands folder so the ligands can be visualised
+
+        Args:
+            folder (str): ligand file location folder
+        """
+
+        self.ligands_folder = validate.folder_path(folder)
+
+    def _initialise_graph_object(self, check=False):
         """intialise the graph object
 
         Args:
@@ -1030,12 +1040,15 @@ class analysis_network:
 
         # if not checking, always make
         if not check:
-            self.network_graph = net_graph(self.ligands, self.perturbations, ligands_folder=ligands_folder)
+            self.network_graph = net_graph(self.ligands, self.perturbations, ligands_folder=self.ligands_folder)
+
+        if not self.ligands_folder:
+            print("please use self.add_ligands folder to add a folder so the ligands can be visualised!")
 
         # if checking, first see if it exists and if not make
         elif check:
             if not self.network_graph:
-                self.network_graph = net_graph(self.ligands, self.perturbations, ligands_folder=ligands_folder)
+                self.network_graph = net_graph(self.ligands, self.perturbations, ligands_folder=self.ligands_folder)
 
         return self.network_graph
 
@@ -1595,3 +1608,71 @@ class analysis_network:
         )
 
         return r_confidence, tau_confidence, mue_confidence
+
+    def perturbing_atoms_and_overlap(self, prep_dir=None, outputs_dir=None, **kwargs):
+
+        if prep_dir:
+            prep_dir = validate.folder_path(prep_dir)
+            calc_atom_mappings = True
+        else:
+            print("please provide the prep dir to use for calculating atom mappings. Will only look at overlap.")
+            calc_atom_mappings = False
+
+        if outputs_dir:
+            outputs_dir = validate.folder_path(outputs_dir)
+        else:
+            print("please provide the dir where the outputs are located")
+            return
+
+        pert_dict = self.exper_pert_dict
+
+        with open(f"{self.output_folder}/perturbing_overlap.dat", "w") as f:
+            writer = csv.writer(f)
+            writer.writerow(
+                [
+                    "perturbation",
+                    "engine",
+                    "perturbing_atoms",
+                    "percen_overlap_okay",
+                    "too_small_avg",
+                    "diff_to_exp",
+                    "error",
+                ]
+            )
+            for pert, eng in it.product(self.perturbations, self.engines):
+                print(f"running {pert}, {eng}....")
+
+                if calc_atom_mappings:
+
+                    lig_0 = pert.split("~")[0]
+                    lig_1 = pert.split("~")[1]
+
+                    # Load equilibrated inputs for both ligands
+                    system0 = BSS.IO.readMolecules(
+                        [f"{prep_dir}/{lig_0}_lig_equil_solv.rst7", f"{prep_dir}/{lig_0}_lig_equil_solv.prm7"]
+                    )
+                    system1 = BSS.IO.readMolecules(
+                        [f"{prep_dir}/{lig_1}_lig_equil_solv.rst7", f"{prep_dir}/{lig_1}_lig_equil_solv.prm7"]
+                    )
+
+                    pert_atoms = pipeline.prep.merge.no_perturbing_atoms_average(system0, system1, **kwargs)
+                
+                else:
+                    pert_atoms = None
+
+                try:
+                    ana_obj = pipeline.analysis.analyse(f"{outputs_dir}/{eng}/{pert}", analysis_prot=self.analysis_options)
+                    avg, error, repeats_tuple_list = ana_obj.analyse_all_repeats()
+                    percen_okay, too_smalls_avg = ana_obj.check_overlap()
+                    diff = abs(pert_dict[pert][0] - avg.value())
+                    err = error.value()
+                except Exception as e:
+                    print(e)
+                    percen_okay = None
+                    too_smalls_avg = None
+                    diff = None
+                    err = None
+
+                row = [pert, eng, pert_atoms, percen_okay, too_smalls_avg, diff, err]
+                print(row)
+                writer.writerow(row)

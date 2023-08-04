@@ -71,10 +71,12 @@ def fep_prep(pert, prot_file, num_lambda_query, engine_query, main_dir, prep_dir
 
     # load in any predefined mapping
     if os.path.exists(
-        f"{main_dir}/inputs/mapping/{lig_1}~{lig_2}_mapping_dict.pickle"
+        # f"{main_dir}/inputs/mapping/{lig_1}~{lig_2}_mapping_dict.pickle"
+        f"/home/anna/Documents/benchmark/inputs/mapping/{lig_1}~{lig_2}_mapping_dict.pickle"
     ):
         with open(
-            f"{main_dir}/inputs/mapping/{lig_1}~{lig_2}_mapping_dict.pickle",
+            # f"{main_dir}/inputs/mapping/{lig_1}~{lig_2}_mapping_dict.pickle",
+            f"/home/anna/Documents/benchmark/inputs/mapping/{lig_1}~{lig_2}_mapping_dict.pickle",
             "rb",
         ) as handle:
             mapping_dict = pickle.load(handle)

@@ -3,9 +3,9 @@ import warnings
 import BioSimSpace as BSS
 from BioSimSpace import Units as _Units
 import pickle
-import numpy as _np
-import math as _math
-import pandas as _pd
+import numpy as np
+import math as math
+import pandas as pd
 from scipy.stats import sem
 import pickle
 import matplotlib.pyplot as plt
@@ -527,7 +527,7 @@ class analyse:
                     - self._bound_pmf_dict[bound_name][0][1]
                 )
                 bound_err = BSS.Types.Energy(
-                    _math.sqrt(
+                    math.sqrt(
                         (
                             self._bound_pmf_dict[bound_name][-1][2].value()
                             * self._bound_pmf_dict[bound_name][-1][2].value()
@@ -555,7 +555,7 @@ class analyse:
                     - self._free_pmf_dict[free_name][0][1]
                 )
                 free_err = BSS.Types.Energy(
-                    _math.sqrt(
+                    math.sqrt(
                         (
                             self._free_pmf_dict[free_name][-1][2].value()
                             * self._free_pmf_dict[free_name][-1][2].value()
@@ -639,13 +639,13 @@ class analyse:
             missing_results = False
 
         if missing_results:
-            return (_np.nan, _np.nan), repeats_tuple_list
+            return (np.nan, np.nan), repeats_tuple_list
 
         # list of values for each leg
         free_vals = [val.value() for val in self._free_val_dict.values()]
         bound_vals = [val.value() for val in self._bound_val_dict.values()]
-        free_avg = _np.mean(free_vals)
-        bound_avg = _np.mean(bound_vals)
+        free_avg = np.mean(free_vals)
+        bound_avg = np.mean(bound_vals)
         # errors depending on how many results
         if len(self.free_calculated) == 1:
             free_err = self._free_err_dict[self.free_calculated[0]].value()
@@ -657,7 +657,7 @@ class analyse:
             bound_err = sem(bound_vals)
         # freenerg values
         freenrg_val = bound_avg - free_avg
-        freenrg_err = _math.sqrt(_math.pow(bound_err, 2) + _math.pow(free_err, 2))
+        freenrg_err = math.sqrt(math.pow(bound_err, 2) + math.pow(free_err, 2))
         freenrg_rel = (
             freenrg_val * _Units.Energy.kcal_per_mol,
             freenrg_err * _Units.Energy.kcal_per_mol,
@@ -896,6 +896,7 @@ class analyse:
                 "start",
                 self._statistical_inefficiency,
                 self._auto_equilibration,
+                do_pickle
             )
             eresults_dict, ebound_dict, efree_dict = analyse._calculate_truncated(
                 self._work_dir,
@@ -903,6 +904,7 @@ class analyse:
                 "end",
                 self._statistical_inefficiency,
                 self._auto_equilibration,
+                do_pickle
             )
 
             self.spert_results_dict = sresults_dict
@@ -1019,7 +1021,7 @@ class analyse:
 
     @staticmethod
     def _calculate_truncated(
-        path_to_dir, estimator, start_end="start", statsineff=False, eq=False
+        path_to_dir, estimator, start_end="start", statsineff=False, eq=False, try_pickle=True
     ):
         start_end = validate.truncate_keep(start_end)
 
@@ -1037,7 +1039,7 @@ class analyse:
                 {
                     "estimator": estimator,
                     "truncate percentage": trunc_per,
-                    "try pickle": True,
+                    "try pickle": try_pickle,
                     "truncate keep": start_end,
                     "statistical inefficiency": statsineff,
                     "auto equilibration": eq,
@@ -1057,7 +1059,7 @@ class analyse:
 
     @staticmethod
     def single_pert_dict_into_df(pert_dict):
-        df = _pd.DataFrame.from_dict(pert_dict)
+        df = pd.DataFrame.from_dict(pert_dict)
         df = df.transpose()
         df.columns = ["avg", "max"]
         df["min"] = df.loc[:, "max"] * -1
@@ -1108,7 +1110,7 @@ class analyse:
 
         if include_key:
             labels = [l.get_label() for l in lines]
-            plt.legend(lines, labels, loc="upper left")
+            plt.legend(lines, labels, loc="upper right")
 
         plt.xlabel("Percentage of run used")
         if file_path:
@@ -1131,3 +1133,82 @@ class analyse:
 
         if file_path:
             plt.savefig(file_path)
+
+    def plot_across_lambda(self):
+        """plot the repeats across lambdas
+
+        """
+
+        if not self.is_analysed:
+            warnings.warn(
+                "can't check overlap, not all repeats have been analysed. please self.analyse_all_repeats() first!"
+            )
+
+            return None
+
+        # get the lambda values
+        lambda_vals = [entry[0] for entry in self._free_pmf_dict[list(self._free_pmf_dict.keys())[0]]]
+
+        # make the dicts
+        freenrg_dict = {}
+        freenrg_err_dict = {}
+        bound_dict = {}
+        bound_err_dict = {}
+        free_dict = {}
+        free_err_dict = {}
+        for lam in lambda_vals:
+            freenrg_dict[lam] = []
+            freenrg_err_dict[lam] = []
+            bound_dict[lam] = []
+            bound_err_dict[lam] = []
+            free_dict[lam] = []
+            free_err_dict[lam] = []
+
+        for repf,repb in zip(self._free_pmf_dict, self._bound_pmf_dict):
+            bound_pmf = self._bound_pmf_dict[repb]
+            free_pmf = self._free_pmf_dict[repf]
+
+            for pb,pf in zip(bound_pmf,free_pmf):
+                freenrg_dict[pb[0]].append((pb[1].value())-(pf[1].value()))
+                freenrg_err_dict[pb[0]].append((pb[2].value())+(pf[2].value()))
+                bound_dict[pb[0]].append(pb[1].value())
+                bound_err_dict[pb[0]].append(pb[2].value())
+                free_dict[pb[0]].append(pf[1].value())
+                free_err_dict[pb[0]].append(pf[2].value())
+
+        lines = []
+
+        # currently only for freenrg
+        for val_dict in [freenrg_dict]:
+
+            index_dict = {}
+
+            for x in lambda_vals:
+                val_list = [x for x in val_dict[x] if pd.notna(x)]
+                avg = np.mean(val_list)
+                min_val = min(val_list)
+                max_val = max(val_list)
+
+                index_dict[x] = (avg, min_val, max_val)
+
+            df = pd.DataFrame.from_dict(
+                index_dict, orient="index", columns=["avg", "min", "max"]
+            )
+
+            plt.plot(df.index, df["avg"], c="cornflowerblue")
+            plt.fill_between(
+                df.index,
+                df["min"],
+                df["max"],
+                color="lightskyblue",
+                alpha=0.3,
+            )
+            lines += plt.plot(0, 0, c="cornflowerblue", label="freenrg")
+
+            plt.xlim(xmin=0,xmax=1)
+            plt.ylabel("Computed $\Delta$$\Delta$G$_{perturbation}$ (kcal/mol)")
+            plt.xlabel("Lambda")
+            labels = [l.get_label() for l in lines]
+            plt.legend(lines, labels)
+            plt.title(f"Energy across lambda windows for {self.perturbation}")
+            plt.savefig(f'{self._graph_dir}/{self.perturbation}_across_lambda_windows_freenrg.png')

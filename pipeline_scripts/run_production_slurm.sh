@@ -88,11 +88,11 @@ cp min/lambda_$lam/gromacs.gro min/lambda_$lam/initial_gromacs.gro
 # min_counter=$((min_counter+1))
 
 echo "min"
-$gmxexec grompp -f min/lambda_$lam/gromacs.mdp -c min/lambda_$lam/initial_gromacs.gro -p min/lambda_$lam/gromacs.top -o min/lambda_$lam/gromacs.tpr
+$gmxexec grompp -maxwarn 1 -f min/lambda_$lam/gromacs.mdp -c min/lambda_$lam/initial_gromacs.gro -p min/lambda_$lam/gromacs.top -o min/lambda_$lam/gromacs.tpr
 $gmxexec mdrun -ntmpi 1 -deffnm min/lambda_$lam/gromacs ;
 
 echo "heat"
-$gmxexec grompp -f heat/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p heat/lambda_$lam/gromacs.top -o heat/lambda_$lam/gromacs.tpr
+$gmxexec grompp -maxwarn 1 -f heat/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p heat/lambda_$lam/gromacs.top -o heat/lambda_$lam/gromacs.tpr
 $gmxexec mdrun -ntmpi 1 -deffnm heat/lambda_$lam/gromacs ;
 
 # else
@@ -103,10 +103,10 @@ $gmxexec mdrun -ntmpi 1 -deffnm heat/lambda_$lam/gromacs ;
 # done
 
 echo "eq"
-$gmxexec grompp -f eq/lambda_$lam/gromacs.mdp -c heat/lambda_$lam/gromacs.gro -p eq/lambda_$lam/gromacs.top -t heat/lambda_$lam/gromacs.cpt  -o eq/lambda_$lam/gromacs.tpr
+$gmxexec grompp -maxwarn 1 -f eq/lambda_$lam/gromacs.mdp -c heat/lambda_$lam/gromacs.gro -p eq/lambda_$lam/gromacs.top -t heat/lambda_$lam/gromacs.cpt  -o eq/lambda_$lam/gromacs.tpr
 $gmxexec mdrun -ntmpi 1 -deffnm eq/lambda_$lam/gromacs ;
 echo "prod"
-$gmxexec grompp -f lambda_$lam/gromacs.mdp -c eq/lambda_$lam/gromacs.gro -p lambda_$lam/gromacs.top -t eq/lambda_$lam/gromacs.cpt -o lambda_$lam/gromacs.tpr
+$gmxexec grompp -maxwarn 1 -f lambda_$lam/gromacs.mdp -c eq/lambda_$lam/gromacs.gro -p lambda_$lam/gromacs.top -t eq/lambda_$lam/gromacs.cpt -o lambda_$lam/gromacs.tpr
 $gmxexec mdrun -ntmpi 1 -deffnm lambda_$lam/gromacs ;
 
 # delete simulation data 
