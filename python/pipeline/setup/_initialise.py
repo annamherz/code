@@ -194,7 +194,9 @@ class initialise_pipeline:
         if not file_name:
             file_name = f"{self._exec_folder}/ligands.dat"
         else:
-            warnings.warn("The file name should not be changed usually as then it's not compatible with later scripts.")
+            warnings.warn(
+                "The file name should not be changed usually as then it's not compatible with later scripts."
+            )
             file_name = validate.string(file_name)
             validate.folder_path(("/").join(file_name.split("/")[:-1]), create=True)
 

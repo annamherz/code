@@ -10,6 +10,11 @@ from argparse import ArgumentParser
 
 BSS.setVerbose = True
 
+print("adding code to the pythonpath...")
+code = "/home/anna/Documents/code/python"
+sys.path.insert(1, code)
+import pipeline
+
 from pipeline.analysis import *
 from pipeline.utils import write_analysis_file
 from pipeline.prep import *
@@ -59,6 +64,10 @@ def analysis(pert, engine, ana_file, main_dir, prot_file=None):
     # plot the convergence
     analysed_pert.calculate_convergence()
     analysed_pert.plot_convergence()
+    analysed_pert.plot_across_lambda()
+
+    # write for edgembar
+    analysed_pert.format_for_edgembar()
 
 
 def analysis_work_dir(work_dir, pert, engine, ana_file):

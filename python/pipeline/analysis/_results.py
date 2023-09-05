@@ -17,6 +17,7 @@ from cinnabar import wrangle, plotting, stats
 
 from math import isnan
 
+
 class analysis_network:
     """class to analyse results files and plot"""
 
@@ -272,7 +273,7 @@ class analysis_network:
                 net_file=self._net_file,
                 extra_options={"engines": eng},
             )
-            
+
             # check if there are any values for this engine, if not assume it is the entire network from before
             # as dont want this to be none in later functions
             if not values[0]:
@@ -280,7 +281,7 @@ class analysis_network:
                 self._ligands_dict[eng] = self.ligands
             else:
                 self._perturbations_dict[eng] = values[0]
-                self._ligands_dict[eng] = values[1]            
+                self._ligands_dict[eng] = values[1]
 
     def _set_default_options(self):
         """set the default options for the analysis."""
@@ -456,17 +457,19 @@ class analysis_network:
         """
 
         names = validate.is_list(name, make_list=True)
-      
+
         for name in names:
             name = validate.string(name)
             if name not in (self.engines + self.other_results_names):
-                raise ValueError(f"{name} must be in {self.engines + self.other_results_names}")
-        
+                raise ValueError(
+                    f"{name} must be in {self.engines + self.other_results_names}"
+                )
+
         if not make_list:
             names = names[0]
 
         return names
-    
+
     def remove_perturbations(self, perts, name=None):
         """remove perturbations from the network used.
 
@@ -605,9 +608,7 @@ class analysis_network:
         self._compute_cycle_closures()
 
     def _compute_dicts(self):
-        """calculate the perturbation dicts from the previously passed repeat files.
-
-        """
+        """calculate the perturbation dicts from the previously passed repeat files."""
 
         # compute the experimental for perturbations
         self.get_experimental()  # get experimental val dict and normalised dict
@@ -630,11 +631,17 @@ class analysis_network:
             # calc the free and bound leg dicts for the eng
             try:
                 calc_bound_dict = make_dict.comp_results(
-                self._results_bound_repeat_files[eng], self._perturbations_dict[eng], eng, method=self.method
+                    self._results_bound_repeat_files[eng],
+                    self._perturbations_dict[eng],
+                    eng,
+                    method=self.method,
                 )  # older method
                 self.calc_bound_dict.update({eng: calc_bound_dict})
                 calc_free_dict = make_dict.comp_results(
-                self._results_free_repeat_files[eng], self._perturbations_dict[eng], eng, method=self.method
+                    self._results_free_repeat_files[eng],
+                    self._perturbations_dict[eng],
+                    eng,
+                    method=self.method,
                 )  # older method
                 self.calc_free_dict.update({eng: calc_free_dict})
             except Exception as e:
@@ -642,7 +649,6 @@ class analysis_network:
                 print("Could not calculate dicts for bound/free legs.")
 
             self._compute_cinnabar_dict(files, eng, method=self.method)
-
 
     def _compute_cinnabar_dict(self, files, eng, method=None):
         """compute cinnabar and get the dictionaries from it."""
@@ -707,7 +713,6 @@ class analysis_network:
             self.cinnabar_calc_val_dict.update({eng: None})
             self.cinnabar_exper_val_dict.update({eng: None})
 
-
     @staticmethod
     def write_vals_file(val_dict, file_path, eng=None, ana=None, method=None):
         val_dict = validate.dictionary(val_dict)
@@ -768,17 +773,18 @@ class analysis_network:
         self._ligands_dict[name] = ligs
 
         if bound_files and free_files:
-
             bound_files = validate.is_list(bound_files, make_list=True)
             free_files = validate.is_list(free_files, make_list=True)
             for file in bound_files + free_files:
                 validate.file_path(file)
             calc_bound_dict = make_dict.comp_results(
-            bound_files, perts, engine=None, name=name, method=method)
+                bound_files, perts, engine=None, name=name, method=method
+            )
             self.calc_bound_dict.update({name: calc_bound_dict})
             self._results_bound_repeat_files.update({name: bound_files})
             calc_free_dict = make_dict.comp_results(
-            free_files, perts, engine=None, name=name, method=method)
+                free_files, perts, engine=None, name=name, method=method
+            )
             self.calc_free_dict.update({name: calc_free_dict})
             self._results_free_repeat_files.update({name: free_files})
 
@@ -925,7 +931,6 @@ class analysis_network:
         return failed_perts
 
     def disconnected_ligands(self, eng):
-        
         eng = validate.engine(eng)
         val, percen, perturbations = self.successful_runs(eng)
         graph = net_graph(self.ligands, perturbations)
@@ -942,15 +947,17 @@ class analysis_network:
         for pert in perturbations:
             self.network_graph.draw_perturbation(pert)
 
-    def remove_outliers(
-        self, threshold=10, name=None, verbose=False
-    ):
-        """remove outliers above a certain difference to the experimental.
+    def draw_perturbations(self, pert_list):
+        self._initialise_graph_object(check=True)
+        for pert in pert_list:
+            self.network_graph.draw_perturbation(pert)
+
+    def get_outliers(self, threshold=10, name=None, verbose=False):
+        """get outliers above a certain difference to the experimental.
 
         Args:
             threshold (float, optional): difference threshold above which to remove. Defaults to 10.
             name (str, optional): name of the data (engine or other results). Defaults to None.
-            verbose (bool, optional): whether to verbose output which pert is removed. Defaults to False.
         """
 
         # can get from dict or dataframe
@@ -984,13 +991,26 @@ class analysis_network:
                 if pert
             ]
 
-            for pert in perts:
-                self.remove_perturbations(pert, name=name)
+        return perts
 
-                if verbose:
-                    print(f"removed {pert} from perturbations as outlier for {name}.")
+    def remove_outliers(self, threshold=10, name=None, verbose=False):
+        """remove outliers above a certain difference to the experimental.
 
-            self._compute_dicts()
+        Args:
+            threshold (float, optional): difference threshold above which to remove. Defaults to 10.
+            name (str, optional): name of the data (engine or other results). Defaults to None.
+            verbose (bool, optional): whether to verbose output which pert is removed. Defaults to False.
+        """
+
+        perts = self.get_outliers(threshold, name)
+
+        for pert in perts:
+            self.remove_perturbations(pert, name=name)
+
+            if verbose:
+                print(f"removed {pert} from perturbations as outlier for {name}.")
+
+        self._compute_dicts()
 
         # remove plotting object as needs to be reintialised with new perturbations
         self._plotting_object = None
@@ -998,10 +1018,9 @@ class analysis_network:
         self._stats_object = None
 
     def sort_ligands_by_binding_affinity(self, engine=None):
-
         if not self._is_computed_dicts:
             self._compute_dicts()
-        
+
         if engine:
             engines = validate.engines(engine)
         else:
@@ -1009,13 +1028,14 @@ class analysis_network:
 
         for eng in engines:
             print(f"Sorted ligands for {eng}...")
-            df = pd.DataFrame(self.cinnabar_calc_val_dict[eng], index=["value","error"]).transpose()
+            df = pd.DataFrame(
+                self.cinnabar_calc_val_dict[eng], index=["value", "error"]
+            ).transpose()
 
         return df.sort_values(by="value", ascending=True)
 
     def sort_ligands_by_experimental_binding_affinity(self):
-
-        df = pd.DataFrame(self.exper_val_dict, index=["value","error"]).transpose()
+        df = pd.DataFrame(self.exper_val_dict, index=["value", "error"]).transpose()
 
         return df.sort_values(by="value", ascending=True)
 
@@ -1040,19 +1060,27 @@ class analysis_network:
 
         # if not checking, always make
         if not check:
-            self.network_graph = net_graph(self.ligands, self.perturbations, ligands_folder=self.ligands_folder)
+            self.network_graph = net_graph(
+                self.ligands, self.perturbations, ligands_folder=self.ligands_folder
+            )
 
         if not self.ligands_folder:
-            print("please use self.add_ligands folder to add a folder so the ligands can be visualised!")
+            print(
+                "please use self.add_ligands folder to add a folder so the ligands can be visualised!"
+            )
 
         # if checking, first see if it exists and if not make
         elif check:
             if not self.network_graph:
-                self.network_graph = net_graph(self.ligands, self.perturbations, ligands_folder=self.ligands_folder)
+                self.network_graph = net_graph(
+                    self.ligands, self.perturbations, ligands_folder=self.ligands_folder
+                )
 
         return self.network_graph
 
-    def draw_graph(self, output_dir=None, use_cinnabar=False, engines=None, successful_runs=True):
+    def draw_graph(
+        self, output_dir=None, use_cinnabar=False, engines=None, successful_runs=True
+    ):
         """draw the network graph.
 
         Args:
@@ -1066,7 +1094,7 @@ class analysis_network:
             engines = self._validate_in_names_list(engines, make_list=True)
         else:
             engines = self.engines
-            
+
         if use_cinnabar:
             for eng in engines:
                 if output_dir:
@@ -1085,7 +1113,9 @@ class analysis_network:
                     graph.draw_graph(file_dir=output_dir)
             else:
                 for eng in engines:
-                    graph = net_graph(self._ligands_dict[eng], self._perturbations_dict[eng])
+                    graph = net_graph(
+                        self._ligands_dict[eng], self._perturbations_dict[eng]
+                    )
                     graph.draw_graph(file_dir=output_dir)
 
             self.network_graph.draw_graph(file_dir=output_dir)
@@ -1199,15 +1229,16 @@ class analysis_network:
         plot_obj.bar(pert_val="val", names=engine, **kwargs)
 
     def plot_bar_leg(self, engine, leg="bound", **kwargs):
-
         engine = validate.is_list(engine, make_list=True)
 
         plot_obj = self._initialise_plotting_object(
             check=True, verbose=self._is_verbose
         )
 
-        plotting_dict = {"title":f"{leg} for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}"}
-        for key,value in kwargs.items():
+        plotting_dict = {
+            "title": f"{leg} for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}"
+        }
+        for key, value in kwargs.items():
             plotting_dict[key] = value
 
         plot_obj.bar(pert_val=leg, names=engine, **plotting_dict)
@@ -1310,7 +1341,11 @@ class analysis_network:
             check=True, verbose=self._is_verbose
         )
         plot_obj.scatter(
-            pert_val=pert_val, y_names=engines, outliers=True, no_outliers=no_outliers, **kwargs
+            pert_val=pert_val,
+            y_names=engines,
+            outliers=True,
+            no_outliers=no_outliers,
+            **kwargs,
         )
 
     def plot_histogram_sem(self, engines=None, pert_val="pert"):
@@ -1407,32 +1442,16 @@ class analysis_network:
 
         return self._stats_object
 
-    def calc_mad_engines(self, pert_val=None, engines=None):
-        """calculate the Mean Absolute Deviation (MAE) for between all the engines.
-
-        Args:
-            pert_val (str, optional): whether plotting 'pert' ie perturbations or 'val' ie values (per ligand result). Defaults to None.
-            engines (list, optional): names of engines / other results names to calculate the MAD for.
-
-        Returns:
-            tuple: of dataframe of value and error (mae_pert_df, mae_pert_df_err)
-        """
-
+    def _calc_mae_iterations(self, pert_val=None, enginesa=None, enginesb=None):
         stats_obj = self._initialise_stats_object(check=True)
 
         pv = validate.pert_val(pert_val)
 
-        values_dict = stats_obj.values_dict
-        if engines:
-            engines = self._validate_in_names_list(engines, make_list=True)
-        else:
-            engines = self.engines + self.other_results_names
+        mae_df = pd.DataFrame(columns=enginesa, index=enginesb)
+        mae_df_err = pd.DataFrame(columns=enginesa, index=enginesb)
 
-        mae_pert_df = pd.DataFrame(columns=engines, index=engines)
-        mae_pert_df_err = pd.DataFrame(columns=engines, index=engines)
-
-        # iterate over all possible combinations
-        for combo in it.product(engines, engines):
+        # iterate compared to experimental
+        for combo in it.product(enginesa, enginesb):
             eng1 = combo[0]
             eng2 = combo[1]
 
@@ -1440,20 +1459,70 @@ class analysis_network:
             mean_absolute_error = values[0]  # the computed statistic
             mae_err = values[1]  # the stderr from bootstrapping
 
-            mae_pert_df.loc[eng1, eng2] = mean_absolute_error
-            mae_pert_df_err.loc[eng1, eng2] = mae_err
+            # loc index, column
+            mae_df.loc[eng2, eng1] = mean_absolute_error
+            mae_df_err.loc[eng2, eng1] = mae_err
 
-        mae_pert_df.to_csv(
-            f"{self.output_folder}/mae_pert_{self.file_ext}.csv", sep=" "
-        )
-        mae_pert_df_err.to_csv(
-            f"{self.output_folder}/mae_pert_err_{self.file_ext}.csv", sep=" "
+        return mae_df, mae_df_err
+
+    def calc_mae_engines(self, pert_val=None, engines=None):
+        """calculate the Mean Absolute Error (MAE) vs experimental results
+
+        Args:
+            pert_val (str, optional): whether plotting 'pert' ie perturbations or 'val' ie values (per ligand result). Defaults to None.
+            engines (list, optional): names of engines / other results names to calculate the MAE for.
+
+        Returns:
+            tuple: of dataframe of value and error (mae_df, mae_df_err)
+        """
+
+        if engines:
+            engines = self._validate_in_names_list(engines, make_list=True)
+        else:
+            engines = self.engines + self.other_results_names
+
+        mae_df, mae_df_err = self._calc_mae_iterations(
+            pert_val, engines, ["experimental"]
         )
 
-        return mae_pert_df, mae_pert_df_err
+        mae_df.to_csv(
+            f"{self.output_folder}/MAE_{pert_val}_{self.file_ext}.csv", sep=" "
+        )
+        mae_df_err.to_csv(
+            f"{self.output_folder}/MAE_err_{pert_val}_{self.file_ext}.csv", sep=" "
+        )
+
+        return mae_df, mae_df_err
+
+    def calc_mad_engines(self, pert_val=None, engines=None):
+        """calculate the Mean Absolute Deviation (MAD) for between all the engines.
+
+        Args:
+            pert_val (str, optional): whether plotting 'pert' ie perturbations or 'val' ie values (per ligand result). Defaults to None.
+            engines (list, optional): names of engines / other results names to calculate the MAD for.
+
+        Returns:
+            tuple: of dataframe of value and error (mad_df, mad_df_err)
+        """
+
+        if engines:
+            engines = self._validate_in_names_list(engines, make_list=True)
+        else:
+            engines = self.engines + self.other_results_names
+
+        mad_df, mad_df_err = self._calc_mae_iterations(pert_val, engines, engines)
+
+        mad_df.to_csv(
+            f"{self.output_folder}/MAD_{pert_val}_{self.file_ext}.csv", sep=" "
+        )
+        mad_df_err.to_csv(
+            f"{self.output_folder}/MAD_err_{pert_val}_{self.file_ext}.csv", sep=" "
+        )
+
+        return mad_df, mad_df_err
 
     def calc_stats(self, engines=None):
-        stats_obj = self._initialise_stats_object(check=True)
+        self._initialise_stats_object(check=True)
 
         if not engines:
             engines = self.engines
@@ -1585,6 +1654,7 @@ class analysis_network:
 
         # these are the per ligand results
         computed_relative_DDGs = self._fwf_computed_relative_DDGs[engine]
+        self._get_exp_fwf()
         experimental_DDGs = self._fwf_experimental_DDGs
 
         _stats = stats.freeEnergyStats()
@@ -1609,13 +1679,62 @@ class analysis_network:
 
         return r_confidence, tau_confidence, mue_confidence
 
-    def perturbing_atoms_and_overlap(self, prep_dir=None, outputs_dir=None, **kwargs):
+    def _get_mad_fwf(self, enginesa, enginesb):
+        mad_df = pd.DataFrame(columns=enginesa, index=enginesb)
+        mad_df_err = pd.DataFrame(columns=enginesa, index=enginesb)
 
+        for combo in it.product(enginesa, enginesb):
+            eng1 = combo[0]
+            eng2 = combo[1]
+
+            freenrg_dict_eng1 = self._get_ana_fwf(eng1)
+            freenrg_dict_eng2 = self._get_ana_fwf(eng2)
+
+            new_freenrg_dict = {}
+
+            for key in freenrg_dict_eng1:
+                new_freenrg_dict[key] = (
+                    freenrg_dict_eng1[key][0],  # value
+                    freenrg_dict_eng1[key][1],  # error
+                    freenrg_dict_eng2[key][0],
+                    freenrg_dict_eng2[key][1],
+                )
+
+            df = pd.DataFrame.from_dict(
+                new_freenrg_dict,
+                columns=["eng1_value", "eng1_err", "eng2_value", "eng2_err"],
+                orient="index",
+            ).dropna()
+
+            values = stats_engines.compute_stats(
+                x=df["eng1_value"],
+                y=df["eng2_value"],
+                xerr=df["eng1_err"],
+                yerr=df["eng2_err"],
+                statistic="MUE",
+            )
+            mean_absolute_deviation = values[0]  # the computed statitic
+            mad_err = values[1]
+
+            # loc index, column
+            mad_df.loc[eng2, eng1] = mean_absolute_deviation
+            mad_df_err.loc[eng2, eng1] = mad_err
+
+        mad_df.to_csv(f"{self.output_folder}/MAD_fwf_{self.file_ext}.csv", sep=" ")
+        mad_df_err.to_csv(
+            f"{self.output_folder}/MAD_err_fwf_{self.file_ext}.csv", sep=" "
+        )
+
+        return mad_df, mad_df_err
+
+    def perturbing_atoms_and_overlap(self, prep_dir=None, outputs_dir=None, **kwargs):
         if prep_dir:
             prep_dir = validate.folder_path(prep_dir)
             calc_atom_mappings = True
         else:
-            print("please provide the prep dir to use for calculating atom mappings. Will only look at overlap.")
+            print(
+                "please provide the prep dir to use for calculating atom mappings. Will only look at overlap."
+            )
             calc_atom_mappings = False
 
         if outputs_dir:
@@ -1643,25 +1762,35 @@ class analysis_network:
                 print(f"running {pert}, {eng}....")
 
                 if calc_atom_mappings:
-
                     lig_0 = pert.split("~")[0]
                     lig_1 = pert.split("~")[1]
 
                     # Load equilibrated inputs for both ligands
                     system0 = BSS.IO.readMolecules(
-                        [f"{prep_dir}/{lig_0}_lig_equil_solv.rst7", f"{prep_dir}/{lig_0}_lig_equil_solv.prm7"]
+                        [
+                            f"{prep_dir}/{lig_0}_lig_equil_solv.rst7",
+                            f"{prep_dir}/{lig_0}_lig_equil_solv.prm7",
+                        ]
                     )
                     system1 = BSS.IO.readMolecules(
-                        [f"{prep_dir}/{lig_1}_lig_equil_solv.rst7", f"{prep_dir}/{lig_1}_lig_equil_solv.prm7"]
+                        [
+                            f"{prep_dir}/{lig_1}_lig_equil_solv.rst7",
+                            f"{prep_dir}/{lig_1}_lig_equil_solv.prm7",
+                        ]
                     )
 
-                    pert_atoms = pipeline.prep.merge.no_perturbing_atoms_average(system0, system1, **kwargs)
-                
+                    pert_atoms = pipeline.prep.merge.no_perturbing_atoms_average(
+                        system0, system1, **kwargs
+                    )
+
                 else:
                     pert_atoms = None
 
                 try:
-                    ana_obj = pipeline.analysis.analyse(f"{outputs_dir}/{eng}/{pert}", analysis_prot=self.analysis_options)
+                    ana_obj = pipeline.analysis.analyse(
+                        f"{outputs_dir}/{eng}/{pert}",
+                        analysis_prot=self.analysis_options,
+                    )
                     avg, error, repeats_tuple_list = ana_obj.analyse_all_repeats()
                     percen_okay, too_smalls_avg = ana_obj.check_overlap()
                     diff = abs(pert_dict[pert][0] - avg.value())

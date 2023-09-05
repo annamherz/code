@@ -26,7 +26,12 @@ class stats_engines(plotting_engines):
         Returns:
             list: available statistics
         """
-        available_statistics = ["RMSE", "MUE", "R2", "rho", "RAE", "KTAU"]
+        available_statistics = ["RMSE", "MUE", "R2", "rho", "KTAU"]
+        # RMSE = Root Mean Squared Error
+        # MUE = Mean Unsigned Error
+        # R2 = correlation coefficient
+        # rho = Spearman's rank correlation
+        # KTAU = Kendall's rank correlation
 
         return available_statistics
 
@@ -35,7 +40,7 @@ class stats_engines(plotting_engines):
 
         # make stats dict for each name and each stat
         self.statistics_dict = {}
-        for pert_val in ["pert", "val","bound","free"]:
+        for pert_val in ["pert", "val", "bound", "free"]:
             self.statistics_dict[pert_val] = {}
             for namex in self.names_list:
                 self.statistics_dict[pert_val][namex] = {}
@@ -113,11 +118,10 @@ class stats_engines(plotting_engines):
         Returns:
             tuple: (value, error)
         """
-        statistic = validate.string(statistic).upper()
 
         if statistic not in stats_engines.available_statistics():
             raise ValueError(
-                f"please use one of the statistics in {stats_engines.available_statistics()}"
+                f"please use one of the statistics in {stats_engines.available_statistics()}, not {statistic}"
             )
 
         # using cinnabar function
@@ -218,8 +222,10 @@ class stats_engines(plotting_engines):
         y = self._validate_in_names_list(y)
         pert_val = validate.pert_val(pert_val)
 
-        if statistic not in self.statistics:
-            raise ValueError(f"please use one of the statistics in {self.statistics}")
+        if statistic not in stats_engines.available_statistics():
+            raise ValueError(
+                f"please use one of the statistics in {stats_engines.available_statistics()}, not {statistic}"
+            )
 
         values = self._compute_stats(pert_val, data_x=x, data_y=y, statistic=statistic)
 

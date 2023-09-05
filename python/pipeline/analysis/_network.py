@@ -6,13 +6,19 @@ import pandas as pd
 import networkx as nx
 from scipy.stats import sem as sem
 from rdkit import Chem
+import math
 
+import matplotlib
 import matplotlib.pyplot as plt
 import csv
 import numpy as np
 import pandas as pd
 
 from ..utils._validate import *
+
+font = {"family": "normal", "weight": "bold", "size": 22}
+
+matplotlib.rc("font", **{"size": 10})
 
 
 def get_ligands_from_perts(perturbations):
@@ -66,7 +72,7 @@ def get_info_network(net_file=None, results_files=None, extra_options=None):
             raise
 
     # set extra_options variables as defaults
-    engines = [eng.upper() for eng in BSS.FreeEnergy.engines()]  # use all
+    engines = None
 
     if extra_options:
         extra_options = validate.dictionary(extra_options)
@@ -89,13 +95,28 @@ def get_info_network(net_file=None, results_files=None, extra_options=None):
         # use the network file to find the ligands and perturbations
         with open(f"{net_file}", "r") as file:
             for line in file:
-                for engine in engines:
-                    if line.split()[-1] == engine:
-                        lig_0 = line.split()[0]
-                        lig_1 = line.split()[1]
-                        pert = f"{lig_0}~{lig_1}"
-                        if pert not in perturbations:
-                            perturbations.append(pert)
+                if engines:
+                    use_line = False
+                    for engine in engines:
+                        if line.split()[-1] == engine:
+                            use_line = True
+                else:
+                    use_line = True
+
+                if (
+                    "lig0" in line
+                    or "lig1" in line
+                    or "lig_0" in line
+                    or "lig_1" in line
+                ):
+                    use_line = False
+
+                if use_line:
+                    lig_0 = line.split()[0]
+                    lig_1 = line.split()[1]
+                    pert = f"{lig_0}~{lig_1}"
+                    if pert not in perturbations:
+                        perturbations.append(pert)
 
     else:
         for res_file in results_files:
@@ -106,13 +127,29 @@ def get_info_network(net_file=None, results_files=None, extra_options=None):
                 )  # All lines including the blank ones
                 lines = (line for line in lines if line)  # Non-blank lines
                 for line in lines:
-                    for engine in engines:
-                        if line.split(",")[4] == engine:
-                            lig_0 = line.split(",")[0]
-                            lig_1 = line.split(",")[1]
-                            pert = f"{lig_0}~{lig_1}"
-                            if pert not in perturbations:
-                                perturbations.append(pert)
+                    if engines:
+                        use_line = False
+                        for engine in engines:
+                            if line.split(",")[4] == engine:
+                                use_line = True
+
+                    else:
+                        use_line = True
+
+                    if (
+                        "lig0" in line
+                        or "lig1" in line
+                        or "lig_0" in line
+                        or "lig_1" in line
+                    ):
+                        use_line = False
+
+                    if use_line:
+                        lig_0 = line.split(",")[0]
+                        lig_1 = line.split(",")[1]
+                        pert = f"{lig_0}~{lig_1}"
+                        if pert not in perturbations:
+                            perturbations.append(pert)
 
     ligands = get_ligands_from_perts(perturbations)
 
@@ -153,7 +190,7 @@ class net_graph:
             file_dir (str, optional): folder path to save graph image in. Defaults to None.
         """
 
-        self.ligands = validate.is_list(ligands)
+        self.ligands = sorted(validate.is_list(ligands))
         self.perturbations = validate.is_list(perturbations)
 
         if file_dir:
@@ -220,7 +257,7 @@ class net_graph:
 
         plt.show()
 
-    def draw_ligand(self, ligand):
+    def _ligand_image(self, ligand):
         if not self.ligands_folder:
             raise ValueError("please provide a ligands dir w the files inside.")
 
@@ -231,12 +268,47 @@ class net_graph:
 
         return img
 
+    def draw_ligand(self, ligand):
+        img = self._ligand_image(ligand)
+        fig, ax = plt.subplots(1, 1)
+        ax.imshow(img)
+        ax.axis("off")
+        ax.title.set_text(f"{ligand}")
+
+        return fig
+
+    def draw_all_ligands(self, file_dir=None):
+        if not self.ligands_folder:
+            raise ValueError("please provide a ligands dir w the files inside.")
+
+        len_ligs = len(self.ligands)
+
+        fig, axs = plt.subplots(
+            math.ceil(len_ligs / 3), 3, figsize=(10, 35), dpi=150
+        )  # 10,15
+
+        for ax in axs.ravel():
+            ax.axis("off")
+
+        for lig, ax in zip(self.ligands, axs.ravel()):
+            img = self._ligand_image(lig)
+            ax.imshow(img)
+            ax.title.set_text(f"{lig}")
+
+        if self._save_image:
+            plt.savefig(f"{self.file_dir}/ligands.png", dpi=300)
+        if file_dir:
+            file_dir = validate.folder_path(file_dir, create=True)
+            plt.savefig(f"{file_dir}/ligands.png", dpi=300)
+
+        return fig
+
     def draw_perturbation(self, pert):
         lig_0 = pert.split("~")[0]
         lig_1 = pert.split("~")[1]
 
-        img = self.draw_ligand(lig_0)
-        img2 = self.draw_ligand(lig_1)
+        img = self._ligand_image(lig_0)
+        img2 = self._ligand_image(lig_1)
 
         # plt.rcParams['figure.figsize'] = 11 ,8
         fig, ax = plt.subplots(1, 2)

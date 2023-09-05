@@ -8,7 +8,6 @@ from pipeline.prep import *
 
 
 def extract_output(folder, prot_file):
-
     # read in protocol
     protocol = pipeline_protocol(prot_file, auto_validate=True)
 
@@ -20,7 +19,7 @@ def extract_output(folder, prot_file):
                 f"name of the protocol ({protocol.name()}) is not in the folder path, will use:\n"
                 f"{folder} as folder path for this run..."
             )
-            
+
     if protocol.trajectories() == "None":
         traj_lambdas = []
     if protocol.trajectories() == "0,0.5,1":

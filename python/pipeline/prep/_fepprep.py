@@ -393,7 +393,7 @@ class fepprep:
                     engine=f"{protocol.engine()}",
                     work_dir=f"{work_dir}/{leg}_{rep}/min",
                     extra_options=min_extra_options,
-                    ignore_warnings=True
+                    ignore_warnings=True,
                 )
 
                 BSS.FreeEnergy.Relative(
@@ -402,7 +402,7 @@ class fepprep:
                     engine=f"{protocol.engine()}",
                     work_dir=f"{work_dir}/{leg}_{rep}/heat",
                     extra_options=heat_extra_options,
-                    ignore_warnings=True
+                    ignore_warnings=True,
                 )
 
                 BSS.FreeEnergy.Relative(
@@ -411,7 +411,7 @@ class fepprep:
                     engine=f"{protocol.engine()}",
                     work_dir=f"{work_dir}/{leg}_{rep}/eq",
                     extra_options=eq_extra_options,
-                    ignore_warnings=True
+                    ignore_warnings=True,
                 )
 
                 BSS.FreeEnergy.Relative(
@@ -420,7 +420,7 @@ class fepprep:
                     engine=f"{protocol.engine()}",
                     work_dir=f"{work_dir}/{leg}_{rep}",
                     extra_options=prod_extra_options,
-                    ignore_warnings=True
+                    ignore_warnings=True,
                 )
 
         if protocol.engine() == "SOMD":
@@ -446,7 +446,7 @@ class fepprep:
                     engine=f"{protocol.engine()}",
                     work_dir=f"{work_dir}/{leg}_{rep}/eq",
                     extra_options=eq_extra_options,
-                    ignore_warnings=True
+                    ignore_warnings=True,
                 )
 
                 BSS.FreeEnergy.Relative(
@@ -455,7 +455,7 @@ class fepprep:
                     engine=f"{protocol.engine()}",
                     work_dir=f"{work_dir}/{leg}_{rep}",
                     extra_options=prod_extra_options,
-                    ignore_warnings=True
+                    ignore_warnings=True,
                 )
 
     def generate_folders(self, work_dir, **kwargs):
@@ -489,12 +489,12 @@ class fepprep:
         if (
             self._pipeline_protocol.engine() == "AMBER"
             or self._pipeline_protocol.engine() == "GROMACS"
-        ):  
+        ):
             # use a hybrid topology for AMBER and GROMACS
             kwarg_dict = {"PRUNEPERTURBEDCONSTRAINTS": True}
         else:
             kwarg_dict = {}
-        
+
         if amber_version < 22:
             if self._pipeline_protocol.hmr:
                 kwarg_dict["PRUNECROSSINGCONSTRAINTS"] = True

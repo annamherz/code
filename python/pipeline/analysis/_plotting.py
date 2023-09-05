@@ -48,7 +48,9 @@ class plotting_engines:
             )
 
         # set the colours
-        self.colours = plotting_engines.set_colours(other_results_names=self.other_results_names)
+        self.colours = plotting_engines.set_colours(
+            other_results_names=self.other_results_names
+        )
 
         # convert the dictionaries into dataframes for plotting
         self._analysis_dicts_to_df()
@@ -202,12 +204,12 @@ class plotting_engines:
         """
 
         names = validate.is_list(name, make_list=True)
-      
+
         for name in names:
             name = validate.string(name)
             if name not in (self.names_list):
                 raise ValueError(f"{name} must be in {self.names_list}")
-        
+
         if not make_list:
             names = names[0]
 
@@ -246,11 +248,15 @@ class plotting_engines:
                 if self.calc_bound_dict[eng]:
                     values_dict[eng]["bound_results"] = self.calc_bound_dict[eng]
                 else:
-                    values_dict[eng]["bound_results"] = {x: (None,None) for x in self.calc_pert_dict[eng]}
+                    values_dict[eng]["bound_results"] = {
+                        x: (None, None) for x in self.calc_pert_dict[eng]
+                    }
                 if self.calc_free_dict[eng]:
                     values_dict[eng]["free_results"] = self.calc_free_dict[eng]
                 else:
-                    values_dict[eng]["free_results"] = {x: (None,None) for x in self.calc_pert_dict[eng]}
+                    values_dict[eng]["free_results"] = {
+                        x: (None, None) for x in self.calc_pert_dict[eng]
+                    }
 
                 values_dict[eng]["val_results"] = self.calc_val_dict[eng]
 
@@ -273,8 +279,12 @@ class plotting_engines:
             "val_results"
         ] = self.all_exper_val_dict  # normalised data
         # all bound and free values as None for matching df later.
-        values_dict["experimental"]["bound_results"] = {x: (None,None) for x in self.all_exper_pert_dict}
-        values_dict["experimental"]["free_results"] = {x: (None,None) for x in self.all_exper_pert_dict}
+        values_dict["experimental"]["bound_results"] = {
+            x: (None, None) for x in self.all_exper_pert_dict
+        }
+        values_dict["experimental"]["free_results"] = {
+            x: (None, None) for x in self.all_exper_pert_dict
+        }
 
         self.values_dict = values_dict
 
@@ -309,7 +319,7 @@ class plotting_engines:
 
         # construct dict with experimental freenrg and error and computed
         for name in to_convert_list:  # will do this for engines and other results
-            for pv in ["pert", "val","bound","free"]:
+            for pv in ["pert", "val", "bound", "free"]:
                 if pv == "pert":
                     which_list = "perts"
                 elif pv == "val":
@@ -826,7 +836,7 @@ class plotting_engines:
             for y_name in y_names:
                 y_name = self._validate_in_names_list(y_name)
         else:
-            y_names = self.names_list
+            y_names = self.names_list.copy()
             y_names.remove(x_name)
 
         if not values:
@@ -886,10 +896,8 @@ class plotting_engines:
                 mue_values = abs(x - y)
 
                 # find the n ligand names that are outliers.
-                outlier_names = mue_values.nlargest(
-                    no_outliers
-                ).index.values.tolist()
-                print(outlier_names)
+                outlier_names = mue_values.nlargest(no_outliers).index.values.tolist()
+                print(f"{y_name} : {outlier_names}")
 
                 # construct a list of labels to annotate the scatterplot with.
                 annot_labels = []
@@ -1135,8 +1143,8 @@ class plotting_engines:
                 val_list = [x for x in index_dict[x] if pd.notna(x)]
                 avg = np.mean(val_list)
                 # bc of how its plotted later (ie as inbetween a min and a max added to the avg), need this as the difference to the mean
-                min_val = min(val_list) - avg # is a negative value
-                max_val = max(val_list) - avg # is a positive value
+                min_val = min(val_list) - avg  # is a negative value
+                max_val = max(val_list) - avg  # is a positive value
             except:
                 avg = None
                 min_val = None
@@ -1190,7 +1198,9 @@ class plotting_histogram(plotting_engines):
                 f"{output_folder}/graphs", create=True
             )
         # set the colours
-        self.colours = plotting_engines.set_colours(other_results_names=self.other_results_names)
+        self.colours = plotting_engines.set_colours(
+            other_results_names=self.other_results_names
+        )
 
         # set the dictionary for histograms
         self.files_into_error_lists()
@@ -1245,7 +1255,9 @@ class plotting_histogram(plotting_engines):
 
         if no_bins < 1:
             self.best_fit_dict[type_error][name] = (([0], [0]), 0, 0)
-            print(f"could not plot the histogram for {name} for {type_error}. can it find the results files with the error?")
+            print(
+                f"could not plot the histogram for {name} for {type_error}. can it find the results files with the error?"
+            )
             return
 
         # Fit a normal distribution to the data, mean and standard deviation
@@ -1319,9 +1331,6 @@ class plotting_histogram(plotting_engines):
         plt.show()
 
 
-
-
-
 # class plot_convergence():
 #     """class to plot convergence
 #     """
@@ -1367,7 +1376,7 @@ class plotting_histogram(plotting_engines):
 #         Returns:
 #            dict: colour dictionary
 #         """
-        
+
 #         set_colour_dict = plotting_engines._set_colours(colour_dict)
 #         self.colours = set_colour_dict
 
@@ -1393,10 +1402,10 @@ class plotting_histogram(plotting_engines):
 #         """
 
 #         for leg in [ 'free','bound']:
-            
+
 #             plt.figure()
 #             lines = []
-            
+
 #             for eng in engines:
 #                 col = self.colours[eng]
 #                 with open (f'{self.outputs_dir}/{eng}/{perturbation}/pickle/{leg}_pmf_{perturbation}_{eng}_{self.file_ext}.pickle', 'rb') as handle:
@@ -1478,16 +1487,14 @@ class plotting_histogram(plotting_engines):
 #             for repf,repb in zip(free_pmf_dict,bound_pmf_dict):
 #                 bound_pmf = bound_pmf_dict[repb]
 #                 free_pmf = free_pmf_dict[repf]
-                
+
 #                 for pb,pf in zip(bound_pmf,free_pmf):
 #                     y.append((pb[1]*(1/BSS.Units.Energy.kcal_per_mol))-(pf[1]*(1/BSS.Units.Energy.kcal_per_mol)))
 #                     yerr.append((pb[2]*(1/BSS.Units.Energy.kcal_per_mol))+(pf[2]*(1/BSS.Units.Energy.kcal_per_mol)))
-                
 
 
-                
 #             plt.errorbar(x,y_avg,yerr=yerr,color=self.colours[eng])
-        
+
 #         plt.xlim(xmin=0,xmax=1)
 #         plt.ylabel("Computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
 #         plt.xlabel("Lambda")

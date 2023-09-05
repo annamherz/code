@@ -9,6 +9,11 @@ import pandas as pd
 from scipy.stats import sem
 import pickle
 import matplotlib.pyplot as plt
+import glob
+import re
+import pathlib
+
+from alchemlyb.postprocessors.units import to_kcalmol
 
 from ..utils import *
 from ..prep import analysis_protocol
@@ -34,6 +39,9 @@ class analyse:
         self._work_dir = validate.folder_path(work_dir)
         self._pickle_dir = validate.folder_path(f"{self._work_dir}/pickle", create=True)
         self._graph_dir = validate.folder_path(self._work_dir + "/graphs", create=True)
+        self._edgembar_dir = validate.folder_path(
+            self._work_dir + "/edgembar_dats", create=True
+        )
 
         if pert:
             self.perturbation = validate.string(pert)
@@ -274,7 +282,7 @@ class analyse:
 
         if "check overlap" in options_dict:
             check_overlap = validate.boolean(options_dict["check overlap"])
-            if check_overlap == "True" and estimator != "MBAR":
+            if check_overlap == True and estimator != "MBAR":
                 check_overlap = False
             options_dict["check overlap"] = check_overlap
 
@@ -528,14 +536,8 @@ class analyse:
                 )
                 bound_err = BSS.Types.Energy(
                     math.sqrt(
-                        (
-                            self._bound_pmf_dict[bound_name][-1][2].value()
-                            * self._bound_pmf_dict[bound_name][-1][2].value()
-                        )
-                        + (
-                            self._bound_pmf_dict[bound_name][0][2].value()
-                            * self._bound_pmf_dict[bound_name][0][2].value()
-                        )
+                        math.pow(self._bound_pmf_dict[bound_name][-1][2].value(), 2)
+                        + math.pow(self._bound_pmf_dict[bound_name][0][2].value(), 2)
                     ),
                     self._bound_pmf_dict[bound_name][-1][2].unit(),
                 )
@@ -556,14 +558,8 @@ class analyse:
                 )
                 free_err = BSS.Types.Energy(
                     math.sqrt(
-                        (
-                            self._free_pmf_dict[free_name][-1][2].value()
-                            * self._free_pmf_dict[free_name][-1][2].value()
-                        )
-                        + (
-                            self._free_pmf_dict[free_name][0][2].value()
-                            * self._free_pmf_dict[free_name][0][2].value()
-                        )
+                        math.pow(self._free_pmf_dict[free_name][-1][2].value(), 2)
+                        + math.pow(self._free_pmf_dict[free_name][0][2].value(), 2)
                     ),
                     self._free_pmf_dict[free_name][-1][2].unit(),
                 )
@@ -783,7 +779,7 @@ class analyse:
                     name = str(b) + "_bound"
                     overlap = self._bound_matrix_dict[name]
                     overlap_okay, too_small = BSS.FreeEnergy.Relative.checkOverlap(
-                        overlap, estimator=self.estimator
+                        overlap
                     )
                     no_overlaps += 1
                     too_smalls += too_small
@@ -798,7 +794,7 @@ class analyse:
                     name = str(f) + "_free"
                     overlap = self._free_matrix_dict[name]
                     overlap_okay, too_small = BSS.FreeEnergy.Relative.checkOverlap(
-                        overlap, estimator=self.estimator
+                        overlap
                     )
                     no_overlaps += 1
                     too_smalls += too_small
@@ -833,6 +829,7 @@ class analyse:
                     try:
                         name = str(b) + "_bound"
                         overlap = self._bound_matrix_dict[name]
+                        # TODO upgrade so plotting not from BSS like this but from other newer
                         ax = BSS.FreeEnergy.Relative.plot(
                             overlap,
                             work_dir=self._graph_dir,
@@ -896,7 +893,7 @@ class analyse:
                 "start",
                 self._statistical_inefficiency,
                 self._auto_equilibration,
-                do_pickle
+                do_pickle,
             )
             eresults_dict, ebound_dict, efree_dict = analyse._calculate_truncated(
                 self._work_dir,
@@ -904,7 +901,7 @@ class analyse:
                 "end",
                 self._statistical_inefficiency,
                 self._auto_equilibration,
-                do_pickle
+                do_pickle,
             )
 
             self.spert_results_dict = sresults_dict
@@ -1000,8 +997,11 @@ class analyse:
 
     def plot_convergence(self):
         try:
-            for from_start,from_end,leg in zip([self.spert_results_dict, self.spert_bound_dict, self.spert_free_dict],[self.epert_results_dict, self.epert_bound_dict, self.epert_free_dict],["freenerg","bound","free"]):
-                
+            for from_start, from_end, leg in zip(
+                [self.spert_results_dict, self.spert_bound_dict, self.spert_free_dict],
+                [self.epert_results_dict, self.epert_bound_dict, self.epert_free_dict],
+                ["freenerg", "bound", "free"],
+            ):
                 sdf = analyse.single_pert_dict_into_df(from_start)
                 edf = analyse.single_pert_dict_into_df(from_end)
                 # plot individually for perts
@@ -1021,7 +1021,12 @@ class analyse:
 
     @staticmethod
     def _calculate_truncated(
-        path_to_dir, estimator, start_end="start", statsineff=False, eq=False, try_pickle=True
+        path_to_dir,
+        estimator,
+        start_end="start",
+        statsineff=False,
+        eq=False,
+        try_pickle=True,
     ):
         start_end = validate.truncate_keep(start_end)
 
@@ -1097,7 +1102,7 @@ class analyse:
             alpha=0.4,
         )
         lines += plt.plot(0, 0, c="lightcoral", label="forward")
-        
+
         scatterplot = [plt.plot(edf.index, edf["avg"], c="cornflowerblue")]
         plt.fill_between(
             edf.index,
@@ -1135,9 +1140,7 @@ class analyse:
             plt.savefig(file_path)
 
     def plot_across_lambda(self):
-        """plot the repeats across lambdas
-
-        """
+        """plot the repeats across lambdas"""
 
         if not self.is_analysed:
             warnings.warn(
@@ -1147,7 +1150,10 @@ class analyse:
             return None
 
         # get the lambda values
-        lambda_vals = [entry[0] for entry in self._free_pmf_dict[list(self._free_pmf_dict.keys())[0]]]
+        lambda_vals = [
+            entry[0]
+            for entry in self._free_pmf_dict[list(self._free_pmf_dict.keys())[0]]
+        ]
 
         # make the dicts
         freenrg_dict = {}
@@ -1164,13 +1170,13 @@ class analyse:
             free_dict[lam] = []
             free_err_dict[lam] = []
 
-        for repf,repb in zip(self._free_pmf_dict, self._bound_pmf_dict):
+        for repf, repb in zip(self._free_pmf_dict, self._bound_pmf_dict):
             bound_pmf = self._bound_pmf_dict[repb]
             free_pmf = self._free_pmf_dict[repf]
 
-            for pb,pf in zip(bound_pmf,free_pmf):
-                freenrg_dict[pb[0]].append((pb[1].value())-(pf[1].value()))
-                freenrg_err_dict[pb[0]].append((pb[2].value())+(pf[2].value()))
+            for pb, pf in zip(bound_pmf, free_pmf):
+                freenrg_dict[pb[0]].append((pb[1].value()) - (pf[1].value()))
+                freenrg_err_dict[pb[0]].append((pb[2].value()) + (pf[2].value()))
                 bound_dict[pb[0]].append(pb[1].value())
                 bound_err_dict[pb[0]].append(pb[2].value())
                 free_dict[pb[0]].append(pf[1].value())
@@ -1180,7 +1186,6 @@ class analyse:
 
         # currently only for freenrg
         for val_dict in [freenrg_dict]:
-
             index_dict = {}
 
             for x in lambda_vals:
@@ -1205,10 +1210,143 @@ class analyse:
             )
             lines += plt.plot(0, 0, c="cornflowerblue", label="freenrg")
 
-            plt.xlim(xmin=0,xmax=1)
+            plt.xlim(xmin=0, xmax=1)
             plt.ylabel("Computed $\Delta$$\Delta$G$_{perturbation}$ (kcal/mol)")
             plt.xlabel("Lambda")
             labels = [l.get_label() for l in lines]
             plt.legend(lines, labels)
             plt.title(f"Energy across lambda windows for {self.perturbation}")
-            plt.savefig(f'{self._graph_dir}/{self.perturbation}_across_lambda_windows_freenrg.png')
+            plt.savefig(
+                f"{self._graph_dir}/{self.perturbation}_across_lambda_windows_freenrg.png"
+            )
+
+    def extract_edgembar_data(self):
+        self.format_for_edgembar()
+
+    def format_for_edgembar(self):
+        # need to get the data into the format of
+        # filename efep_tlam_elam.dat
+        # tlam is the window at which it is generated ie the name of the folder lambda
+        # elam is the energy lambda ie the different column headings
+        # timeseries kcal/mol
+
+        if not self.is_analysed:
+            warnings.warn(
+                "can't carry out until all repeats have been analysed. please self.analyse_all_repeats() first!"
+            )
+
+            return None
+
+        for leg in self._b_folders + self._f_folders:
+            files, temperatures, lambdas = self.get_files_temperatures_lambdas(
+                f"{self._work_dir}/{leg}"
+            )
+            u_nk = BSS.FreeEnergy.Relative._get_u_nk(files, temperatures, self.engine)
+
+            for df in u_nk:
+                kcal_df = to_kcalmol(df)
+
+                # get trajectory lambda
+                tlam = df.index.get_level_values("lambdas")[0]
+
+                for elam in df.columns:
+                    new_df = kcal_df[elam]
+                    newer_df = new_df.droplevel("lambdas")
+                    final_df = newer_df.reset_index()
+                    folder = validate.folder_path(
+                        f"{self._edgembar_dir}/{leg.split('_')[0]}/{leg.split('_')[1]}",
+                        create=True,
+                    )
+                    final_df.to_csv(
+                        f"{folder}/efep_{tlam}_{elam}.dat",
+                        sep=" ",
+                        index=False,
+                        header=False,
+                    )
+
+    def get_files_temperatures_lambdas(self, work_dir):
+        function_glob_dict = {
+            "SOMD": "**/simfile.dat",
+            "GROMACS": "**/[!bar]*.xvg",
+            "AMBER": "**/*.out",
+        }
+
+        mask = function_glob_dict[self.engine]
+        glob_path = pathlib.Path(work_dir)
+        files = sorted(glob_path.glob(mask))
+
+        lambdas = []
+        for file in files:
+            for part in file.parts:
+                if "lambda" in part:
+                    lambdas.append(float(part.split("_")[-1]))
+
+        if self.engine == "AMBER":
+            # Find the temperature for each lambda window.
+            temperatures = []
+            for file, lambda_ in zip(files, lambdas):
+                found_temperature = False
+                with open(file) as f:
+                    for line in f.readlines():
+                        if not found_temperature:
+                            match = re.search(r"temp0=([\d.]+)", line)
+                            if match is not None:
+                                temperatures += [float(match.group(1))]
+                                found_temperature = True
+                            elif found_temperature == True:
+                                pass
+
+                    if not found_temperature:
+                        raise ValueError(
+                            "The temperature was not detected in the AMBER output file."
+                        )
+
+        elif self.engine == "SOMD":
+            temperatures = []
+            for file in files:
+                found_temperature = False
+                with open(file, "r") as f:
+                    for line in f.readlines():
+                        temp = None
+                        start = "#Generating temperature is"
+                        if start in line:
+                            split_line = (line.split(start)[1]).strip().split(" ")
+                            temp = split_line[0]
+                            unit = split_line[-1]
+                            if unit.upper() == "C":
+                                temp = float(temp) + 273.15  # Convert to K
+                            else:
+                                temp = float(temp)
+                            temperatures.append(temp)
+                            if temp is not None:
+                                found_temperature = True
+                                break
+
+                if not found_temperature:
+                    raise ValueError(
+                        f"The temperature was not detected in the SOMD output file, {file}"
+                    )
+
+        elif self.engine == "GROMACS":
+            # find the temperature at each lambda window
+            temperatures = []
+            for file in files:
+                found_temperature = False
+                with open(file, "r") as f:
+                    for line in f.readlines():
+                        t = None
+                        start = "T ="
+                        end = "(K)"
+                        if start and end in line:
+                            t = int(((line.split(start)[1]).split(end)[0]).strip())
+                            temperatures.append(t)
+                            if t is not None:
+                                found_temperature = True
+                                break
+
+                if not found_temperature:
+                    raise ValueError(
+                        f"The temperature was not detected in the GROMACS output file, {file}"
+                    )
+
+        return files, temperatures, lambdas

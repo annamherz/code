@@ -607,7 +607,7 @@ class validate:
         """
 
         pert_val = validate.string(pert_val).lower()
-        if pert_val not in ["pert", "val","bound","free"]:
+        if pert_val not in ["pert", "val", "bound", "free"]:
             raise ValueError("pert_val must be either 'pert' or 'val'")
 
         return pert_val
