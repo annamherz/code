@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
 from argparse import ArgumentParser
-import os
 from pipeline.setup import *
 
 
@@ -103,7 +102,45 @@ def main():
 
     # make the files needed
     pl.setup_ligands()
+
+    print("please edit the network as needed. Otherwise, leave blank.")
+
+    rem_ligs = str(
+        input("do you want to remove any ligands? Please list all ligands to remove, seperated by a comma: ")
+    ).strip()
+    if rem_ligs:
+        rem_ligs = [lig.strip() for lig in rem_ligs.split(",")]
+        for lig in rem_ligs:
+            pl.remove_ligand(lig)
+    else:
+        pass
+
     pl.setup_network()
+
+    if rem_perts:
+        rem_perts = str(
+            input("do you want to remove any perturbations? Please list all perts to remove (name as above), seperated by a comma: ")
+        ).strip()
+        rem_perts = [pert.strip() for pert in rem_perts.split(",")]
+        for pert in rem_perts:
+            pl.remove_perturbation(pert)
+    else:
+        pass
+
+    add_perts = str(
+        input("do you want to add any perturbations? Please list all perts to add (lig0~lig1), seperated by a comma: ")
+    ).strip()
+    if add_perts:
+        add_perts = [pert.strip() for pert in rem_perts.split(",")]
+        for pert in add_perts:
+            pl.remove_perturbation(pert)
+    else:
+        pass
+
+    # TODO change so can just do numbers of options?
+    pl.add_source_file(str(
+        input("please state the bash file that includes all the source and module parameters: ")
+    ).strip())
 
     # make run_all_slurm to the main folder that was made.
     pl.write_run_all()
