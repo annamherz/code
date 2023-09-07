@@ -1,6 +1,8 @@
 import glob
 import warnings
 import BioSimSpace as BSS
+import shutil
+from collections import OrderedDict
 
 from ..utils._validate import *
 from ..utils._files import *
@@ -16,8 +18,6 @@ class initialise_pipeline:
         # execuction folder automatically made in main folder
         # protein file path
 
-        self.ligands = None
-        self.ligand_names = None
         self.ligands_dict = None
         self.perturbations = None
 
@@ -138,37 +138,29 @@ class initialise_pipeline:
             file_name (str): file name to write the ligands file to.
 
         Returns:
-            ligands: list of BSS ligand molecules
-            ligand_names: list of ligands names
             ligands_dict: dicitonary of ligand names and the BSS molecule.
         """
 
         # generate transformation network based on ligands
         ligand_files = sorted(glob.glob(f"{path_to_ligands}/*.sdf"))
 
-        ligands = []
-        ligand_names = []
-        ligands_dict = {}
+        ligands_dict = OrderedDict()
 
         for filepath in ligand_files:
-            # append the molecule object to a list.
-            lig = BSS.IO.readMolecules(filepath)[0]
-            ligands.append(lig)
 
-            # append the molecule name to another list so that we can use the name of each molecule in our workflow.
+            lig = BSS.IO.readMolecules(filepath)[0]
             lig_name = filepath.split("/")[-1].replace(".sdf", "")
-            ligand_names.append(lig_name)
 
             ligands_dict[lig_name] = lig
 
-        print(f"there were {len(ligand_names)} ligands found. These are:\n")
-        for lig in ligand_names:
+        print(f"there were {len(ligands_dict.keys())} ligands found. These are:\n")
+        for lig in ligands_dict.keys():
             print(lig)
 
         # write ligands file.
-        write_ligands(ligand_names, file_name)
+        write_ligands(list(ligands_dict.keys()), file_name)
 
-        return ligands, ligand_names, ligands_dict
+        return ligands_dict
 
     def setup_ligands(self, file_name=None):
         """setup the ligands
@@ -200,12 +192,10 @@ class initialise_pipeline:
             file_name = validate.string(file_name)
             validate.folder_path(("/").join(file_name.split("/")[:-1]), create=True)
 
-        ligands, ligand_names, ligands_dict = initialise_pipeline._setup_ligands(
+        ligands_dict = initialise_pipeline._setup_ligands(
             self._ligands_folder, file_name
         )
 
-        self.ligands = ligands
-        self.ligand_names = ligand_names
         self.ligands_dict = ligands_dict
 
         self._is_ligands_setup = True
@@ -219,13 +209,11 @@ class initialise_pipeline:
 
         # if have setup the ligands remove it from the names, ligands and the dict
         if self._is_ligands_setup:
-            if lig in self.ligand_names:
-                self.ligand_names.remove(lig)
-                self.ligands.remove(self.ligands_dict[lig])
+            if lig in self.ligands_dict.keys():
                 del self.ligands_dict[lig]
 
             # write ligands file again as updted
-            write_ligands(self.ligand_names, f"{self._exec_folder}/ligands.dat")
+            write_ligands(list(self.ligands_dict.keys()), f"{self._exec_folder}/ligands.dat")
 
         else:
             print(
@@ -233,12 +221,11 @@ class initialise_pipeline:
             )
 
     @staticmethod
-    def _setup_network(ligands, ligand_names, folder, links_file=None):
+    def _setup_network(ligands_dict, folder, links_file=None):
         """setup a network
 
         Args:
-            ligands (list): BSS molecules list of ligands
-            ligand_names (list): list of ligand names, must
+            ligands_dict: dicitonary of ligand names and the BSS molecule.
             folder (str): folder path of where to save the network setup files and visualisation
             links_file (str, optional): file path to a links file to use instead of LOMAP. Defaults to None.
 
@@ -246,8 +233,10 @@ class initialise_pipeline:
             dict: dictionary of perturbations and their scores
         """
 
+        ligand_names = list(ligands_dict.keys())
+
         transformations, lomap_scores = BSS.Align.generateNetwork(
-            ligands,
+            ligands_dict.values(),
             plot_network=True,
             names=ligand_names,
             work_dir=f"{folder}/visualise_network",
@@ -274,23 +263,15 @@ class initialise_pipeline:
             links_file (str, optional): links file to use instead of LOMAP when generating the network. Defaults to None.
         """
 
-        if not self.ligand_names or not self.ligands:
+        if not self._is_ligands_setup:
             print("please run setup_ligands before setting up the network")
             return
 
-        ligs = []
-        lig_names = []
-
-        for key, value in self.ligands_dict.items():
-            ligs.append(value)
-            lig_names.append(key)
-
         pert_network_dict = initialise_pipeline._setup_network(
-            ligs,
-            lig_names,
+            self.ligands_dict,
             f"{self.exec_folder()}/{folder}",
-            links_file=links_file,
-        )
+            links_file=links_file
+            )
 
         self.pert_network_dict = pert_network_dict
         self.perturbations = [f"{key[0]}~{key[1]}" for key in pert_network_dict.keys()]
@@ -298,6 +279,7 @@ class initialise_pipeline:
         write_lomap_scores(
             pert_network_dict, f"{self.exec_folder()}/{folder}/network_scores.dat"
         )
+        self.write_network()
 
         self._is_network_setup = True
 
@@ -318,6 +300,8 @@ class initialise_pipeline:
             write_lomap_scores(
                 self.pert_network_dict, f"{self.exec_folder()}/network_scores.dat"
             )
+
+            self.write_network()
 
         else:
             print("please setup network first before removing any perturbations")
@@ -349,6 +333,8 @@ class initialise_pipeline:
                 self.pert_network_dict, f"{self.exec_folder()}/network_scores.dat"
             )
 
+            self.write_network()
+
         else:
             print("please setup network first before adding any perturbations")
 
@@ -366,7 +352,7 @@ class initialise_pipeline:
             print("please setup network first")
             return
 
-        graph = net_graph(self.ligand_names, self.perturbations)
+        graph = net_graph(list(self.ligands_dict.keys()), self.perturbations)
         graph.draw_graph(file_dir=folder)
 
     def setup_protocols(self, protocol_dictionary=None, ana_protocol_dictionary=None):
@@ -429,8 +415,24 @@ class initialise_pipeline:
         else:
             print("please setup network first before writing the network file.")
 
+    def add_source_file(self, file):
+        """source file that has info for modules, conda paths, MD engines, etc.
+
+        Args:
+            file (str): file path
+        """
+
+        self.source_file = validate.file_path(file)
+
     def write_run_all(self):
         """write the run all file needed to run the pipeline. This file should be checked manually."""
+
+        # copy over the files
+        shutil.copytree("../default_scripts",f"{self.main_folder}/scripts")
+        if self.source_file:
+            shutil.copyfile(self.source_file, f"{self.main_folder}/scripts/source_file.sh")
+        else:
+            print("there is no source file. this will create an issue.")
 
         with open(f"{self._main_folder}/run_all_slurm.sh", "w") as rsh:
             rsh.write(
@@ -441,12 +443,6 @@ class initialise_pipeline:
 # please check all file paths and MD engines are sourced to correct path between the hashtags
 
 ###########
-
-# make sure engines etc are sourced correctly
-export PYTHONPATH=export PYTHONPATH="/home/anna/BioSimSpace/python:$PYTHONPATH" # if using a cloned git branch of BSS - otherwise comment out
-export BSS="/home/anna/anaconda3/bin/activate biosimspace-dev" # to use the conda env to make sure sire works correctly - sourced in each sh script
-export amber="{BSS._amber_home}" # sourced in each script
-export gromacs="{BSS._gmx_exe}" # sourced in each script
 
 # export important file locations
 export MAINDIRECTORY="{self._main_folder}"
@@ -460,7 +456,11 @@ export prot_file="$MAINDIRECTORY/execution_model/protocol.dat"
 export ana_file="$MAINDIRECTORY/execution_model/analysis_protocol.dat"
 
 # this should be the location of in the pipeline module
-export scripts_dir="/home/anna/Documents/code/pipeline_scripts" # choose location of scripts
+export scripts_dir="$MAINDIRECTORY/scripts" # choose location of scripts
+
+# sourcing
+source $scripts_dir/source_file.sh
+source $scripts_dir/extract_execution_model_bash.sh
 
 # remove any ^M from end of file lines
 dos2unix "$lig_file"
@@ -475,26 +475,13 @@ dos2unix "$ana_file"
 # chmod u+x $scripts_dir/run_extract_output_slurm.sh
 # chmod u+x $scripts_dir/run_analysis_slurm.sh
 
-# sourcing - as needed in the othe sh scripts
-source $BSS
-source $amber/amber.sh
-source $gromacs
-source $scripts_dir/extract_execution_model_bash.sh
-
 ###########
 
-"""
-            )
-
-            with open(f"{self._main_folder}/run_all_slurm.sh", "a") as rsh:
-                rsh.write(
-                    """\
-
 echo "The folder for all these runs is $MAINDIRECTORY"
-echo ${lig_array[@]}
-echo ${trans_array[@]}
-echo ${eng_array[@]}
-echo ${win_array[@]}
+echo ${{lig_array[@]}}
+echo ${{trans_array[@]}}
+echo ${{eng_array[@]}}
+echo ${{win_array[@]}}
 echo "name is $name"
 
 # make output dir for slurm out and err files
@@ -504,21 +491,21 @@ fi
 
 # Run the runs
 # ligand prep
-jidlig=$(sbatch --parsable --array=0-$((${#lig_array[@]}-1)) $scripts_dir/run_ligprep_slurm.sh)
+jidlig=$(sbatch --parsable --array=0-$((${{#lig_array[@]}}-1)) $scripts_dir/run_ligprep_slurm.sh)
 echo "ligand prep jobid is $jidlig"
 
 # FEP prep
-jidfep=$(sbatch --dependency=afterany:${jidlig} --parsable --array=0-$((${#trans_array[@]}-1)) $scripts_dir/run_fepprep_slurm.sh)
+jidfep=$(sbatch --dependency=afterany:${{jidlig}} --parsable --array=0-$((${{#trans_array[@]}}-1)) $scripts_dir/run_fepprep_slurm.sh)
 echo "FEP prep jobid is $jidfep"
 
 # Production runs and analysis for the transformation
-for i in "${!trans_array[@]}"; do
-jidprod=$(sbatch --dependency=afterany:${jidfep} --parsable --array=0-$((${win_array[i]}-1)) $scripts_dir/run_production_slurm.sh ${trans_array[i]}$name ${eng_array[i]} ${win_array[i]} $repeats)
-echo "Production jobid for ${trans_array[i]}, ${eng_array[i]} is $jidprod"
-jidextract=$(sbatch --dependency=afterany:${jidprod} --parsable $scripts_dir/run_extract_output_slurm.sh ${trans_array[i]} ${eng_array[i]})
-echo "Extraction jobid for ${trans_array[i]}, ${eng_array[i]} is $jidextract"
-jidana=$(sbatch --dependency=afterany:${jidextract} --parsable $scripts_dir/run_analysis_slurm.sh ${trans_array[i]} ${eng_array[i]})
-echo "Analysis jobid for ${trans_array[i]}, ${eng_array[i]} is $jidana"
+for i in "${{!trans_array[@]}}"; do
+jidprod=$(sbatch --dependency=afterany:${{jidfep}} --parsable --array=0-$((${{win_array[i]}}-1)) $scripts_dir/run_production_slurm.sh ${{trans_array[i]}}$name ${{eng_array[i]}} ${{win_array[i]}} $repeats)
+echo "Production jobid for ${{trans_array[i]}}, ${{eng_array[i]}} is $jidprod"
+jidextract=$(sbatch --dependency=afterany:${{jidprod}} --parsable $scripts_dir/run_extract_output_slurm.sh ${{trans_array[i]}} ${{eng_array[i]}})
+echo "Extraction jobid for ${{trans_array[i]}}, ${{eng_array[i]}} is $jidextract"
+jidana=$(sbatch --dependency=afterany:${{jidextract}} --parsable $scripts_dir/run_analysis_slurm.sh ${{trans_array[i]}} ${{eng_array[i]}})
+echo "Analysis jobid for ${{trans_array[i]}}, ${{eng_array[i]}} is $jidana"
 done        
 
 """
