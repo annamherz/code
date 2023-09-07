@@ -11,9 +11,7 @@
 export OMP_NUM_THREADS=8
 
 # sourcing
-source $BSS
-source $amber/amber.sh
-source $gromacs
+source $scripts_dir/source_file.sh
 source $scripts_dir/extract_execution_model_bash.sh
 
 date
@@ -38,7 +36,7 @@ fi
 trans_dir=$(pwd)
 
 # iterate over dir (for each leg) based on no of repeats
-for dir in 'free' 'bound' ; do #
+for dir in 'free' 'bound' ; do
 for rep in "${repeats_array[@]}" ; do
 repeat=${dir}_${rep}
 cd $repeat
@@ -46,6 +44,11 @@ repeat_dir=$(pwd)
 
 echo "Running in $repeat_dir"
 echo "Lambda is $lam"
+
+sed -i '5 a\   gti_add_sc=5' min/lambda_$lam/amber.cfg
+sed -i '5 a\   gti_add_sc=5' heat/lambda_$lam/amber.cfg
+sed -i '5 a\   gti_add_sc=5' eq/lambda_$lam/amber.cfg
+sed -i '5 a\   gti_add_sc=5' lambda_$lam/amber.cfg
 
 # run the runs based on which engine
 if [ $2 = "AMBER" ]; then
