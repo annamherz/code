@@ -4,11 +4,11 @@ import warnings as _warnings
 
 try:
     amber_version = BSS._amber_version
-    # assume the amber version is 22
+    # assume the amber version is 20
     if not amber_version:
-        amber_version = 22
+        amber_version = 20
 except:
-    amber_version = 22
+    amber_version = 20
 
 from ..utils import *
 from ._merge import *
