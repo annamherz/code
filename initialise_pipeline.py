@@ -9,7 +9,7 @@ def ask_things():
         input("what is the Ligand forcefield? (allowed: GAFF2, Parsely, Sage): ")
     ).strip()
     sampling_time = str(input("what is the sampling time? (in ns): ")).strip()
-    engine = str(input("what is the engine? (allowed: SOMD, AMBER, GROMACS): ")).strip()
+    engines = str(input("what is the engine? (allowed: SOMD, AMBER, GROMACS): ")).strip()
     hmr = str(input("should HMR be applied? (allowed: True, False): ")).strip()
     repeats = str(input("how many repeats? (recommended: 3): ")).strip()
     trajectories = str(
@@ -23,7 +23,7 @@ def ask_things():
         "hmr": hmr,
         "repeats": repeats,
         "trajectories": trajectories,
-        "engine": engine,
+        "engines": engines,
     }
 
     return protocol_dict
@@ -117,10 +117,10 @@ def main():
 
     pl.setup_network()
 
+    rem_perts = str(
+        input("do you want to remove any perturbations? Please list all perts to remove (name as above), seperated by a comma: ")
+    ).strip()
     if rem_perts:
-        rem_perts = str(
-            input("do you want to remove any perturbations? Please list all perts to remove (name as above), seperated by a comma: ")
-        ).strip()
         rem_perts = [pert.strip() for pert in rem_perts.split(",")]
         for pert in rem_perts:
             pl.remove_perturbation(pert)

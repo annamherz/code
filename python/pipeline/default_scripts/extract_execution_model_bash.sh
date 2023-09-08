@@ -14,9 +14,17 @@ fi
 # get the name of the run
 nam=$(awk '/name/{print $NF}' $prot_file)
 if [ -z "$nam" ]; then
+
 name=""
+
 else
+
 name="_$nam"
+
+if [$nam == "None"]; then
+name=""
+fi
+
 fi
 
 # keeping the trajectory?

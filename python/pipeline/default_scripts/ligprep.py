@@ -27,7 +27,7 @@ def lig_prep(
             sys.exit(0)
 
     # make other folders that need to be made for the prepped files
-    folders = [f"{main_dir}/prep", f"{main_dir}/prep/pre_run"]
+    folders = [f"{main_dir}/prep", f"{main_dir}/prep/pre_run", f"{main_dir}/prep/solvation"]
     for folder in folders:
         if not os.path.exists(folder):
             os.mkdir(folder)
@@ -71,6 +71,7 @@ def lig_prep(
             protocol.box_type(),
             protocol.box_edges(),
             protocol.box_edges_unit(),
+            work_dir=f"{main_dir}/prep/solvation/{lig_name}"
         )
 
         # saving pre runs

@@ -39,6 +39,7 @@ class ligprep:
         box_edges_unit="angstrom",
         ion_conc=0.15,
         verbose=True,
+        work_dir=None
     ):
         """minimum solvation
 
@@ -50,6 +51,7 @@ class ligprep:
             box_edges_unit (str, optional): unit of box edges. Defaults to "angstrom".
             ion_conc (float, optional): Ion conc added (NaCl). Defaults to 0.15.
             verbose (bool, optional): if output should be verbose. Defaults to True.
+            work_dir (str, optional): work dir for solvation
 
         Returns:
             _BioSimSpace._SireWrappers.System: the solvated system
@@ -61,7 +63,8 @@ class ligprep:
             box_edges = validate.integer(box_edges)
             box_edges_unit = validate.box_edges_unit(box_edges_unit)
             box_type = validate.box_type(box_type)
-            ion_conc = validate.float(ion_conc)
+            ion_conc = validate.is_float(ion_conc)
+            work_dir = validate.folder_path(work_dir, create=True)
         except Exception as e:
             print(
                 f"The provided arguments could not be validated.\n Exception is:\n {e}"
@@ -100,7 +103,7 @@ class ligprep:
         boxtype_func = boxtype_dict[box_type]
         box, angles = boxtype_func(max(box_sizes))
         mol_solvated = BSS.Solvent.solvate(
-            solvent, molecule=system, box=box, angles=angles, ion_conc=ion_conc
+            solvent, molecule=system, box=box, angles=angles, ion_conc=ion_conc, work_dir=work_dir
         )
 
         nmols = mol_solvated.nMolecules()

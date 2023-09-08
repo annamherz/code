@@ -6,6 +6,7 @@ from collections import OrderedDict
 
 from ..utils._validate import *
 from ..utils._files import *
+from ..utils._files import write_network as _write_network
 from ..prep._protocol import *
 from ..analysis._network import *
 
@@ -236,7 +237,7 @@ class initialise_pipeline:
         ligand_names = list(ligands_dict.keys())
 
         transformations, lomap_scores = BSS.Align.generateNetwork(
-            ligands_dict.values(),
+            list(ligands_dict.values()),
             plot_network=True,
             names=ligand_names,
             work_dir=f"{folder}/visualise_network",
@@ -276,12 +277,8 @@ class initialise_pipeline:
         self.pert_network_dict = pert_network_dict
         self.perturbations = [f"{key[0]}~{key[1]}" for key in pert_network_dict.keys()]
 
-        write_lomap_scores(
-            pert_network_dict, f"{self.exec_folder()}/{folder}/network_scores.dat"
-        )
-        self.write_network()
-
         self._is_network_setup = True
+        self.write_network()
 
     def remove_perturbation(self, pert):
         """remove a perturbation from the network for the pipeline.
@@ -296,10 +293,6 @@ class initialise_pipeline:
                 del self.pert_network_dict[
                     (f"{pert.split('~')[0]}", f"{pert.split('~')[1]}")
                 ]
-
-            write_lomap_scores(
-                self.pert_network_dict, f"{self.exec_folder()}/network_scores.dat"
-            )
 
             self.write_network()
 
@@ -328,10 +321,6 @@ class initialise_pipeline:
 
             self.pert_network_dict[(lig0, lig1)] = single_lomap_score[0]
             self.perturbations.append(pert)
-
-            write_lomap_scores(
-                self.pert_network_dict, f"{self.exec_folder()}/network_scores.dat"
-            )
 
             self.write_network()
 
@@ -407,7 +396,7 @@ class initialise_pipeline:
         if self._is_network_setup:
             if not file_path:
                 file_path = f"{self.exec_folder()}/network.dat"
-            write_network(self.pert_network_dict, self.protocol, file_path)
+            _write_network(self.pert_network_dict, self.protocol, file_path)
             write_lomap_scores(
                 self.pert_network_dict, f"{self.exec_folder()}/network_scores.dat"
             )
@@ -426,11 +415,12 @@ class initialise_pipeline:
 
     def write_run_all(self):
         """write the run all file needed to run the pipeline. This file should be checked manually."""
-
+        
         # copy over the files
-        shutil.copytree("../default_scripts",f"{self.main_folder}/scripts")
+        print("copying default scripts...")
+        shutil.copytree(f"{pipeline.__file__.split('__init__.py')[0]}default_scripts",f"{self._main_folder}/scripts")
         if self.source_file:
-            shutil.copyfile(self.source_file, f"{self.main_folder}/scripts/source_file.sh")
+            shutil.copyfile(self.source_file, f"{self._main_folder}/scripts/source_file.sh")
         else:
             print("there is no source file. this will create an issue.")
 
@@ -458,15 +448,20 @@ export ana_file="$MAINDIRECTORY/execution_model/analysis_protocol.dat"
 # this should be the location of in the pipeline module
 export scripts_dir="$MAINDIRECTORY/scripts" # choose location of scripts
 
+# replace trailing ^M
+cp $prot_file $prot_file\_0
+cp $lig_file $lig_file\_0
+cp $net_file $net_file\_0
+sed 's/\r$//' $prot_file\_0 > $prot_file
+sed 's/\r$//' $lig_file\_0 > $lig_file
+sed 's/\r$//' $net_file\_0 > $net_file
+rm $prot_file\_0
+rm $lig_file\_0
+rm $net_file\_0
+
 # sourcing
 source $scripts_dir/source_file.sh
 source $scripts_dir/extract_execution_model_bash.sh
-
-# remove any ^M from end of file lines
-dos2unix "$lig_file"
-dos2unix "$net_file"
-dos2unix "$prot_file"
-dos2unix "$ana_file"
 
 # chmod all files so can be executed by sbatch.
 # chmod u+x $scripts_dir/run_ligprep_slurm.sh

@@ -367,7 +367,7 @@ def write_protocol(query_dict, file_path):
     query_dict = validate.dictionary(query_dict)
 
     # write in the style needed for the protocol
-    with open(file, "w") as protocol_file:
+    with open(file, "w", encoding="utf-8", newline='\n') as protocol_file:
         writer = csv.writer(protocol_file, delimiter=";")
         for query in query_dict.keys():
             if query == "config options":
@@ -393,7 +393,7 @@ def write_ligands(ligand_names, file_path):
     ligand_names = validate.is_list(ligand_names)
     file = validate.string(file_path)
 
-    with open(file, "w") as ligands_file:
+    with open(file, "w", encoding="utf-8", newline='\n') as ligands_file:
         writer = csv.writer(ligands_file)
         for lig in ligand_names:
             writer.writerow([lig])
@@ -410,7 +410,7 @@ def write_lomap_scores(pert_network_dict, file_path):
     file = validate.string(file_path)
     pert_network_dict = validate.dictionary(pert_network_dict)
 
-    with open(file, "w") as scores_file:
+    with open(file, "w", encoding="utf-8", newline='\n') as scores_file:
         writer = csv.writer(scores_file)
 
         for transf in sorted(pert_network_dict.keys()):
@@ -435,15 +435,10 @@ def write_network(pert_network_dict, protocol, file_path):
     # write perts file. Base the lambda schedule on the file generated in the previous cell.
     np.set_printoptions(formatter={"float": "{: .4f}".format})
 
-    with open(file, "w") as network_file:
+    with open(file, "w", encoding="utf-8", newline='\n') as network_file:
         writer = csv.writer(network_file, delimiter=" ")
 
         for pert, lomap_score in pert_network_dict.items():
-            # # based on the provided (at top of notebook) lambda allocations and LOMAP threshold, decide allocation.
-            # if lomap_score == None or lomap_score < float(node.getInput("LOMAP Threshold")):
-            #     num_lambda = node.getInput("DiffLambdaWindows")
-            # else:
-            #     num_lambda = node.getInput("LambdaWindows")
 
             num_lambda = protocol.num_lambda()  # same no lamdda windows for all
 

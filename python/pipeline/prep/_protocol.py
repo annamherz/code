@@ -277,6 +277,7 @@ class pipeline_protocol(protocol):
             "equilibrium runtime unit": "ps",
             "engines": "ALL",
             "fepprep": "both",
+            "number of lambda windows": "12",
             "rerun": "False",
             "config options": None,
             "config options file": None,
@@ -361,6 +362,7 @@ class pipeline_protocol(protocol):
             self.eq_runtime_unit(query_dict["equilibrium runtime unit"])
             self.engines(query_dict["engines"])
             self.fepprep(query_dict["fepprep"])
+            self.num_lambda(query_dict["number of lambda windows"])
             self.config_options_file(query_dict["config options file"])
             if query_dict["config options"]:
                 self.config_options(query_dict["config options"])
@@ -676,7 +678,12 @@ class pipeline_protocol(protocol):
             self._query_dict["start temperature"] = value
             self._start_temperature = value
         else:
-            value = self._start_temperature
+            try:
+                value = self._start_temperature
+            except:
+                # if it is the default start temperature, it is zero
+                value = int(0)
+                self._start_temperature = value
 
         return value
 
