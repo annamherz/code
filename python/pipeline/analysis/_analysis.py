@@ -12,8 +12,12 @@ import matplotlib.pyplot as plt
 import glob
 import re
 import pathlib
+import logging
+
+from typing import Union, Optional
 
 from alchemlyb.postprocessors.units import to_kcalmol
+from alchemlyb.visualisation import plot_mbar_overlap_matrix, plot_ti_dhdl
 
 from ..utils import *
 from ..prep import analysis_protocol
@@ -22,7 +26,7 @@ from ..prep import analysis_protocol
 class analyse:
     """class to analyse a work dir"""
 
-    def __init__(self, work_dir, pert=None, engine=None, analysis_prot=None):
+    def __init__(self, work_dir: str, pert: Optional[str] = None, engine: Optional[str] = None, analysis_prot: Optional[str] = None):
         """class for analysing results in a directory for a single perturbation
 
         Args:
@@ -58,8 +62,8 @@ class analyse:
                 self.ligand_0 = self.perturbation.split("~")[0]
                 self.ligand_1 = self.perturbation.split("~")[1]
             except Exception as e:
-                print(e)
-                print(
+                logging.exception(e)
+                logging.critical(
                     "was unable to get the perturbation name and ligands from the file path.\n please add these when initialising using pert='lig_0~lig_1'."
                 )
 
@@ -77,10 +81,10 @@ class analyse:
                     for eng in BSS.FreeEnergy.engines():
                         if eng.upper() in self._work_dir.upper():
                             self.engine = validate.engine(eng)
-                            print(f"found {eng.upper()} as engine in work_dir")
+                            logging.info(f"found {eng.upper()} as engine in work_dir")
             except Exception as e:
-                print(e)
-                print(
+                logging.exception(e)
+                logging.critical(
                     "was unable to get the engine from the file path.\n please add when initialising using engine='ENGINE'."
                 )
 
@@ -168,7 +172,7 @@ class analyse:
         return file_ext
 
     @staticmethod
-    def file_ext(options_dict):
+    def file_ext(options_dict: dict):
         """write a file extension based on a protocol style options dictionary
 
         Args:
@@ -205,7 +209,7 @@ class analyse:
         return pickle_ext
 
     @staticmethod
-    def pickle_ext(options_dict, perturbation, engine):
+    def pickle_ext(options_dict: dict, perturbation: str, engine: str):
         # validate any inputs in the dictionary
         options_dict = analyse._update_options_dict(options_dict)
 
@@ -369,12 +373,12 @@ class analyse:
         self._f_repeats = list(range(self._no_of_f_repeats))
 
         if self._no_of_b_repeats != self._no_of_f_repeats:
-            print(
+            logging.warning(
                 f"There are a different number of repeats for bound ({self._no_of_b_repeats}) and free ({self._no_of_f_repeats}) for {self._work_dir}."
                 + f"these are {self._b_folders} and {self._f_folders}."
             )
         else:
-            print(
+            logging.info(
                 f"There are {self._no_of_b_repeats} repeats for each the bound and the free for {self._work_dir}."
                 + f"these are {self._b_folders} and {self._f_folders}."
             )
@@ -392,7 +396,7 @@ class analyse:
         # try loading in if previously calculated
         if try_pickle:
             try:
-                print(
+                logging.info(
                     f"trying to locate pickles in default pickle folder, {self._pickle_dir} for {pickle_ext}..."
                 )
                 with open(
@@ -427,9 +431,9 @@ class analyse:
                     f"{self._pickle_dir}/free_err_{pickle_ext}.pickle", "rb"
                 ) as file:
                     self._free_err_dict = pickle.load(file)
-                print("pickles found!")
+                logging.info("pickles found!")
             except:
-                print("loading pickle failed. Calculating normally.")
+                logging.info("loading pickle failed. Calculating normally.")
                 try_pickle = False
 
         return try_pickle
@@ -463,9 +467,9 @@ class analyse:
 
         if self._save_pickle:
             if do_pickle:
-                print("already using pickles, will not be saving again.")
+                logging.info("already using pickles, will not be saving again.")
             else:
-                print("saving the pmf dictionaries for bound and free as pickles.")
+                logging.info("saving the pmf dictionaries for bound and free as pickles.")
             self.save_pickle()
 
         return (freenrg_rel[0], freenrg_rel[1], repeats_tuple_list)
@@ -503,8 +507,8 @@ class analyse:
                 self._bound_matrix_dict.update({name: overlap_matrix_bound})
                 self.bound_calculated.append(name)
             except Exception as e:
-                print(e)
-                print(
+                logging.exception(e)
+                logging.error(
                     f"Unable to analyse values for {name}, which is repeat {self._b_folders[b]} in {self._work_dir}."
                 )
 
@@ -521,8 +525,8 @@ class analyse:
                 self._free_matrix_dict.update({name: overlap_matrix_free})
                 self.free_calculated.append(name)
             except Exception as e:
-                print(e)
-                print(
+                logging.exception(e)
+                logging.error(
                     f"Unable to analyse values for {name}, which is repeat {self._f_folders[f]} in {self._work_dir}."
                 )
 
@@ -544,8 +548,8 @@ class analyse:
                 self._bound_val_dict.update({bound_name: bound_val})
                 self._bound_err_dict.update({bound_name: bound_err})
             except Exception as e:
-                print(e)
-                print(
+                logging.exception(e)
+                logging.error(
                     f"""Unable to compute values for {bound_name} in {self._work_dir}.\
                     Check earlier error message if these values could be analysed."""
                 )
@@ -566,8 +570,8 @@ class analyse:
                 self._free_val_dict.update({free_name: free_val})
                 self._free_err_dict.update({free_name: free_err})
             except Exception as e:
-                print(e)
-                print(
+                logging.exception(e)
+                logging.error(
                     f"""Unable to compute values for {free_name} in {self._work_dir}.\
                     Check earlier error message if these values could be analysed."""
                 )
@@ -594,8 +598,8 @@ class analyse:
                 if name in self._bound_pmf_dict.keys():
                     self.bound_calculated.append(name)
             except Exception as e:
-                print(e)
-                print(
+                logging.exception(e)
+                logging.error(
                     f"Unable to analyse values for {name} from pickle, which should be repeat {self._b_folders[b]} in {self._work_dir}."
                 )
 
@@ -605,8 +609,8 @@ class analyse:
                 if name in self._free_pmf_dict.keys():
                     self.free_calculated.append(name)
             except Exception as e:
-                print(e)
-                print(
+                logging.exception(e)
+                logging.error(
                     f"Unable to analyse values for {name} from pickle, which should be repeat {self._f_folders[f]} in {self._work_dir}."
                 )
 
@@ -626,10 +630,10 @@ class analyse:
 
         # first check if there are calculated values for each.
         if len(self.bound_calculated) == 0:
-            print("there are no results for the bound leg.")
+            logging.error("there are no results for the bound leg.")
             missing_results = True
         elif len(self.free_calculated) == 0:
-            print("there are no results for the free leg.")
+            logging.error("there are no results for the free leg.")
             missing_results = True
         else:
             missing_results = False
@@ -670,23 +674,23 @@ class analyse:
         # create tuple list of each repeat that was calculated
         # first check the length of the calculated values and check if this is also the length of the folders found
         if len(self.bound_calculated) != self._no_of_b_repeats:
-            print(
+            logging.warning(
                 "the number of calculated values for bound does not match the number of bound folders.\n maybe try reanalysing/check errors?"
             )
         if len(self.free_calculated) != self._no_of_f_repeats:
-            print(
+            logging.warning(
                 "the number of calculated values for free does not match the number of free folders.\n maybe try reanalysing/check errors?"
             )
 
         # if the numebr of calculated values is the same, match these evenly
         if len(self.bound_calculated) == len(self.free_calculated):
-            print(
+            logging.info(
                 f"There are {len(self.bound_calculated)} calculated values for each the bound and the free leg for the folders in {self._work_dir}."
             )
             no_of_repeats = len(self.bound_calculated)
 
         elif len(self.bound_calculated) != len(self.free_calculated):
-            print(
+            logging.warning(
                 f"There are {len(self.bound_calculated)} calculated values for the bound and {len(self.free_calculated)} calculated values for the free leg for the folders in {self._work_dir}."
             )
             # use the shorter calculated values as the number of complete repeats
@@ -696,10 +700,10 @@ class analyse:
                 no_of_repeats = len(self.free_calculated)
 
         # calculate
-        print(f"{no_of_repeats} repeats will be calculated.")
+        logging.info(f"{no_of_repeats} repeats will be calculated.")
         r = 0
         for b, f in zip(self.bound_calculated, self.free_calculated):
-            print(f"calculating repeat {r} as {b} and {f}.")
+            logging.info(f"calculating repeat {r} as {b} and {f}.")
             freenrg_rel_rep = BSS.FreeEnergy.Relative.difference(
                 self._bound_pmf_dict[b], self._free_pmf_dict[f]
             )
@@ -756,8 +760,8 @@ class analyse:
                 ) as handle:
                     pickle.dump(self._free_err_dict, handle)
             except Exception as e:
-                print(e)
-                print("could not save pickle :( ")
+                logging.exception(e)
+                logging.warning("could not save pickle :( ")
 
     def check_overlap(self):
         """check the overlap of the analysed object."""
@@ -786,8 +790,8 @@ class analyse:
                     if overlap_okay:
                         okay += 1
                 except Exception as e:
-                    print(e)
-                    print(f"could not check overlap matrix for {name}")
+                    logging.exception(e)
+                    logging.error(f"could not check overlap matrix for {name}")
 
             for f in self._f_repeats:
                 try:
@@ -801,8 +805,8 @@ class analyse:
                     if overlap_okay:
                         okay += 1
                 except Exception as e:
-                    print(e)
-                    print(f"could not check overlap matrix for {name}")
+                    logging.exception(e)
+                    logging.error(f"could not check overlap matrix for {name}")
 
             if no_overlaps:
                 percen_okay = (okay / no_overlaps) * 100
@@ -829,55 +833,42 @@ class analyse:
                     try:
                         name = str(b) + "_bound"
                         overlap = self._bound_matrix_dict[name]
-                        # TODO upgrade so plotting not from BSS like this but from other newer
-                        ax = BSS.FreeEnergy.Relative.plot(
-                            overlap,
-                            work_dir=self._graph_dir,
-                            file_name=f"{name}_overlap_MBAR_{self.pickle_extension}",
-                        )
+                        ax = plot_mbar_overlap_matrix(overlap)
+                        ax.figure.savefig(f"{self._graph_dir}/{name}_overlap_MBAR_{self.pickle_extension}",)
                     except Exception as e:
-                        print(e)
-                        print(f"could not plt overlap matrix for {name}")
+                        logging.exception(e)
+                        logging.error(f"could not plt overlap matrix for {name}")
 
                 for f in self._f_repeats:
                     try:
                         name = str(f) + "_free"
                         overlap = self._free_matrix_dict[name]
-                        ax = BSS.FreeEnergy.Relative.plot(
-                            overlap,
-                            work_dir=self._graph_dir,
-                            file_name=f"{name}_overlap_MBAR_{self.pickle_extension}",
-                        )
+                        ax = plot_mbar_overlap_matrix(overlap)
+                        ax.figure.savefig(f"{self._graph_dir}/{name}_overlap_MBAR_{self.pickle_extension}",)
                     except Exception as e:
-                        print(e)
-                        print(f"could not plt overlap matrix for {name}")
+                        logging.exception(e)
+                        logging.error(f"could not plt overlap matrix for {name}")
 
             elif self.estimator == "TI":
                 for b in self._b_repeats:
                     name = str(b) + "_bound"
                     overlap = self._bound_matrix_dict[name]
                     try:
-                        ax = BSS.FreeEnergy.Relative.plot(
-                            overlap,
-                            work_dir=self._graph_dir,
-                            file_name=f"{name}_dHdl_TI_{self.pickle_extension}",
-                        )
+                        ax = plot_ti_dhdl(overlap)
+                        ax.figure.savefig(f"{self._graph_dir}/{name}_dHdl_TI_{self.pickle_extension}",)
                     except Exception as e:
-                        print(e)
-                        print(f"could not plt dhdl for {name}")
+                        logging.exception(e)
+                        logging.error(f"could not plt dhdl for {name}")
 
                 for f in self._f_repeats:
                     name = str(f) + "_free"
                     overlap = self._free_matrix_dict[name]
                     try:
-                        ax = BSS.FreeEnergy.Relative.plot(
-                            overlap,
-                            work_dir=self._graph_dir,
-                            file_name=f"{name}_dHdl_TI_{self.pickle_extension}",
-                        )
+                        ax = plot_ti_dhdl(overlap)
+                        ax.figure.savefig(f"{self._graph_dir}/{name}_dHdl_TI_{self.pickle_extension}",)
                     except Exception as e:
-                        print(e)
-                        print(f"could not plt dhdl for {name}")
+                        logging.exception(e)
+                        logging.error(f"could not plt dhdl for {name}")
 
     def calculate_convergence(self):
         if self._try_pickle:
@@ -925,7 +916,7 @@ class analyse:
 
         # try loading in if previously calculated
         try:
-            print(
+            logging.info(
                 f"trying to locate pickles for convergence in default pickle folder, {self._pickle_dir} for {pickle_ext}..."
             )
             with open(
@@ -952,10 +943,10 @@ class analyse:
                 f"{self._pickle_dir}/epert_free_dict_{pickle_ext}.pickle", "rb"
             ) as file:
                 self.epert_free_dict = pickle.load(file)
-            print("pickles found!")
+            logging.info("pickles found!")
             do_pickle = True
         except:
-            print("loading pickle failed. Calculating normally.")
+            logging.info("loading pickle failed. Calculating normally.")
 
         return do_pickle
 
@@ -965,7 +956,7 @@ class analyse:
 
         # save pickle
         if self._save_pickle:
-            print(
+            logging.info(
                 f"trying to save pickles for convergence in default pickle folder, {self._pickle_dir} for {pickle_ext}..."
             )
             # write the pmf as a pickle
@@ -993,7 +984,7 @@ class analyse:
                 f"{self._pickle_dir}/epert_free_dict_{pickle_ext}.pickle", "wb"
             ) as handle:
                 pickle.dump(self.epert_free_dict, handle)
-            print("saved pickles!")
+            logging.info("saved pickles!")
 
     def plot_convergence(self):
         try:
@@ -1005,7 +996,7 @@ class analyse:
                 sdf = analyse.single_pert_dict_into_df(from_start)
                 edf = analyse.single_pert_dict_into_df(from_end)
                 # plot individually for perts
-                print(
+                logging.info(
                     f"plotting for {leg}, {self.perturbation}, {self.engine} in {self._graph_dir}..."
                 )
                 analyse.plot_truncated(
@@ -1016,9 +1007,9 @@ class analyse:
                 )
 
         except Exception as e:
-            print(e)
-            print("failed to plot convergence, please check Exception message.")
-
+            logging.exception(e)
+            logging.error("failed to plot convergence, please check Exception message.")
+    
     @staticmethod
     def _calculate_truncated(
         path_to_dir,

@@ -1,4 +1,5 @@
 import os
+import logging
 
 from ._validate import *
 
@@ -14,13 +15,13 @@ def engine_network(engine, file_path):
     file_path = validate.file_path(file_path)
 
     try:
-        print(
+        logging.info(
             "using the folder of the file as the location to write the output file..."
         )
         output_file = f"{file_path.rsplit('.',1)[0]}_{engine.lower()}.dat"
 
     except:
-        print("assuming the file path is just network_combined.dat as not provided...")
+        logging.info("assuming the file path is just network_combined.dat as not provided...")
         file_path = "network_combined.dat"
         if not os.path.exists(file_path):
             raise ValueError(f"{file_path} does not exist in the current folder.")

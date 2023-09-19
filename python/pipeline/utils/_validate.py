@@ -4,6 +4,7 @@ from BioSimSpace._SireWrappers import Molecule as _Molecule
 import os
 import warnings
 import networkx as nx
+import logging
 
 import pipeline
 
@@ -133,7 +134,7 @@ class validate:
 
         if create:
             if not os.path.exists(folder_path):
-                print(f"creating {folder_path} as it could not be found...")
+                logging.info(f"creating {folder_path} as it could not be found...")
                 os.makedirs(folder_path)
             else:
                 pass
@@ -204,7 +205,7 @@ class validate:
                         engines = validate.engine(engines)
                         engines = [engines]
             except:
-                print("engine input not recognised. Will use all engines.")
+                logging.error("engine input not recognised. Will use all engines.")
                 engines = BSS.FreeEnergy.engines()
 
         return engines
@@ -332,7 +333,7 @@ class validate:
                         )
 
         if isinstance(integer, float):
-            print(f"{integer} will be turned into {int(integer)}")
+            logging.info(f"{integer} will be turned into {int(integer)}")
             integer = round(integer)
 
         return integer

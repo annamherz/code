@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH -n 1
 #SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=5
+#SBATCH --cpus-per-task=8
 #SBATCH --job-name=ana
 #SBATCH --time=01:00:00
-#SBATCH -o ../slurm_logs/ana_%A.out
-#SBATCH -e ../slurm_logs/ana_%A.err
+#SBATCH -o slurm_logs/ana_%A.out
+#SBATCH -e slurm_logs/ana_%A.err
 
 # sourcing
 source $scripts_dir/source_file.sh

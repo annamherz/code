@@ -1,6 +1,7 @@
 """library of pipeline functions used for the RBFE benchmarking"""
 
 import warnings as _warnings
+import logging
 from importlib.metadata import version
 
 __all__ = ["analysis", "prep", "utils"]
@@ -15,6 +16,9 @@ with _warnings.catch_warnings():
         del BioSimSpace
     except:
         raise EnvironmentError("BioSimSpace required: www.biosimspace.org")
+
+# all levels are logged
+logging.basicConfig(level=logging.warning)
 
 from . import utils
 from . import analysis

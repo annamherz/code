@@ -2,6 +2,7 @@ import csv
 import os
 import numpy as np
 import pandas as pd
+import logging
 
 from ._validate import *
 from ..analysis._network import get_info_network
@@ -45,7 +46,7 @@ def write_analysis_file(analysis, results_dir, method=None):
 
         # first, write a header if the file is created for the first time.
         if os.path.getsize(final_summary_file) == 0:
-            print(f"Starting {final_summary_file} file.")
+            logging.info(f"Starting {final_summary_file} file.")
             writer.writerow(
                 ["lig_0", "lig_1", "freenrg", "error", "engine", "analysis", "method"]
             )
@@ -67,7 +68,7 @@ def write_analysis_file(analysis, results_dir, method=None):
         # use csv to open the results file.
         with open(final_summary_file, "a") as freenrg_writefile:
             writer = csv.writer(freenrg_writefile)
-            print(
+            logging.info(
                 f"Writing results. Average free energy of binding is {str(analysis.freenrg)} "
                 + f"and the error is {str(analysis.error)} for {analysis.perturbation}, {analysis.engine}."
             )
@@ -92,7 +93,7 @@ def write_analysis_file(analysis, results_dir, method=None):
 
             # first, write a header if the file is created for the first time.
             if os.path.getsize(results_file_path) == 0:
-                print(f"Starting {results_file_path} file.")
+                logging.info(f"Starting {results_file_path} file.")
                 writer.writerow(
                     [
                         "lig_0",
@@ -121,7 +122,7 @@ def write_analysis_file(analysis, results_dir, method=None):
             # use csv to open the results file.
             with open(results_file_path, "a") as freenrg_writefile:
                 writer = csv.writer(freenrg_writefile)
-                print(
+                logging.info(
                     f"Writing results. For repeat {r}, free energy of binding is "
                     + f"{str(analysis.repeats_tuple_list[r][1])} and the error is {str(analysis.repeats_tuple_list[r][2])} "
                     + f"for {analysis.perturbation}, {analysis.engine}."
@@ -170,7 +171,7 @@ def write_analysis_file(analysis, results_dir, method=None):
 
                 # first, write a header if the file is created for the first time.
                 if os.path.getsize(results_file_path) == 0:
-                    print(f"Starting {results_file_path} file.")
+                    logging.info(f"Starting {results_file_path} file.")
                     writer.writerow(
                         [
                             "lig_0",
@@ -199,7 +200,7 @@ def write_analysis_file(analysis, results_dir, method=None):
                 # use csv to open the results file.
                 with open(results_file_path, "a") as freenrg_writefile:
                     writer = csv.writer(freenrg_writefile)
-                    print(
+                    logging.info(
                         f"Writing results. For repeat {name} {r}, free energy of binding is "
                         + f"{str(val_dict[f'{r}_{name}'])} and the error is {str(err_dict[f'{r}_{name}'])} "
                         + f"for {analysis.perturbation}, {analysis.engine}."
@@ -227,7 +228,7 @@ def write_atom_mappings(lig_0, lig_1, ligand_0, ligand_1, mapping, output_file):
 
         # first, write a header if the file is created for the first time.
         if os.path.getsize(output_file) == 0:
-            print(f"Starting {output_file} file.")
+            logging.info(f"Starting {output_file} file.")
             writer.writerow(["lig_0", "lig_1", "lig_0_atoms", "lig_1_atoms", "mapping"])
 
     with open(output_file, "r") as readfile:
@@ -244,7 +245,7 @@ def write_atom_mappings(lig_0, lig_1, ligand_0, ligand_1, mapping, output_file):
         # use csv to open the results file.
         with open(output_file, "a") as writefile:
             writer = csv.writer(writefile, delimiter=";")
-            print(f"Writing results.")
+            logging.info(f"Writing results.")
             writer.writerow(data_point)
 
 
@@ -287,7 +288,7 @@ def write_modified_results_files(
         output_folder = validate.folder_path(
             results_files[0].replace(results_files[0].split("/")[-1], "")[:-1]
         )
-        print(f"using {output_folder} to write the results as none specified...")
+        logging.info(f"using {output_folder} to write the results as none specified...")
 
     # set extra_options variables as defaults
     engines = [eng.upper() for eng in BSS.FreeEnergy.engines()]  # use all
@@ -371,6 +372,8 @@ def write_protocol(query_dict, file_path):
         writer = csv.writer(protocol_file, delimiter=";")
         for query in query_dict.keys():
             if query == "config options":
+                pass
+            elif not query_dict[query]: # do not write if None value
                 pass
             elif isinstance(query_dict[query], list):
                 value = ",".join(query_dict[query])

@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH -n 1
 #SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=5
+#SBATCH --cpus-per-task=8
 #SBATCH --job-name=ligprep
 #SBATCH --time=10:00:00
-#SBATCH -o ../slurm_logs/ligprep_%A_%a.out
-#SBATCH -e ../slurm_logs/ligprep_%A_%a.err
+#SBATCH -o slurm_logs/ligprep_%A_%a.out
+#SBATCH -e slurm_logs/ligprep_%A_%a.err
 
 # sourcing
 source $scripts_dir/source_file.sh

@@ -1,6 +1,7 @@
 import BioSimSpace as BSS
 from distutils.dir_util import copy_tree, remove_tree
 import warnings as _warnings
+import logging
 
 try:
     amber_version = BSS._amber_version
@@ -15,6 +16,7 @@ from ._merge import *
 from ._ligprep import *
 from ._equilibrate import *
 
+from typing import Optional
 from pytest import approx
 from scipy.constants import proton_mass
 from scipy.constants import physical_constants
@@ -22,7 +24,8 @@ from scipy.constants import physical_constants
 hydrogen_amu = proton_mass / (physical_constants["atomic mass constant"][0])
 
 
-def check_hmr(system, protocol, engine):
+def check_hmr(system:  BSS._SireWrappers.System, protocol:  BSS.Protocol, engine: str) ->  BSS._SireWrappers.System:
+    
     # from bss code
 
     system = validate.system(system)
@@ -53,7 +56,7 @@ def check_hmr(system, protocol, engine):
 
         for mol in molecules:
             try:
-                h = mol.search("{element H}[0]")
+                h = mol.search("element H")
                 # mass = h._sire_object.property(mass_prop).value()
                 mass = h[0]._sire_object.evaluate().mass(property_map).value()
                 found_h = True
@@ -134,7 +137,10 @@ class fepprep:
     makes all the protocols and writes the folders
     """
 
-    def __init__(self, free_system=None, bound_system=None, protocol=None):
+    def __init__(self, free_system:  Optional[BSS._SireWrappers.System] = None,
+                 bound_system:  Optional[BSS._SireWrappers.System] = None,
+                 protocol:  Optional[str] = None # TODO fix
+                 ):
         # instantiate the class with the system and pipeline_protocol
         if free_system:
             self._merge_free_system = validate.system(free_system).copy()
@@ -142,7 +148,7 @@ class fepprep:
             self._merge_free_system = None
             self._free_system_0 = None
             self._free_system_1 = None
-            print(
+            logging.error(
                 "please add a system for free with lig0 and free with lig1 and merge these"
             )
 
@@ -152,7 +158,7 @@ class fepprep:
             self._merge_bound_system = None
             self._bound_system_0 = None
             self._bound_system_1 = None
-            print(
+            logging.error(
                 "please add a system for bound with lig0 and bound with lig1 and merge these"
             )
 
@@ -160,7 +166,7 @@ class fepprep:
         # generate the BSS protocols from the pipeline protocol
         fepprep._generate_bss_protocols(self)
 
-    def add_system(self, system, free_bound=None, start_end=None):
+    def add_system(self, system: BSS._SireWrappers.System, free_bound: Optional[str] = None, start_end: Optional[str] = None):
         """add a merged system to the fepprep and which state it is meant to represent;
         either the free/bound leg or the state at start(lambda 0.0)/end(lambda 1.0)
 
@@ -188,7 +194,7 @@ class fepprep:
         if free_bound == "bound" and start_end == "end":
             self._bound_system_1 = validate.system(system).copy()
 
-    def merge_systems(self, align_to="lig0", **kwargs):
+    def merge_systems(self, align_to: str = "lig0", **kwargs) -> (BSS._SireWrappers.System,BSS._SireWrappers.System):
         """merge the systems based on whether aligning to the lambda 0.0 coordinates or the lmabda 1.0 coordinates.
 
         Args:
@@ -203,7 +209,7 @@ class fepprep:
         for key, value in kwargs.items():
             kwarg_dict[key.upper().replace(" ", "").replace("_", "").strip()] = value
 
-        print(f"merging using {kwarg_dict} ...")
+        logging.info(f"merging using {kwarg_dict} ...")
 
         self._free_system_0 = check_hmr(
             self._free_system_0,
@@ -226,12 +232,23 @@ class fepprep:
             self._pipeline_protocol.engine(),
         )
 
-        free_system = merge.merge_system(
-            self._free_system_0, self._free_system_1, **kwarg_dict
-        )
-        bound_system = merge.merge_system(
-            self._bound_system_0, self._bound_system_1, **kwarg_dict
-        )
+        try:
+            free_system = merge.merge_system(
+                self._free_system_0, self._free_system_1, **kwarg_dict
+            )
+            bound_system = merge.merge_system(
+                self._bound_system_0, self._bound_system_1, **kwarg_dict
+            )
+        except:
+            logging.error("could not merge with the existing protocol. Will try merging with the allow ring breaking and allow ring size change arguments set to True...")
+            update_kwarg_dict = {"ALLOWRINGBREAKING":True, "ALLOWRINGSIZECHANGE":True}
+            kwarg_dict.update(update_kwarg_dict)
+            free_system = merge.merge_system(
+                self._free_system_0, self._free_system_1, **kwarg_dict
+            )
+            bound_system = merge.merge_system(
+                self._bound_system_0, self._bound_system_1, **kwarg_dict
+            )
 
         self._merge_free_system = free_system
         self._merge_bound_system = bound_system
@@ -242,6 +259,17 @@ class fepprep:
         """internal function to generate bss protocols for setup based on passed pipeline protocol."""
 
         protocol = self._pipeline_protocol
+
+        restart_interval = 10000
+
+        if protocol.engine() == "AMBER":
+            # for amber, this will be 1/value to give 2 for the collision frequency in ps-1
+            eq_thermostat_time_constant=BSS.Types.Time(2, "picosecond")
+            thermostat_time_constant=BSS.Types.Time(0.5, "picosecond")
+        elif protocol.engine() == "GROMACS":
+            # in gromacs this is the tau-t in ps
+            eq_thermostat_time_constant=BSS.Types.Time(2, "picosecond")
+            thermostat_time_constant=BSS.Types.Time(2, "picosecond")
 
         if protocol.engine() == "AMBER" or protocol.engine() == "GROMACS":
             min_protocol = BSS.Protocol.FreeEnergyMinimisation(
@@ -257,8 +285,10 @@ class fepprep:
                 * protocol.temperature_unit(),
                 temperature_end=protocol.end_temperature()
                 * protocol.temperature_unit(),
-                restart_interval=10000,
+                restart_interval=restart_interval,
                 hmr_factor=protocol.hmr_factor(),
+                thermostat_time_constant=eq_thermostat_time_constant,
+
             )
             eq_protocol = BSS.Protocol.FreeEnergyEquilibration(
                 timestep=protocol.timestep() * protocol.timestep_unit(),
@@ -267,18 +297,20 @@ class fepprep:
                 temperature=protocol.temperature() * protocol.temperature_unit(),
                 pressure=protocol.pressure() * protocol.pressure_unit(),
                 restart=True,
-                restart_interval=10000,
+                restart_interval=restart_interval,
                 hmr_factor=protocol.hmr_factor(),
+                thermostat_time_constant=thermostat_time_constant,
             )
-            freenrg_protocol = BSS.Protocol.FreeEnergy(
+            freenrg_protocol = BSS.Protocol.FreeEnergyProduction(
                 timestep=protocol.timestep() * protocol.timestep_unit(),
                 num_lam=protocol.num_lambda(),
                 runtime=protocol.sampling() * protocol.sampling_unit(),
                 temperature=protocol.temperature() * protocol.temperature_unit(),
                 pressure=protocol.pressure() * protocol.pressure_unit(),
                 restart=True,
-                restart_interval=10000,
+                restart_interval=restart_interval,
                 hmr_factor=protocol.hmr_factor(),
+                thermostat_time_constant=thermostat_time_constant,
             )
 
         elif protocol.engine() == "SOMD":
@@ -291,7 +323,7 @@ class fepprep:
                 temperature=protocol.temperature() * protocol.temperature_unit(),
                 runtime=(protocol.eq_runtime() * 2) * protocol.eq_runtime_unit(),
                 pressure=protocol.pressure() * protocol.pressure_unit(),
-                restart_interval=10000,
+                restart_interval=restart_interval,
                 hmr_factor=protocol.hmr_factor(),
             )
             freenrg_protocol = BSS.Protocol.FreeEnergy(
@@ -300,7 +332,7 @@ class fepprep:
                 runtime=protocol.sampling() * protocol.sampling_unit(),
                 temperature=protocol.temperature() * protocol.temperature_unit(),
                 pressure=protocol.pressure() * protocol.pressure_unit(),
-                restart_interval=10000,
+                restart_interval=restart_interval,
                 hmr_factor=protocol.hmr_factor(),
             )
 
@@ -330,7 +362,7 @@ class fepprep:
 
             # zip together the molecules in that leg with the name for that leg
             for leg, leg_mol in zip(legs, legs_mols):
-                print(f"carrying out for {leg}")
+                logging.info(f"carrying out prep system middle for {leg}")
                 leg_equil_final = minimise_equilibrate_leg(
                     leg_mol, "AMBER", pmemd_path, lig_fep="fepprep", work_dir=work_dir
                 )
@@ -356,17 +388,11 @@ class fepprep:
         eq_protocol = self._eq_protocol
         freenrg_protocol = self._freenrg_protocol
 
-        print(f"setting up FEP run in {work_dir}...")
+        logging.info(f"setting up FEP run in {work_dir}...")
 
         if protocol.engine() == "AMBER" or protocol.engine() == "GROMACS":
             # set up for each the bound and the free leg
             for leg, system in zip(["bound", "free"], [system_bound, system_free]):
-                # # repartition the hydrogen masses, so only needs to be done once during the setup
-                # if protocol.hmr() == True:
-                #     print(f"checking and maybe repartitioning hydrogen masses for 4fs timestep for {leg}...")
-                #     system = check_hmr(system, freenrg_protocol, protocol.engine())
-                # elif protocol.hmr() == False:
-                #     pass
 
                 min_extra_options = {}
                 heat_extra_options = {}
@@ -498,6 +524,7 @@ class fepprep:
         if amber_version < 22:
             if self._pipeline_protocol.hmr:
                 kwarg_dict["PRUNECROSSINGCONSTRAINTS"] = True
+                # kwarg_dict["PRUNEATOMTYPES"] = True
 
         # any pipeline kwargs overwrite this
         for key, value in self._pipeline_protocol.kwargs().items():
@@ -524,7 +551,7 @@ class fepprep:
             sec_half = lambdas_list[middle_index:]
 
             # copy files to main folder
-            print(
+            logging.info(
                 "copying generated folders for the endstates into a combined folder, so first half is lig0 and second half is lig1"
             )
             for lig, lam_list in zip(ligs, [first_half, sec_half]):
@@ -540,12 +567,12 @@ class fepprep:
                             pass
 
                 # remove the dir
-                print(f"removing directory for {lig} as copied...")
+                logging.info(f"removing directory for {lig} as copied...")
                 remove_tree(f"{work_dir}/{lig}")
 
         else:
             if not self._merge_free_system or not self._merge_bound_system:
-                print("no merged systems, merging....")
+                logging.info("no merged systems, merging....")
                 self.merge_systems(**kwarg_dict)
             self._generate_folders(
                 self._merge_free_system, self._merge_bound_system, work_dir, rep=rep
@@ -555,11 +582,11 @@ class fepprep:
         # for the sake of analysis , doesnt matter as finds folders w names of leg
         more_repeats = list(range(start_rep, self._pipeline_protocol.repeats()))
 
-        print(
+        logging.info(
             f"there are {self._pipeline_protocol.repeats()} folder(s) being made for each leg..."
         )
         for r in more_repeats:
             for leg in ["bound", "free"]:
                 copy_tree(f"{work_dir}/{leg}_{rep}", f"{work_dir}/{leg}_{r}")
 
-        print("done.")
+        logging.info("done.")

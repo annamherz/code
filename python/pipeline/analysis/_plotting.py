@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import logging
 
 from scipy.stats import sem as sem
 from scipy.stats import bootstrap, norm
@@ -267,8 +268,8 @@ class plotting_engines:
                 values_dict[eng]["bound_results"] = [None]
                 values_dict[eng]["free_results"] = [None]
                 values_dict[eng]["val_results"] = [None]
-                print(e)
-                print(
+                logging.error(e)
+                logging.error(
                     f"could not convert {eng} values for plotting. None will be used. Was earlier analysis okay?"
                 )
 
@@ -378,7 +379,8 @@ class plotting_engines:
                 freenrg_dict[value] = [x_ddG, x_err, y_ddG, y_err]
             except Exception as e:
                 if verbose:
-                    print(f"{value} not in both dicts, {x_name} and {y_name}")
+                    logging.error(e)
+                    logging.error(f"{value} not in both dicts, {x_name} and {y_name}")
 
         freenrg_df = pd.DataFrame(
             freenrg_dict,
@@ -615,7 +617,7 @@ class plotting_engines:
             try:
                 engines = validate.engines(engines_query)
             except:
-                print(
+                logging.error(
                     "engine input not recognised. Will use all engines for which there is data."
                 )
                 engines = self.engines
@@ -897,7 +899,7 @@ class plotting_engines:
 
                 # find the n ligand names that are outliers.
                 outlier_names = mue_values.nlargest(no_outliers).index.values.tolist()
-                print(f"{y_name} : {outlier_names}")
+                logging.info(f"outlier names for {y_name} are {outlier_names}")
 
                 # construct a list of labels to annotate the scatterplot with.
                 annot_labels = []
@@ -1091,7 +1093,7 @@ class plotting_engines:
         engines = validate.engines(engines)
 
         for engine in engines:
-            print(f"plotting diff to final result for all perturbations in {engine}...")
+            logging.info(f"plotting diff to final result for all perturbations in {engine}...")
             sdf = plotting_engines.pert_dict_into_conv_df(
                 self.spert_results_dict[engine], plot_error=False, plot_difference=True
             )
@@ -1104,7 +1106,7 @@ class plotting_engines:
                 f"{self.graph_folder}/plt_truncated_{engine}_difference_forward_reverse_{self.file_ext}.png",
                 plot_difference=True,
             )
-            print(f"saved images in {self.graph_folder}.")
+            logging.info(f"saved images in {self.graph_folder}.")
 
     @staticmethod
     def pert_dict_into_conv_df(pert_dict, plot_error=False, plot_difference=True):
@@ -1255,7 +1257,7 @@ class plotting_histogram(plotting_engines):
 
         if no_bins < 1:
             self.best_fit_dict[type_error][name] = (([0], [0]), 0, 0)
-            print(
+            logging.error(
                 f"could not plot the histogram for {name} for {type_error}. can it find the results files with the error?"
             )
             return
@@ -1276,10 +1278,10 @@ class plotting_histogram(plotting_engines):
         self.best_fit_dict[type_error][name] = ((x, y), mu, std)
 
         # plot
-        plt.xlabel("Error")
+        plt.xlabel("Error (kcal/mol)")
         plt.ylabel("Frequency")
         plt.title(
-            f"Distribution of {type_error} for {name}, {self.net_ext.replace('_',', ')}\n mu = {mu:.3f} , std = {std:.3f}"
+            f"Distribution of {type_error} error for {name}, {self.net_ext.replace('_',', ')}\n mu = {mu:.3f} , std = {std:.3f}"
         )
         plt.savefig(
             f"{self.graph_folder}/histogram_{name}_{type_error}_{self.file_ext}_{self.net_ext}.png",

@@ -1,3 +1,5 @@
+import logging
+
 from ..utils import *
 
 
@@ -22,8 +24,8 @@ class protocol:
                 self._query_dict = self._read_protocol()
                 is_file = True
             except Exception as e:
-                print(e)
-                print("Not recognised as file, trying to read as dictionary...")
+                logging.error(e)
+                logging.error("Not recognised as file, trying to read as dictionary...")
                 is_file = False
 
             if not is_file:
@@ -32,8 +34,8 @@ class protocol:
                     self._prot_file = None
                     is_dict = True
                 except Exception as e:
-                    print(e)
-                    print(
+                    logging.error(e)
+                    logging.error(
                         "dictionary wasn't recognised either. trying to read as pipeline protocol..."
                     )
                     is_dict = False
@@ -54,13 +56,13 @@ class protocol:
                     except:
                         self._prot_file = None
                 except Exception as e:
-                    print(e)
-                    raise ValueError(
+                    logging.error(e)
+                    logging.error(
                         f"input was not recognised as a file/dictionary/protocol object."
                     )
 
         else:
-            print("no file or dict passed, using entirely default values...")
+            logging.info("no file or dict passed, using entirely default values...")
             # set the query dict as the default dict
             self._query_dict = self.default_dict()
 
@@ -100,7 +102,7 @@ class protocol:
             self._is_validated = True
 
         except ValueError as e:
-            print(
+            logging.error(
                 f"There is a problem with the input provided in {self._prot_file}.\n Error is:\n {e}"
             )
 
@@ -159,10 +161,9 @@ class protocol:
             if query not in default_dict.keys():
                 kwarg_dict[query] = query_dict[query]
                 del query_dict[query]
-                if self.verbose:
-                    print(
-                        f"{query} removed from the protocol as not recognised.\n please use only:\n {default_dict.keys()}\n added as a kwarg argument instead."
-                    )
+                logging.info(
+                    f"{query} removed from the protocol as not recognised.\n please use only:\n {default_dict.keys()}\n added as a kwarg argument instead."
+                )
 
         query_dict["kwargs"] = kwarg_dict
 
@@ -170,10 +171,9 @@ class protocol:
         for query in default_dict.keys():
             if query not in query_dict.keys():
                 query_dict[query] = default_dict[query]
-                if self.verbose:
-                    print(
-                        f"{query} not found in protocol. {default_dict[query]} will be used."
-                    )
+                logging.info(
+                    f"{query} not found in protocol. {default_dict[query]} will be used."
+                )
 
         return query_dict
 
@@ -202,7 +202,7 @@ class protocol:
         """prints the protocol."""
 
         if not self._is_validated:
-            print("please validate the protocol first.")
+            logging.error("please validate the protocol first.")
 
         else:
             query_dict = self._query_dict
@@ -339,55 +339,50 @@ class pipeline_protocol(protocol):
 
         query_dict = self._query_dict
 
-        try:
-            # validate all the input dict and replace in the query dict
-            self.ligand_forcefield(query_dict["ligand forcefield"])
-            self.protein_forcefield(query_dict["protein forcefield"])
-            self.solvent(query_dict["solvent"])
-            self.box_edges(query_dict["box edges"])
-            self.box_edges_unit(query_dict["box edges unit"])
-            self.box_type(query_dict["box type"])
-            self.sampling(query_dict["sampling"])
-            self.sampling_unit(query_dict["sampling unit"])
-            self.repeats(query_dict["repeats"])
-            self.trajectories(query_dict["trajectories"])
-            self.start_temperature(query_dict["start temperature"])
-            self.end_temperature(query_dict["end temperature"])
-            self.temperature(query_dict["temperature"])
-            self.temperature_unit(query_dict["temperature unit"])
-            self.pressure(query_dict["pressure"])
-            self.pressure_unit(query_dict["pressure unit"])
-            self.min_steps(query_dict["minimisation steps"])
-            self.eq_runtime(query_dict["equilibrium runtime"])
-            self.eq_runtime_unit(query_dict["equilibrium runtime unit"])
-            self.engines(query_dict["engines"])
-            self.fepprep(query_dict["fepprep"])
-            self.num_lambda(query_dict["number of lambda windows"])
-            self.config_options_file(query_dict["config options file"])
-            if query_dict["config options"]:
-                self.config_options(query_dict["config options"])
-            else:
-                self.config_options(query_dict["config options file"])
-            self.kwargs(query_dict["kwargs"])
-            self.name(query_dict["name"])
-            self.rerun(query_dict["rerun"])
+        # validate all the input dict and replace in the query dict
+        # any failed validations use default values
+        self.ligand_forcefield(query_dict["ligand forcefield"])
+        self.protein_forcefield(query_dict["protein forcefield"])
+        self.solvent(query_dict["solvent"])
+        self.box_edges(query_dict["box edges"])
+        self.box_edges_unit(query_dict["box edges unit"])
+        self.box_type(query_dict["box type"])
+        self.sampling(query_dict["sampling"])
+        self.sampling_unit(query_dict["sampling unit"])
+        self.repeats(query_dict["repeats"])
+        self.trajectories(query_dict["trajectories"])
+        self.start_temperature(query_dict["start temperature"])
+        self.end_temperature(query_dict["end temperature"])
+        self.temperature(query_dict["temperature"])
+        self.temperature_unit(query_dict["temperature unit"])
+        self.pressure(query_dict["pressure"])
+        self.pressure_unit(query_dict["pressure unit"])
+        self.min_steps(query_dict["minimisation steps"])
+        self.eq_runtime(query_dict["equilibrium runtime"])
+        self.eq_runtime_unit(query_dict["equilibrium runtime unit"])
+        self.engines(query_dict["engines"])
+        self.fepprep(query_dict["fepprep"])
+        self.num_lambda(query_dict["number of lambda windows"])
+        self.config_options_file(query_dict["config options file"])
+        if query_dict["config options"]:
+            self.config_options(query_dict["config options"])
+        else:
+            self.config_options(query_dict["config options file"])
+        self.kwargs(query_dict["kwargs"])
+        self.name(query_dict["name"])
+        self.rerun(query_dict["rerun"])
 
-            # choose timestep based on whether HMR is applied or not
-            # this is important as BSS hmr mixin considers the timestep for the default auto
-            self.hmr(query_dict["hmr"])
-            self.hmr_factor(query_dict["hmr factor"])
+        # choose timestep based on whether HMR is applied or not
+        # this is important as BSS hmr mixin considers the timestep for the default auto
+        self.hmr(query_dict["hmr"])
+        self.hmr_factor(query_dict["hmr factor"])
 
-            self.timestep(query_dict["timestep"])
-            self.timestep_unit(query_dict["timestep unit"])
-            self.timestep_overwrite(query_dict["timestep overwrite"])
+        self.timestep(query_dict["timestep"])
+        self.timestep_unit(query_dict["timestep unit"])
+        self.timestep_overwrite(query_dict["timestep overwrite"])
 
-            # is now validated
-            self._is_validated = True
-
-        except ValueError as e:
-            print(
-                f"There is a problem with the input provided in {self._prot_file}.\n Error is:\n {e}"
-            )
+        # is now validated
+        self._is_validated = True
 
     # this is not part of the default protocol and is found in the network file
     # it needs to be allocated before fepprep
@@ -872,7 +867,7 @@ class pipeline_protocol(protocol):
             if self._hmr:
                 pass
             else:
-                print(
+                logging.info(
                     f"'hmr' must be set to True for a hmr factor to be applied. It will still be set as {value}."
                 )
 
@@ -966,21 +961,24 @@ class pipeline_protocol(protocol):
         return value
 
     def config_options(self, value=None):
+
         if value:
             try:
-                print(
-                    "trying to read config options as a file / read the file for this..."
-                )
                 value = validate.file_path(value)
                 value_dict = self._read_config_file(file=value)
                 self._query_dict["config options file"] = value
                 self._config_options_file = value
             except:
-                print("config options not a file, trying to read in as dictionary...")
-                value_dict = value
-            value = validate.dictionary(value_dict)
-            self._query_dict["config options"] = value
-            self._config_options = value
+                logging.error("config options not a file, trying to read in as dictionary...")
+                try:
+                    value_dict = value
+                    value = validate.dictionary(value_dict)
+                    self._query_dict["config options"] = value
+                    self._config_options = value
+                except:
+                    logging.error(f"could not validate config options, {value}")
+                    value = self._config_dict()
+                    self._config_options = value
         else:
             try:
                 value = self._config_options
@@ -991,10 +989,16 @@ class pipeline_protocol(protocol):
         return value
 
     def config_options_file(self, value=None):
+        
         if value:
-            value = validate.file_path(value)
-            self._query_dict["config options file"] = value
-            self._config_options_file = value
+            try:
+                value = validate.file_path(value)
+                self._query_dict["config options file"] = value
+                self._config_options_file = value
+            except:
+                logging.error(f"could not validate config options file path, {value}")
+                value = None
+                self._config_options_file = value                
         else:
             try:
                 value = self._config_options_file
@@ -1039,12 +1043,8 @@ class analysis_protocol(protocol):
     def __init__(self, file=None, auto_validate=False, verbose=False):
         # inherit the init from other protocol too
         super().__init__(file, auto_validate, verbose, "analysis")
-
-    # read protocol inherited
-    # rewrite protocol also inherited
-    # print protocol also inherited
+        
     # check query also inherited but with new default dict
-
     def default_dict(self):
         default_dict = {
             "estimator": "MBAR",
@@ -1068,28 +1068,23 @@ class analysis_protocol(protocol):
 
         query_dict = self._query_dict
 
-        try:
-            # validate all the input dict
-            self.estimator(query_dict["estimator"])
-            self.analysis_method(query_dict["method"])
-            self.check_overlap(query_dict["check overlap"])
-            self.try_pickle(query_dict["try pickle"])
-            self.save_pickle(query_dict["save pickle"])
-            self.auto_equilibration(query_dict["auto equilibration"])
-            self.statistical_inefficiency(query_dict["statistical inefficiency"])
-            self.truncate_percentage(query_dict["truncate percentage"])
-            self.truncate_keep(query_dict["truncate keep"])
-            self.mbar_method(query_dict["mbar method"])
-            self.kwargs(query_dict["kwargs"])
-            self.name(query_dict["name"])
+        # validate all the input dict
+        self.estimator(query_dict["estimator"])
+        self.analysis_method(query_dict["method"])
+        self.check_overlap(query_dict["check overlap"])
+        self.try_pickle(query_dict["try pickle"])
+        self.save_pickle(query_dict["save pickle"])
+        self.auto_equilibration(query_dict["auto equilibration"])
+        self.statistical_inefficiency(query_dict["statistical inefficiency"])
+        self.truncate_percentage(query_dict["truncate percentage"])
+        self.truncate_keep(query_dict["truncate keep"])
+        self.mbar_method(query_dict["mbar method"])
+        self.kwargs(query_dict["kwargs"])
+        self.name(query_dict["name"])
 
-            # is now validated
-            self._is_validated = True
+        # is now validated
+        self._is_validated = True
 
-        except ValueError as e:
-            print(
-                f"There is a problem with the input provided in {self._prot_file}.\n Error is:\n {e}"
-            )
 
     def estimator(self, value=None):
         """set the estimator in the analysis protocol or return its value.

@@ -1,6 +1,6 @@
 import BioSimSpace as BSS
 from BioSimSpace.Units.Length import angstrom as _angstrom
-
+import logging
 from ..utils._validate import *
 
 
@@ -38,7 +38,6 @@ class ligprep:
         box_edges,
         box_edges_unit="angstrom",
         ion_conc=0.15,
-        verbose=True,
         work_dir=None
     ):
         """minimum solvation
@@ -50,7 +49,6 @@ class ligprep:
             box_edges (int/float): box edges size added to box size calculated
             box_edges_unit (str, optional): unit of box edges. Defaults to "angstrom".
             ion_conc (float, optional): Ion conc added (NaCl). Defaults to 0.15.
-            verbose (bool, optional): if output should be verbose. Defaults to True.
             work_dir (str, optional): work dir for solvation
 
         Returns:
@@ -66,7 +64,7 @@ class ligprep:
             ion_conc = validate.is_float(ion_conc)
             work_dir = validate.folder_path(work_dir, create=True)
         except Exception as e:
-            print(
+            logging.error(
                 f"The provided arguments could not be validated.\n Exception is:\n {e}"
             )
 
@@ -88,7 +86,7 @@ class ligprep:
         # check the box size and adjust if needed
         min_size = 42 * _angstrom
         if max(box_sizes) < min_size:
-            print(
+            logging.error(
                 f"max box size {max(box_sizes)} is below the min size {min_size}. This will be replaced."
             )
             new_max_size = max(box_sizes) + (min_size - max(box_sizes))
@@ -102,19 +100,19 @@ class ligprep:
         # this also adds ions to balance the charge
         boxtype_func = boxtype_dict[box_type]
         box, angles = boxtype_func(max(box_sizes))
+
         mol_solvated = BSS.Solvent.solvate(
             solvent, molecule=system, box=box, angles=angles, ion_conc=ion_conc, work_dir=work_dir
         )
 
         nmols = mol_solvated.nMolecules()
 
-        if verbose == True:
-            print(f"box dimensions for {box_edges} {box_edges_unit} {box_type} are:")
-            print(f"box_min : {box_min}")
-            print(f"box_max : {box_max}")
-            print(f"box_size : {box_size}")
-            print(f"box_sizes : {box_sizes}")
-            print(f"with the final box : {box} with angles as : {angles}")
-            print(f"The total no of molecules is : {nmols}")
+        logging.info(f"box dimensions for {box_edges} {box_edges_unit} {box_type} are:")
+        logging.info(f"box_min : {box_min}")
+        logging.info(f"box_max : {box_max}")
+        logging.info(f"box_size : {box_size}")
+        logging.info(f"box_sizes : {box_sizes}")
+        logging.info(f"with the final box : {box} with angles as : {angles}")
+        logging.info(f"The total no of molecules is : {nmols}")
 
         return mol_solvated

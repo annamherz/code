@@ -1,5 +1,6 @@
 import BioSimSpace as BSS
 from BioSimSpace import _Exceptions
+import logging 
 
 from ..utils._validate import *
 
@@ -55,14 +56,14 @@ class merge:
         align_func = func_dict[scoring_function]
 
         if not mapping:
-            print("mapping ligands...")
+            logging.info("mapping ligands...")
             # Align ligand2 on ligand1
             # get the mapping of ligand0 to atoms in ligand1
             l0a, l1a, mapping = pipeline.prep.merge.atom_mappings(
                 ligand_0, ligand_1, **kwargs
             )
         else:
-            print("using provided mapping...")
+            logging.info("using provided mapping...")
             l0a = ligand_0.getAtoms()
             l1a = ligand_1.getAtoms()
 
@@ -75,7 +76,7 @@ class merge:
             )
 
         inv_mapping = {v: k for k, v in mapping.items()}
-        print(
+        logging.info(
             f"aligning and merging the ligands according to align to {align_to}, allow ring breaking {allow_ring_breaking}, allow ring size change {allow_ring_size_change}..."
         )
         if align_to == "LIG0":
@@ -175,7 +176,7 @@ class merge:
             )
 
         # merge the ligands based on the engine.
-        print(f"mapping, aligning and merging the ligands...")
+        logging.info(f"mapping, aligning and merging the ligands...")
         merged_trans = merge.merge_ligands(ligand_0, ligand_1, **kwargs)
 
         if align_to == "LIG0":
@@ -211,6 +212,7 @@ class merge:
         complete_rings = True
         prune_perturbed_constraints = None
         prune_crossing_constraints = None
+        prune_atom_types = None
         scoring_function = "rmsd_align"
         prematch = {}
 
@@ -222,6 +224,8 @@ class merge:
                 prune_perturbed_constraints = validate.boolean(value)
             if key == "PRUNECROSSINGCONSTRAINTS":
                 prune_crossing_constraints = validate.boolean(value)
+            if key == "PRUNEATOMTYPES":
+                prune_atom_types = validate.boolean(value)
             if key == "SCORINGFUNCTION":
                 scoring_function = validate.string(
                     value
@@ -253,13 +257,14 @@ class merge:
             "complete_rings_only",
             "prune_perturbed_constraints",
             "prune_crossing_constraints",
+            "prune_atom_types"
         ]:
             try:
                 del kwargs[name]
             except:
                 pass
 
-        print(
+        logging.info(
             f"mapping atoms using {scoring_function}, complete rings {complete_rings}, prune perturbed constraints {prune_perturbed_constraints}, prune crossing constraints {prune_crossing_constraints} and prematch {prematch}"
         )
         # Align ligand2 on ligand1
@@ -272,6 +277,7 @@ class merge:
             prematch=prematch,
             prune_perturbed_constraints=prune_perturbed_constraints,
             prune_crossing_constraints=prune_crossing_constraints,
+            prune_atom_types=prune_atom_types,
             **kwargs,
         )
 

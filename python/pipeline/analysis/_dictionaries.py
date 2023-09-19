@@ -8,6 +8,7 @@ from scipy.stats import sem as sem
 import csv
 import numpy as np
 import pandas as pd
+import logging
 
 from ..utils import *
 from ._network import get_info_network
@@ -92,7 +93,7 @@ class make_dict:
         for res_file in results_files:
             res_df = pd.read_csv(res_file)
             # drop any none values in freenrg
-            res_df = res_df.dropna()
+            res_df = res_df[res_df['freenrg'].notna()]
             try:
                 res_df = res_df[res_df["freenrg"].str.contains("nan") == False]
             except:
@@ -416,8 +417,9 @@ class make_dict:
                             )
                         }
                     )
-                except:
-                    print(f"{pert_name} value not computed. cannot add to dictionary")
+                except Exception as e:
+                    logging.exception(e)
+                    logging.error(f"{pert_name} value not computed. cannot add to dictionary")
 
         return freenrg_dict
 
@@ -453,7 +455,7 @@ class make_dict:
                     }
                 )
             except:
-                print(f"{node[1]['name']} value not computed. cannot add to dictionary")
+                logging.warning(f"{node[1]['name']} value not computed. cannot add to dictionary")
 
         if normalise:
             normalised_freenrg_dict = make_dict._normalise_data(freenrg_dict)
@@ -504,7 +506,7 @@ class make_dict:
 
         for lig in ligands:
             if lig not in exper_val_dict.keys():
-                print(
+                logging.warning(
                     f"{lig} not found in experimental values. Please add to the experimental file."
                 )
             else:
@@ -609,7 +611,6 @@ class make_dict:
 
         for cycle in cycle_closures:
             cycle_dict = {}
-            # print(cycle)
             cycle_val = []
             cycle_val_err = []
             for pert in cycle:
@@ -622,7 +623,7 @@ class make_dict:
                         cycle_val.append(+pert_dict[pert][0])
                         cycle_val_err.append(pert_dict[pert][1])
                     else:
-                        print(
+                        logging.warning(
                             f"{pert} or {rev_pert} does not exist in the results for {cycle}. This cycle is not included."
                         )
                         break
@@ -631,7 +632,7 @@ class make_dict:
                         cycle_val.append(-pert_dict[rev_pert][0])
                         cycle_val_err.append(pert_dict[rev_pert][1])
                     else:
-                        print(
+                        logging.warning(
                             f"{pert} or {rev_pert} does not exist in the results for {cycle}. This cycle is not included."
                         )
                         break
@@ -643,4 +644,8 @@ class make_dict:
 
             cycles_dict.update({"_".join(cycle): (sum(cycle_val), sum(cycle_val_err))})
 
-        return (cycles_dict, cycle_vals, np.mean(cycle_vals), np.std(cycle_vals))
+            cycle_vals_not_nan = [abs(x) for x in cycle_vals if str(x) != 'nan']
+            avg_cc = np.mean(cycle_vals_not_nan)
+            std_cc = np.std(cycle_vals_not_nan)
+
+        return (cycles_dict, cycle_vals, avg_cc, std_cc)

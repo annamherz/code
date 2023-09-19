@@ -10,6 +10,7 @@ BSS.setVerbose(True)
 from pipeline.utils import *
 from pipeline.prep import *
 
+# TODO logger file and path for it. slurm log print the logging output.
 
 def lig_prep(
     main_dir,
@@ -18,7 +19,6 @@ def lig_prep(
     ligands_folder,
     lig_name,
     engine,
-    work_dir=None,
 ):
     # Exit if prep files are already available for ligand and protein
     if os.path.exists(f"{main_dir}/prep/{lig_name}_sys_equil_solv.prm7"):
@@ -85,7 +85,7 @@ def lig_prep(
         # minimise and eqiulibrate these
         print(f"minimising and equilibrating for {leg} and {lig_name}")
         leg_equil_final = minimise_equilibrate_leg(
-            leg_mol_solvated, engine, work_dir=work_dir
+            leg_mol_solvated, engine, work_dir=f"{main_dir}/prep/mineq/{lig_name}"
         )
 
         # finally, save last snapshot
@@ -127,12 +127,8 @@ def check_arguments(args):
     else:
         protocol_file = str(input("what is the path to the protocol file?: ").strip())
 
-    if args.work_dir:
-        workdir = args.work_dir
-    else:
-        workdir = None
 
-    return main_folder, protocol_file, protein_path, ligands_folder, lig_name, workdir
+    return main_folder, protocol_file, protein_path, ligands_folder, lig_name
 
 
 def main():
@@ -165,9 +161,7 @@ def main():
     parser.add_argument(
         "-p", "--protocol_file", type=str, default=None, help="path to protocol file"
     )
-    parser.add_argument(
-        "-w", "--work_dir", type=str, default=None, help="optional work dir"
-    )
+
     args = parser.parse_args()
 
     # check arguments
@@ -178,7 +172,6 @@ def main():
         protein_file,
         ligands_folder,
         lig_name,
-        workdir,
     ) = check_arguments(args)
 
     print(f"prep for {lig_name}")
@@ -186,7 +179,7 @@ def main():
     engine = "AMBER"
 
     lig_prep(
-        main_dir, protocol_file, protein_file, ligands_folder, lig_name, engine, workdir
+        main_dir, protocol_file, protein_file, ligands_folder, lig_name, engine
     )
 
 

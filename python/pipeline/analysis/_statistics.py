@@ -40,7 +40,7 @@ class stats_engines(plotting_engines):
 
         # make stats dict for each name and each stat
         self.statistics_dict = {}
-        for pert_val in ["pert", "val", "bound", "free"]:
+        for pert_val in ["pert", "val","bound","free"]:
             self.statistics_dict[pert_val] = {}
             for namex in self.names_list:
                 self.statistics_dict[pert_val][namex] = {}
@@ -94,7 +94,7 @@ class stats_engines(plotting_engines):
                 xerr = xerr
                 yerr = yerr
             except:
-                print(
+                logging.error(
                     "if not providing data_x and data_y (which should be a name in the self.names_list),\
                       please provide x,y,xerr,yerr values"
                 )
@@ -103,7 +103,7 @@ class stats_engines(plotting_engines):
 
     @staticmethod
     def compute_stats(x=None, y=None, xerr=None, yerr=None, statistic=None):
-        """_summary_
+        """static method for computing various statistics.
 
         Args:
             x (list, optional): ordered list of x data. Defaults to None.
@@ -193,8 +193,8 @@ class stats_engines(plotting_engines):
                         )
                         self.statistics_dict[pv]["experimental"][name][stats] = values
                     except Exception as e:
-                        print(e)
-                        print(
+                        logging.error(e)
+                        logging.error(
                             f"could not compute {stats} for {pv}, 'experimental' and '{name}'"
                         )
                         self.statistics_dict[pv]["experimental"][name][stats] = np.nan
@@ -223,9 +223,7 @@ class stats_engines(plotting_engines):
         pert_val = validate.pert_val(pert_val)
 
         if statistic not in stats_engines.available_statistics():
-            raise ValueError(
-                f"please use one of the statistics in {stats_engines.available_statistics()}, not {statistic}"
-            )
+            raise ValueError(f"please use one of the statistics in {stats_engines.available_statistics()}, not {statistic}")
 
         values = self._compute_stats(pert_val, data_x=x, data_y=y, statistic=statistic)
 

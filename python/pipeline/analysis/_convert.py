@@ -217,8 +217,8 @@ class convert:
                 exper_val_dict = validate.dictionary(exper_val)
             except:
                 validate.file_path(exper_val)
-                print("input is a file, will convert this into a dict...")
-                print("please check that the conversion of values is okay.")
+                logging.info("input is a file, will convert this into a dict...")
+                logging.info("please check that the conversion of values is okay.")
                 exper_val_dict = convert.yml_into_exper_dict(exper_val)
 
             add_exper_values = True

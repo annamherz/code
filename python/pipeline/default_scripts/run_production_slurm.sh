@@ -4,8 +4,8 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --job-name=prod
 #SBATCH --time=24:00:00
-#SBATCH -o ../slurm_logs/prod_%A_%a.out
-#SBATCH -e ../slurm_logs/prod_%A_%a.err
+#SBATCH -o slurm_logs/prod_%A_%a.out
+#SBATCH -e slurm_logs/prod_%A_%a.err
 
 # specifying the number of threads (needed for gromacs)
 export OMP_NUM_THREADS=8
@@ -45,10 +45,11 @@ repeat_dir=$(pwd)
 echo "Running in $repeat_dir"
 echo "Lambda is $lam"
 
-sed -i '5 a\   gti_add_sc=5' min/lambda_$lam/amber.cfg
-sed -i '5 a\   gti_add_sc=5' heat/lambda_$lam/amber.cfg
-sed -i '5 a\   gti_add_sc=5' eq/lambda_$lam/amber.cfg
-sed -i '5 a\   gti_add_sc=5' lambda_$lam/amber.cfg
+# in amber22 ?
+# sed -i '5 a\   gti_add_sc=5,' min/lambda_$lam/amber.cfg
+# sed -i '5 a\   gti_add_sc=5,' heat/lambda_$lam/amber.cfg
+# sed -i '5 a\   gti_add_sc=5,' eq/lambda_$lam/amber.cfg
+# sed -i '5 a\   gti_add_sc=5,' lambda_$lam/amber.cfg
 
 # run the runs based on which engine
 if [ $2 = "AMBER" ]; then
@@ -73,44 +74,22 @@ fi
 
 if [ $2 = "GROMACS" ]; then
 
-if [ -z ${gmx23+x} ]; then
-gmxexec=gmx23
-else
-gmxexec=gmx
-fi
-
-min_counter=0
 cp min/lambda_$lam/gromacs.gro min/lambda_$lam/initial_gromacs.gro
 
-# sed -i 's/rlist = 2.0/rlist = 1.6/g' min/lambda_$lam/gromacs.mdp
-
-# while [ $min_counter != 5 ]; do
-
-# if [ ! -s heat/lambda_$lam/gromacs.xvg ]; then
-# echo "min attempt $min_counter"
-# min_counter=$((min_counter+1))
-
 echo "min"
-$gmxexec grompp -maxwarn 1 -f min/lambda_$lam/gromacs.mdp -c min/lambda_$lam/initial_gromacs.gro -p min/lambda_$lam/gromacs.top -o min/lambda_$lam/gromacs.tpr
-$gmxexec mdrun -ntmpi 1 -deffnm min/lambda_$lam/gromacs ;
+gmx grompp -maxwarn 1 -f min/lambda_$lam/gromacs.mdp -c min/lambda_$lam/initial_gromacs.gro -p min/lambda_$lam/gromacs.top -o min/lambda_$lam/gromacs.tpr
+gmx mdrun -ntmpi 1 -deffnm min/lambda_$lam/gromacs ;
 
 echo "heat"
-$gmxexec grompp -maxwarn 1 -f heat/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p heat/lambda_$lam/gromacs.top -o heat/lambda_$lam/gromacs.tpr
-$gmxexec mdrun -ntmpi 1 -deffnm heat/lambda_$lam/gromacs ;
-
-# else
-# echo "heat managed to proceed okay with $min_counter minimisations."
-# min_counter=5
-# fi
-
-# done
+gmx grompp -maxwarn 1 -f heat/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p heat/lambda_$lam/gromacs.top -o heat/lambda_$lam/gromacs.tpr
+gmx mdrun -ntmpi 1 -deffnm heat/lambda_$lam/gromacs ;
 
 echo "eq"
-$gmxexec grompp -maxwarn 1 -f eq/lambda_$lam/gromacs.mdp -c heat/lambda_$lam/gromacs.gro -p eq/lambda_$lam/gromacs.top -t heat/lambda_$lam/gromacs.cpt  -o eq/lambda_$lam/gromacs.tpr
-$gmxexec mdrun -ntmpi 1 -deffnm eq/lambda_$lam/gromacs ;
+gmx grompp -maxwarn 1 -f eq/lambda_$lam/gromacs.mdp -c heat/lambda_$lam/gromacs.gro -p eq/lambda_$lam/gromacs.top -t heat/lambda_$lam/gromacs.cpt  -o eq/lambda_$lam/gromacs.tpr
+gmx mdrun -ntmpi 1 -deffnm eq/lambda_$lam/gromacs ;
 echo "prod"
-$gmxexec grompp -maxwarn 1 -f lambda_$lam/gromacs.mdp -c eq/lambda_$lam/gromacs.gro -p lambda_$lam/gromacs.top -t eq/lambda_$lam/gromacs.cpt -o lambda_$lam/gromacs.tpr
-$gmxexec mdrun -ntmpi 1 -deffnm lambda_$lam/gromacs ;
+gmx grompp -maxwarn 1 -f lambda_$lam/gromacs.mdp -c eq/lambda_$lam/gromacs.gro -p lambda_$lam/gromacs.top -t eq/lambda_$lam/gromacs.cpt -o lambda_$lam/gromacs.tpr
+gmx mdrun -ntmpi 1 -deffnm lambda_$lam/gromacs ;
 
 # delete simulation data 
 if [[ $keep_traj == "None" ]]; then

@@ -238,7 +238,7 @@ class initialise_pipeline:
 
         transformations, lomap_scores = BSS.Align.generateNetwork(
             list(ligands_dict.values()),
-            plot_network=True,
+            plot_network=False,
             names=ligand_names,
             work_dir=f"{folder}/visualise_network",
             links_file=links_file,
@@ -480,8 +480,8 @@ echo ${{win_array[@]}}
 echo "name is $name"
 
 # make output dir for slurm out and err files
-if [[ ! -d ../slurm_logs ]]; then
-    mkdir ../slurm_logs
+if [[ ! -d slurm_logs ]]; then
+    mkdir slurm_logs
 fi
 
 # Run the runs
@@ -495,11 +495,12 @@ echo "FEP prep jobid is $jidfep"
 
 # Production runs and analysis for the transformation
 for i in "${{!trans_array[@]}}"; do
-jidprod=$(sbatch --dependency=afterany:${{jidfep}} --parsable --array=0-$((${{win_array[i]}}-1)) $scripts_dir/run_production_slurm.sh ${{trans_array[i]}}$name ${{eng_array[i]}} ${{win_array[i]}} $repeats)
+jidprod=$(sbatch --dependency=afterany:${{jidfep}} --parsable --array=0-$((${{win_array[i]}}-1)) $scripts_dir/run_production_slurm.sh ${{trans_array[i]}}$name ${{eng_array[i]}} ${{win_array[i]}})
 echo "Production jobid for ${{trans_array[i]}}, ${{eng_array[i]}} is $jidprod"
-jidextract=$(sbatch --dependency=afterany:${{jidprod}} --parsable $scripts_dir/run_extract_output_slurm.sh ${{trans_array[i]}} ${{eng_array[i]}})
-echo "Extraction jobid for ${{trans_array[i]}}, ${{eng_array[i]}} is $jidextract"
-jidana=$(sbatch --dependency=afterany:${{jidextract}} --parsable $scripts_dir/run_analysis_slurm.sh ${{trans_array[i]}} ${{eng_array[i]}})
+# jidextract=$(sbatch --dependency=afterany:${{jidprod}} --parsable $scripts_dir/run_extract_output_slurm.sh ${{trans_array[i]}} ${{eng_array[i]}})
+# echo "Extraction jobid for ${{trans_array[i]}}, ${{eng_array[i]}} is $jidextract"
+# extract commented out as only needed if transfering files from cluster --dependency=afterany:${{jidextract}}
+jidana=$(sbatch --dependency=afterany:${{jidprod}} --parsable $scripts_dir/run_analysis_slurm.sh ${{trans_array[i]}} ${{eng_array[i]}})
 echo "Analysis jobid for ${{trans_array[i]}}, ${{eng_array[i]}} is $jidana"
 done        
 

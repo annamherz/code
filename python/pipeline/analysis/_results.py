@@ -31,7 +31,6 @@ class analysis_network:
         analysis_prot=None,
         method=None,
         extra_options=None,
-        verbose=False,
     ):
         """analyses the network for a certain system
 
@@ -49,7 +48,6 @@ class analysis_network:
             TypeError: analysis ext must be the correct type.
         """
 
-        self.is_verbose(verbose)
 
         if method:
             self.method = validate.string(method)
@@ -63,7 +61,7 @@ class analysis_network:
             self.engines = validate.engines("ALL")
 
         if not exp_file:
-            print(
+            logging.error(
                 "please set an experimental yml/csv file so this can be used, eg using .get_experimental(exp_file). "
             )
             self.exp_file = None
@@ -71,7 +69,7 @@ class analysis_network:
             self.exp_file = validate.file_path(exp_file)
 
         if not net_file:
-            print(
+            logging.info(
                 "no network file, will use all perturbations found in results files from the results dir."
             )
             self._net_file = None
@@ -106,7 +104,7 @@ class analysis_network:
             self._results_files = self._get_results_files()
             self._results_value_files = {}
         else:
-            print(
+            logging.error(
                 "There is no provided results directory. There are no results to analyse. This will probably create an issue for many other functions. please reinstantiate the object with a results directory."
             )
             self._results_directory = None
@@ -118,7 +116,7 @@ class analysis_network:
 
         if not output_folder:
             if self._results_directory:
-                print(
+                logging.info(
                     "no output folder provided, writing all output to the 'results_directory'."
                 )
                 self.output_folder = f"{self._results_directory}"
@@ -126,7 +124,7 @@ class analysis_network:
                     f"{self._results_directory}/graphs", create=True
                 )
             else:
-                print(
+                logging.info(
                     "no output or results directory, so writing files to current folder..."
                 )
                 self.output_folder = os.getcwd()
@@ -163,12 +161,6 @@ class analysis_network:
         self._is_computed_dicts = False
 
         self._set_dictionary_outputs()
-
-    def is_verbose(self, value):
-        verbose = validate.boolean(value)
-        self._is_verbose = verbose
-
-        return verbose
 
     def _get_results_repeat_files(self, leg=None):
         """get the files of all the repeats for a specific leg. Used during init to set free and bound repeat files.
@@ -242,7 +234,7 @@ class analysis_network:
 
         if not self._results_directory:
             if not self._net_file:
-                print(
+                logging.error(
                     "As there is no provided results directory or network file, please set perturbations and ligands manually."
                 )
                 return
@@ -385,7 +377,7 @@ class analysis_network:
 
         if not exp_file:
             if not self.exp_file:
-                print(
+                logging.error(
                     "need an experimental file to proceed with most of the calculations. please set using self.get_experimental(file)"
                 )
             else:
@@ -402,7 +394,7 @@ class analysis_network:
                 exp_file, temp=self.temperature
             )  # this output is in kcal/mol
         else:
-            print(
+            logging.error(
                 "file type for experimental must be yml or csv. No experimental results will be analysed"
             )
             return
@@ -564,7 +556,7 @@ class analysis_network:
             try:
                 adict[new_name] = adict.pop(old_name)
             except:
-                print(
+                logging.error(
                     f"could not rename one of the dicts, as it does not have this key as one of its keys."
                 )
 
@@ -592,7 +584,7 @@ class analysis_network:
         self._compute_dicts()
 
         # initialise plotting and stats objects
-        self._initialise_plotting_object(verbose=self._is_verbose)
+        self._initialise_plotting_object()
 
         self._is_computed_dicts = True
 
@@ -645,8 +637,8 @@ class analysis_network:
                 )  # older method
                 self.calc_free_dict.update({eng: calc_free_dict})
             except Exception as e:
-                print(e)
-                print("Could not calculate dicts for bound/free legs.")
+                logging.error(e)
+                logging.error("Could not calculate dicts for bound/free legs.")
 
             self._compute_cinnabar_dict(files, eng, method=self.method)
 
@@ -705,8 +697,8 @@ class analysis_network:
             ]
 
         except Exception as e:
-            print(e)
-            print(f"could not create cinnabar network for {eng}")
+            logging.error(e)
+            logging.error(f"could not create cinnabar network for {eng}")
             self._cinnabar_networks.update({eng: None})
             self.cinnabar_calc_pert_dict.update({eng: None})
             self.cinnabar_exper_pert_dict.update({eng: None})
@@ -744,7 +736,7 @@ class analysis_network:
         # add identifier for the other results
         name = validate.string(name)
         if name in self.other_results_names:
-            print(
+            logging.error(
                 f"{name} is already in the other results. please use a different name!"
             )
             return
@@ -795,7 +787,7 @@ class analysis_network:
         self._compute_cinnabar_dict(files=f"{new_file_path}.csv", eng=name)
 
         # initialise plotting and stats objects again so theyre added
-        self._initialise_plotting_object(check=False, verbose=self._is_verbose)
+        self._initialise_plotting_object(check=False)
         self._initialise_stats_object(check=False)
 
     def compute_convergence(self, main_dir):
@@ -833,9 +825,8 @@ class analysis_network:
                             )
                             validate.folder_path(path_to_dir)
                         except:
-                            print(path_to_dir)
                             path_to_dir = None
-                            print(
+                            logging.error(
                                 f"cannot find pickle directory for {pert} in {engine}, where the pickles saved in a 'pickle' dir in that perturbation folder?"
                             )
 
@@ -877,7 +868,7 @@ class analysis_network:
                     self.epert_free_dict[engine][pert] = efree_dict
 
                 except:
-                    print(
+                    logging.error(
                         f"could not load pickles for {pert} in {engine}. Was it analysed for convergence?"
                     )
 
@@ -910,12 +901,12 @@ class analysis_network:
 
             percen = (val / len(perts)) * 100
 
-            print(f"{val} out of {len(perts)} have results, which is {percen} %.")
+            logging.info(f"{val} out of {len(perts)} have results, which is {percen} %.")
             return (val, percen, perturbations)
 
         else:
-            print("please compute results from results files first.")
-            return None
+            logging.error("please compute results from results files first.")
+            return (None, None, None)
 
     def failed_runs(self, eng):
         eng = validate.engine(eng)
@@ -952,7 +943,7 @@ class analysis_network:
         for pert in pert_list:
             self.network_graph.draw_perturbation(pert)
 
-    def get_outliers(self, threshold=10, name=None, verbose=False):
+    def get_outliers(self, threshold=10, name=None):
         """get outliers above a certain difference to the experimental.
 
         Args:
@@ -963,7 +954,7 @@ class analysis_network:
         # can get from dict or dataframe
         # probably best from plotting object
 
-        plot_obj = self._initialise_plotting_object(check=True, verbose=verbose)
+        plot_obj = self._initialise_plotting_object(check=True)
         threshold = validate.is_float(threshold)
 
         perts = []
@@ -993,13 +984,12 @@ class analysis_network:
 
         return perts
 
-    def remove_outliers(self, threshold=10, name=None, verbose=False):
+    def remove_outliers(self, threshold=10, name=None):
         """remove outliers above a certain difference to the experimental.
 
         Args:
             threshold (float, optional): difference threshold above which to remove. Defaults to 10.
             name (str, optional): name of the data (engine or other results). Defaults to None.
-            verbose (bool, optional): whether to verbose output which pert is removed. Defaults to False.
         """
 
         perts = self.get_outliers(threshold, name)
@@ -1007,8 +997,7 @@ class analysis_network:
         for pert in perts:
             self.remove_perturbations(pert, name=name)
 
-            if verbose:
-                print(f"removed {pert} from perturbations as outlier for {name}.")
+            logging.info(f"removed {pert} from perturbations as outlier for {name}.")
 
         self._compute_dicts()
 
@@ -1027,7 +1016,6 @@ class analysis_network:
             engines = self.engines
 
         for eng in engines:
-            print(f"Sorted ligands for {eng}...")
             df = pd.DataFrame(
                 self.cinnabar_calc_val_dict[eng], index=["value", "error"]
             ).transpose()
@@ -1065,7 +1053,7 @@ class analysis_network:
             )
 
         if not self.ligands_folder:
-            print(
+            logging.error(
                 "please use self.add_ligands folder to add a folder so the ligands can be visualised!"
             )
 
@@ -1134,23 +1122,19 @@ class analysis_network:
         network_graph = self.network_graph
 
         for eng in self.engines:
-            pert_dict = self.cinnabar_calc_pert_dict[eng]
+            pert_dict = self.calc_pert_dict[eng]
 
             cycle_closures = network_graph.cycle_closures()
 
             cycles = make_dict.cycle_closures(pert_dict, cycle_closures)
 
-            # print(f"{eng} cycle vals is {cycles[1]}")
-            # print(f"{eng} cycle mean is {cycles[2]}")
-            # print(f"{eng} cycle deviation is {cycles[3]}")
-
             self.cycle_dict.update(
                 {eng: (cycles[0], cycles[1], cycles[2], cycles[3])}
-            )  # the cycles dict
+            )  # the cycles dict : cycles, vals, mean, deviation
 
         return self.cycle_dict
 
-    def _initialise_plotting_object(self, check=False, verbose=False):
+    def _initialise_plotting_object(self, check=False):
         """intialise the plotting object
 
         Args:
@@ -1163,19 +1147,19 @@ class analysis_network:
         # if not checking, always make
         if not check:
             self._plotting_object = plotting_engines(
-                analysis_object=self, verbose=verbose
+                analysis_object=self
             )
 
         # if checking, first see if it exists and if not make
         elif check:
             if not self._plotting_object:
                 self._plotting_object = plotting_engines(
-                    analysis_object=self, verbose=verbose
+                    analysis_object=self
                 )
 
         return self._plotting_object
 
-    def _initialise_histogram_object(self, check=False, verbose=False):
+    def _initialise_histogram_object(self, check=False):
         """intialise the histogram plotting object
 
         Args:
@@ -1188,14 +1172,14 @@ class analysis_network:
         # if not checking, always make
         if not check:
             self._histogram_object = plotting_histogram(
-                analysis_object=self, verbose=verbose
+                analysis_object=self
             )
 
         # if checking, first see if it exists and if not make
         elif check:
             if not self._histogram_object:
                 self._histogram_object = plotting_histogram(
-                    analysis_object=self, verbose=verbose
+                    analysis_object=self
                 )
 
         return self._histogram_object
@@ -1210,7 +1194,7 @@ class analysis_network:
         engine.append("experimental")
 
         plot_obj = self._initialise_plotting_object(
-            check=True, verbose=self._is_verbose
+            check=True
         )
         plot_obj.bar(pert_val="pert", names=engine, **kwargs)
 
@@ -1224,7 +1208,7 @@ class analysis_network:
         engine.append("experimental")
 
         plot_obj = self._initialise_plotting_object(
-            check=True, verbose=self._is_verbose
+            check=True
         )
         plot_obj.bar(pert_val="val", names=engine, **kwargs)
 
@@ -1232,7 +1216,7 @@ class analysis_network:
         engine = validate.is_list(engine, make_list=True)
 
         plot_obj = self._initialise_plotting_object(
-            check=True, verbose=self._is_verbose
+            check=True
         )
 
         plotting_dict = {
@@ -1267,7 +1251,7 @@ class analysis_network:
 
         else:
             plot_obj = self._initialise_plotting_object(
-                check=True, verbose=self._is_verbose
+                check=True
             )
             plot_obj.scatter(pert_val="pert", y_names=engines, **kwargs)
 
@@ -1295,11 +1279,11 @@ class analysis_network:
 
         else:
             plot_obj = self._initialise_plotting_object(
-                check=True, verbose=self._is_verbose
+                check=True
             )
             plot_obj.scatter(pert_val="val", y_names=engines, **kwargs)
 
-    def plot_eng_vs_eng(self, engine_a=None, engine_b=None, pert_val="pert"):
+    def plot_eng_vs_eng(self, engine_a=None, engine_b=None, pert_val="pert", **kwargs):
         """plot scatter plot of engine_a vs engine_b
 
         Args:
@@ -1309,7 +1293,7 @@ class analysis_network:
         """
 
         plot_obj = self._initialise_plotting_object(
-            check=True, verbose=self._is_verbose
+            check=True
         )
 
         if pert_val == "pert":
@@ -1322,6 +1306,8 @@ class analysis_network:
             "x label": f"{engine_b} " + binding,
             "key": False,
         }
+        for key,value in kwargs.items():
+            plotting_dict[key] = value
 
         plot_obj.scatter(
             pert_val=pert_val, y_names=engine_a, x_name=engine_b, **plotting_dict
@@ -1338,7 +1324,7 @@ class analysis_network:
         """
 
         plot_obj = self._initialise_plotting_object(
-            check=True, verbose=self._is_verbose
+            check=True
         )
         plot_obj.scatter(
             pert_val=pert_val,
@@ -1391,7 +1377,7 @@ class analysis_network:
         """
 
         hist_obj = self._initialise_histogram_object(
-            check=True, verbose=self._is_verbose
+            check=True
         )
 
         if not engines:
@@ -1417,7 +1403,7 @@ class analysis_network:
                 engine = validate.engines(engine)
 
             plot_obj = self._initialise_plotting_object(
-                check=True, verbose=self._is_verbose
+                check=True
             )
             plot_obj.plot_convergence(engines=engine)
 
@@ -1664,15 +1650,15 @@ class analysis_network:
         r_confidence = _stats.R_confidence
         tau_confidence = _stats.tau_confidence
         mue_confidence = _stats.mue_confidence
-        print(
+        logging.info(
             "R confidence is:   %.2f < %.2f < %.2f"
             % (r_confidence[1], r_confidence[0], r_confidence[2])
         )
-        print(
+        logging.info(
             "MUE confidence is: %.2f < %.2f < %.2f"
             % (mue_confidence[1], mue_confidence[0], mue_confidence[2])
         )
-        print(
+        logging.info(
             "Tau confidence is: %.2f < %.2f < %.2f"
             % (tau_confidence[1], tau_confidence[0], tau_confidence[2])
         )
@@ -1732,7 +1718,7 @@ class analysis_network:
             prep_dir = validate.folder_path(prep_dir)
             calc_atom_mappings = True
         else:
-            print(
+            logging.info(
                 "please provide the prep dir to use for calculating atom mappings. Will only look at overlap."
             )
             calc_atom_mappings = False
@@ -1740,7 +1726,7 @@ class analysis_network:
         if outputs_dir:
             outputs_dir = validate.folder_path(outputs_dir)
         else:
-            print("please provide the dir where the outputs are located")
+            logging.error("please provide the dir where the outputs are located")
             return
 
         pert_dict = self.exper_pert_dict
@@ -1759,7 +1745,7 @@ class analysis_network:
                 ]
             )
             for pert, eng in it.product(self.perturbations, self.engines):
-                print(f"running {pert}, {eng}....")
+                logging.info(f"running {pert}, {eng}....")
 
                 if calc_atom_mappings:
                     lig_0 = pert.split("~")[0]
@@ -1796,12 +1782,11 @@ class analysis_network:
                     diff = abs(pert_dict[pert][0] - avg.value())
                     err = error.value()
                 except Exception as e:
-                    print(e)
+                    logging.error(e)
                     percen_okay = None
                     too_smalls_avg = None
                     diff = None
                     err = None
 
                 row = [pert, eng, pert_atoms, percen_okay, too_smalls_avg, diff, err]
-                print(row)
                 writer.writerow(row)

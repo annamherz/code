@@ -1,0 +1,136 @@
+#!/usr/bin/python3
+
+from argparse import ArgumentParser
+
+from scipy.stats import sem as sem
+import sys
+import glob
+
+if "/home/anna/Documents/cinnabar" not in sys.path:
+    sys.path.insert(1, "/home/anna/Documents/cinnabar")
+import cinnabar
+
+print("adding code to the pythonpath...")
+code = "/home/anna/Documents/code/python"
+if code not in sys.path:
+    sys.path.insert(1, code)
+import pipeline
+
+print(cinnabar.__file__)
+
+from pipeline import *
+from pipeline.utils import validate
+from pipeline.analysis import *
+
+def analyse_results(main_dir, experimental_file):
+
+    # choose location for the files
+    net_file = f"{main_dir}/execution_model/network.dat"
+    ana_file = f"{main_dir}/execution_model/analysis_protocol.dat"
+    exp_file = experimental_file
+    results_folder = f"{main_dir}/outputs_extracted/results"
+    output_folder = validate.folder_path(f"{main_dir}/analysis", create=True)
+
+    all_analysis_object = analysis_network(
+        results_folder,
+        exp_file=exp_file,
+        net_file=net_file,
+        output_folder=output_folder,
+        analysis_prot=ana_file,
+    )
+
+    all_analysis_object.compute_results()
+
+    all_analysis_object.compute_convergence(main_dir=main_dir)
+    all_analysis_object.plot_convergence()
+
+    # plotting all
+    # bar
+    all_analysis_object.plot_bar_lig()
+    all_analysis_object.plot_bar_pert()
+
+    # scatter
+    all_analysis_object.plot_scatter_lig()
+    all_analysis_object.plot_scatter_pert()
+    all_analysis_object.plot_scatter_lig(use_cinnabar=True)
+    all_analysis_object.plot_scatter_pert(use_cinnabar=True)
+
+    for eng in all_analysis_object.engines:
+        all_analysis_object.plot_scatter_lig(engine=eng)
+        all_analysis_object.plot_scatter_pert(engine=eng)
+
+        # outliers
+        all_analysis_object.plot_outliers(engine=eng)
+        all_analysis_object.plot_outliers(engine=eng, pert_val="val")
+
+        for pv in ["pert", "val"]:
+            stat_rank = all_analysis_object._stats_object.compute_rho(pv, y=eng)
+            print(f"rank correlation for {pv}, {eng} is {stat_rank}")
+
+    all_analysis_object.plot_histogram_legs()
+    all_analysis_object.plot_histogram_repeats()
+    all_analysis_object.plot_histogram_sem(pert_val="pert")
+    all_analysis_object.plot_histogram_sem(pert_val="val")
+
+    all_analysis_object.calc_mad_engines(pert_val="pert")
+    all_analysis_object.calc_mad_engines(pert_val="pert")
+    all_analysis_object.calc_mad_engines(pert_val="val")
+    all_analysis_object.calc_mad_engines(pert_val="val")
+
+
+
+def check_arguments(args):
+    # pass the checks to the other check functions
+    if args.main_folder:
+        main_folder = validate.folder_path(args.main_folder)
+    else:
+        main_folder = validate.folder_path(
+            str(
+                input("what is the main folder where all the files should go?: ")
+            ).strip()
+        )
+
+    if args.experimental_file:
+        experimental_file = validate.file_path(args.experimental_file)
+    else:
+        experimental_file = validate.file_path(
+            str(
+                input("what is the main folder where all the files should go?: ")
+            ).strip()
+        )
+
+    return main_folder, experimental_file
+
+
+def main():
+    print("analyse the pipeline!")
+
+    # accept all options as arguments
+    parser = ArgumentParser(description="analyse simulations")
+    parser.add_argument(
+        "-mf",
+        "--main_folder",
+        type=str,
+        default=None,
+        help="main folder path to create for all the runs",
+    )
+    parser.add_argument(
+        "-ef",
+        "--experimental_file",
+        type=str,
+        default=None,
+        help="Path to the experimental yml file.",
+    )
+    args = parser.parse_args()
+
+    # check arguments
+    print("checking the provided command line arguments...")
+    main_folder, experimental_file = check_arguments(args)
+
+    analyse_results(main_folder, experimental_file)
+
+    print(f"finished analysing.")
+
+
+if __name__ == "__main__":
+    main()

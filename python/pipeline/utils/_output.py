@@ -1,6 +1,7 @@
 import os
 import shutil
 import subprocess
+import logging
 
 import MDAnalysis as mda
 import MDAnalysis.transformations as trans
@@ -93,7 +94,7 @@ def add_header_simfile(trans_dir):
 
             sim_okay = False
             if not sim_okay:
-                print(f"will write header for simfiles in {direc}")
+                logging.info(f"will write header for simfiles in {direc}")
                 try:
                     if not os.path.exists(f"{direc}/old_simfile.dat"):
                         os.rename(f"{direc}/simfile.dat", f"{direc}/old_simfile.dat")
@@ -210,7 +211,7 @@ class extract:
 
         # make directory
         extract_dir = validate.folder_path(extract_dir, create=True)
-        print(f"using {extract_dir} for target file location as none was set.")
+        logging.info(f"using {extract_dir} for target file location as none was set.")
 
         self.extract_dir = extract_dir
 
@@ -263,7 +264,7 @@ class extract:
                     elif "SOMD" in dirs:
                         file_names = ["somd.cfg"]
                 if not file_names:
-                    print(
+                    logging.info(
                         "no engine found in filepath, will try to extract each engine's input config file format..."
                     )
                     file_names = ["amber.cfg", "somd.cfg", "gromacs.mdp"]
@@ -272,7 +273,7 @@ class extract:
                     try:
                         shutil.copyfile(f"{dirs}/{file}", f"{new_dir}/{file}")
                     except:
-                        print(
+                        logging.error(
                             f"{dirs} does not have a recognised input file, {str(file)}."
                         )
 
@@ -315,7 +316,7 @@ class extract:
                                 file_names = ["simfile.dat"]
                             # if cant find the engine in the file path try all
                             else:
-                                print(
+                                logging.info(
                                     "no engine found in filepath, will try to extract each engine's output format..."
                                 )
                                 file_names = ["amber.out", "gromacs.xvg", "simfile.dat"]
@@ -326,11 +327,11 @@ class extract:
                                         f"{dirs}/{file}", f"{new_dir}/{file}"
                                     )
                                     if os.path.getsize(f"{new_dir}/{file}") == 0:
-                                        print(
+                                        logging.error(
                                             f"File extracting to '{new_dir}/{file}' is empty!"
                                         )
                                 except:
-                                    print(
+                                    logging.error(
                                         f"{dirs} does not have a recognised input file, {str(file)}."
                                     )
 
@@ -362,7 +363,7 @@ class extract:
         if traj_lambdas:
             traj_lambdas = validate.is_list(traj_lambdas)
         else:
-            print("no traj_lambdas provided, will not extract any frames.")
+            logging.info("no traj_lambdas provided, will not extract any frames.")
             traj_lambdas = []
 
         # exclude pickle folder from list, only do bound and free legs
@@ -410,7 +411,7 @@ class extract:
                                 file_exists = False
 
                         if file_exists:
-                            print(
+                            logging.info(
                                 "traj extracted already exists, will NOT extract again."
                             )
                             return
@@ -497,7 +498,7 @@ class extract:
         write_dir = traj_extract_dir
         u = universe
 
-        print("starting to write trajectory frames...")
+        logging.info("starting to write trajectory frames...")
         timesteps = [u.trajectory.ts for ts in u.trajectory]
         timestep_freq = int(len(timesteps) / 4)
         # five frames - if 4 ns, this is every ns
@@ -514,7 +515,7 @@ class extract:
             with mda.Writer(f"{write_dir}/system_{str(time)}.pdb") as W:
                 W.write(u)
 
-        print("finished writing 5 frames to pdb.")
+        logging.info("finished writing 5 frames to pdb.")
 
     @staticmethod
     def _rmsd_trajectory(universe, traj_extract_dir):
@@ -551,7 +552,7 @@ class extract:
         ax.set_ylabel(r"RMSD of ligand ($\AA$)")
         fig.savefig(f"{write_dir}/rmsd_ligand.png")
 
-        print(
+        logging.info(
             f"the maximum rmsd of the ligand is {max(rmsd[2])} and the minimum is {min(rmsd[2])}"
         )
 

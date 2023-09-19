@@ -7,6 +7,7 @@ import networkx as nx
 from scipy.stats import sem as sem
 from rdkit import Chem
 import math
+import logging
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -58,8 +59,9 @@ def get_info_network(net_file=None, results_files=None, extra_options=None):
         try:
             net_file = validate.file_path(net_file)
             use_net_file = True
-        except:
-            print("can't use net_file, will use results files instead.")
+        except Exception as e:
+            logging.error(e)
+            logging.info("can't use net_file, will use results files instead.")
 
     if not use_net_file:
         try:
@@ -67,9 +69,9 @@ def get_info_network(net_file=None, results_files=None, extra_options=None):
             for file in results_files:
                 validate.file_path(file)
         except Exception as e:
-            print(e)
-            print("cant use network or results files, please provide one or the other.")
-            raise
+            logging.error(e)
+            logging.error("cant use network or results files, please provide one or the other.")
+            return (None, None)
 
     # set extra_options variables as defaults
     engines = None
@@ -81,12 +83,12 @@ def get_info_network(net_file=None, results_files=None, extra_options=None):
             try:
                 engines = [validate.engine(extra_options["engine"])]
             except Exception as e:
-                print(e)
+                logging.error(e)
         if "engines" in extra_options.keys():
             try:
                 engines = validate.engines(extra_options["engines"])
             except Exception as e:
-                print(e)
+                logging.error(e)
 
     # We also want to create a list of the perturbations in our network.
     perturbations = []
@@ -379,13 +381,11 @@ class net_graph:
                         "dict entry must be of the format {(lig_0, lig_1): weight}"
                     )
             use_file = False
-            # print("using dict to add weights")
         except:
             use_file = True
             weight_dict = {}
 
         if use_file:
-            # print("using input file to get the weights")
             scores_file = validate.file_path(input_data)
 
             with open(scores_file, "r") as file:
