@@ -460,4 +460,6 @@ def write_network(pert_network_dict, protocol, file_path):
             # write out both directions for this perturbation.
             for eng in protocol.engines():
                 writer.writerow([pert[0], pert[1], len(lam_array_np), lam_array, eng])
-                # writer.writerow([pert[1], pert[0], len(lam_array_np), lam_array, engine])
+
+                if protocol.reverse():
+                    writer.writerow([pert[1], pert[0], len(lam_array_np), lam_array, eng])

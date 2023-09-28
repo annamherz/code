@@ -54,14 +54,18 @@ echo "Lambda is $lam"
 # run the runs based on which engine
 if [ $2 = "AMBER" ]; then
 echo "min"
+
+if [[ ! -f min/lambda_$lam/initial_amber.rst7 ]]; then
     cp min/lambda_$lam/amber.rst7 min/lambda_$lam/initial_amber.rst7
-    pmemd.cuda -i min/lambda_$lam/amber.cfg -c min/lambda_$lam/amber.rst7 -ref min/lambda_$lam/amber.rst7 -p min/lambda_$lam/amber.prm7 -O -o min/lambda_$lam/amber.out -inf min/lambda_$lam/amber.info -e min/lambda_$lam/amber.en -r min/lambda_$lam/amber.rst7 -x min/lambda_$lam/amber.nc -l min/lambda_$lam/amber.log ;
+fi
+    
+    pmemd.cuda -i min/lambda_$lam/amber.cfg -c min/lambda_$lam/initial_amber.rst7 -ref min/lambda_$lam/initial_amber.rst7 -p min/lambda_$lam/amber.prm7 -O -o min/lambda_$lam/amber.out -inf min/lambda_$lam/amber.info -e min/lambda_$lam/amber.en -r min/lambda_$lam/amber.rst7 -x min/lambda_$lam/amber.nc -l min/lambda_$lam/amber.log ;
 echo "heat"
     pmemd.cuda -i heat/lambda_$lam/amber.cfg -c min/lambda_$lam/amber.rst7 -ref min/lambda_$lam/amber.rst7 -p heat/lambda_$lam/amber.prm7 -O -o heat/lambda_$lam/amber.out -inf heat/lambda_$lam/amber.info -e heat/lambda_$lam/amber.en -r heat/lambda_$lam/amber.rst7 -x heat/lambda_$lam/amber.nc -l heat/lambda_$lam/amber.log ;
 echo "eq"
     pmemd.cuda -i eq/lambda_$lam/amber.cfg -c heat/lambda_$lam/amber.rst7 -ref heat/lambda_$lam/amber.rst7 -p eq/lambda_$lam/amber.prm7 -O -o eq/lambda_$lam/amber.out -inf eq/lambda_$lam/amber.info -e eq/lambda_$lam/amber.en -r eq/lambda_$lam/amber.rst7 -x eq/lambda_$lam/amber.nc -l eq/lambda_$lam/amber.log ;
 echo "prod"
-    pmemd.cuda -i lambda_$lam/amber.cfg -c eq/lambda_$lam/amber.rst7 -ref eq/lambda_$lam/amber.rst7 -p lambda_$lam/amber.prm7 -O -o lambda_$lam/amber.out -inf lambda_$lam/amber.info -e lambda_$lam/amber.en -r lambda_$lam/amber.rst7 -x lambda_$lam/amber.nc -l lambda_$lam/amber.log -AllowSmallBox ;
+    pmemd.cuda -i lambda_$lam/amber.cfg -c eq/lambda_$lam/amber.rst7 -ref eq/lambda_$lam/amber.rst7 -p lambda_$lam/amber.prm7 -O -o lambda_$lam/amber.out -inf lambda_$lam/amber.info -e lambda_$lam/amber.en -r lambda_$lam/amber.rst7 -x lambda_$lam/amber.nc -l lambda_$lam/amber.log # -AllowSmallBox ;
 
 # delete simulation data 
 if [[ $keep_traj == "None" ]]; then

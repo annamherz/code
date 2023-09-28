@@ -279,6 +279,7 @@ class pipeline_protocol(protocol):
             "fepprep": "both",
             "number of lambda windows": "12",
             "rerun": "False",
+            "reverse": "False",
             "config options": None,
             "config options file": None,
             "name": None,
@@ -371,6 +372,7 @@ class pipeline_protocol(protocol):
         self.kwargs(query_dict["kwargs"])
         self.name(query_dict["name"])
         self.rerun(query_dict["rerun"])
+        self.reverse(query_dict["reverse"])
 
         # choose timestep based on whether HMR is applied or not
         # this is important as BSS hmr mixin considers the timestep for the default auto
@@ -1038,6 +1040,25 @@ class pipeline_protocol(protocol):
 
         return value
 
+    def reverse(self, value=None):
+        """set whether to also run perturbations in the reverse direction.
+        This will write a network file containing the reverse perturbations during the setup stages.
+
+        Args:
+            value (boolean, optional): if rerun. Defaults to None.
+
+        Returns:
+            boolean: if it is a rerun
+        """
+
+        if value:
+            value = validate.boolean(value)
+            self._query_dict["reverse"] = value
+            self._reverse = value
+        else:
+            value = self._reverse
+
+        return value
 
 class analysis_protocol(protocol):
     def __init__(self, file=None, auto_validate=False, verbose=False):

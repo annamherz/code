@@ -12,7 +12,8 @@ from ._dictionaries import *
 from ._convert import *
 from ..prep import *
 
-import cinnabar
+from typing import Union, Optional
+
 from cinnabar import wrangle, plotting, stats
 
 from math import isnan
@@ -23,14 +24,14 @@ class analysis_network:
 
     def __init__(
         self,
-        results_directory=None,
-        exp_file=None,
-        engines=None,
-        net_file=None,
-        output_folder=None,
-        analysis_prot=None,
-        method=None,
-        extra_options=None,
+        results_directory: Optional[str] = None,
+        exp_file: Optional[str] = None,
+        engines: Optional[str] = None,
+        net_file: Optional[str] = None,
+        output_folder: Optional[str] = None,
+        analysis_prot: Optional[analysis_protocol] = None,
+        method: Optional[str] = None,
+        extra_options: Optional[dict] = None,
     ):
         """analyses the network for a certain system
 
@@ -1184,33 +1185,39 @@ class analysis_network:
 
         return self._histogram_object
 
-    def plot_bar_pert(self, engine=None, **kwargs):
+    def plot_bar_pert(self, engines=None, **kwargs):
         """plot the bar plot of the perturbations.
 
         Args:
             engine (str, optional): engine to plot for. Defaults to None, will use all.
         """
-        engine = validate.is_list(engine, make_list=True)
-        engine.append("experimental")
+        if engines:
+            engines = self._validate_in_names_list(engines, make_list=True)
+        else:
+            engines = self.engines + self.other_results_names
+        engines.append("experimental")
 
         plot_obj = self._initialise_plotting_object(
             check=True
         )
-        plot_obj.bar(pert_val="pert", names=engine, **kwargs)
+        plot_obj.bar(pert_val="pert", names=engines, **kwargs)
 
-    def plot_bar_lig(self, engine=None, **kwargs):
+    def plot_bar_lig(self, engines=None, **kwargs):
         """plot the bar plot of the values per ligand.
 
         Args:
             engine (str, optional): engine to plot for. Defaults to None, will use all.
         """
-        engine = validate.is_list(engine, make_list=True)
-        engine.append("experimental")
+        if engines:
+            engines = self._validate_in_names_list(engines, make_list=True)
+        else:
+            engines = self.engines + self.other_results_names
+        engines.append("experimental")
 
         plot_obj = self._initialise_plotting_object(
             check=True
         )
-        plot_obj.bar(pert_val="val", names=engine, **kwargs)
+        plot_obj.bar(pert_val="val", names=engines, **kwargs)
 
     def plot_bar_leg(self, engine, leg="bound", **kwargs):
         engine = validate.is_list(engine, make_list=True)
@@ -1238,7 +1245,7 @@ class analysis_network:
         if engines:
             engines = self._validate_in_names_list(engines, make_list=True)
         else:
-            engines = self.engines
+            engines = self.engines + self.other_results_names
 
         if use_cinnabar:
             for eng in engines:
@@ -1266,7 +1273,7 @@ class analysis_network:
         if engines:
             engines = self._validate_in_names_list(engines, make_list=True)
         else:
-            engines = self.engines
+            engines = self.engines + self.other_results_names
 
         if use_cinnabar:
             for eng in engines:

@@ -17,8 +17,8 @@ with _warnings.catch_warnings():
     except:
         raise EnvironmentError("BioSimSpace required: www.biosimspace.org")
 
-# all levels are logged
-logging.basicConfig(level=logging.warning)
+# # all levels are logged
+# logging.basicConfig(level=logging.warning)
 
 from . import utils
 from . import analysis

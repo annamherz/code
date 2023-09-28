@@ -21,7 +21,7 @@ else
 
 name="_$nam"
 
-if [$nam == "None"]; then
+if [ $nam == "None" ]; then
 name=""
 fi
 

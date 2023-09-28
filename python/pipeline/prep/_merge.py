@@ -70,10 +70,8 @@ class merge:
         # check no of perturbing atoms in each molecule on average
         no_atoms = (len(l0a) + len(l1a)) / 2 - len(mapping)
         if no_atoms > 25:
-            raise ValueError(
-                f"the mapping results in more than 25 perturbable atoms per molecule on average, which is not ideal.\
-                             check if mapping is reasonable?"
-            )
+            logging.critical(f"the mapping results in more than 25 perturbable atoms per molecule on average, which is not ideal.\
+                                check if mapping is reasonable?")
 
         inv_mapping = {v: k for k, v in mapping.items()}
         logging.info(

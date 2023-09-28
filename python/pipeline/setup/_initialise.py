@@ -51,7 +51,7 @@ class initialise_pipeline:
             folder_path = validate.folder_path(folder_path)
 
             ligand_files = glob.glob(f"{folder_path}/*.sdf")
-            if len(ligand_files) < 3:
+            if len(ligand_files) < 2:
                 raise ValueError(
                     "need atleast two *.sdf ligands in folder for setting up the pipeline."
                 )
@@ -122,9 +122,14 @@ class initialise_pipeline:
                 validate.file_path(f"{protein_path}.prm7")
                 self._protein_path = protein_path
             except:
-                raise ValueError(
-                    "protein path must be that to the rst7 and prm7 parameterised protein"
-                )
+                try:
+                    validate.file_path(f"{protein_path}.top")
+                    validate.file_path(f"{protein_path}.gro")
+                    self._protein_path = protein_path
+                except:
+                    raise ValueError(
+                        "protein path must be that to rst7/top with prm7/gro file formats for the parameterised protein"
+                    )
         else:
             pass
 
@@ -327,6 +332,16 @@ class initialise_pipeline:
         else:
             print("please setup network first before adding any perturbations")
 
+    def run_reverse(self, reverse: bool):
+        """whether to also run the network in the reverse direction. Important for writing the network file.
+
+        Args:
+            reverse (bool): whether to write the reverse perturbations as well.
+        """
+
+        self.protocol.reverse(reverse)
+        self.protocol.rewrite_protocol(file_path=f"{self.exec_folder()}/protocol.dat")
+
     def draw_network(self, folder=None):
         """draw the network.
 
@@ -497,10 +512,9 @@ echo "FEP prep jobid is $jidfep"
 for i in "${{!trans_array[@]}}"; do
 jidprod=$(sbatch --dependency=afterany:${{jidfep}} --parsable --array=0-$((${{win_array[i]}}-1)) $scripts_dir/run_production_slurm.sh ${{trans_array[i]}}$name ${{eng_array[i]}} ${{win_array[i]}})
 echo "Production jobid for ${{trans_array[i]}}, ${{eng_array[i]}} is $jidprod"
-# jidextract=$(sbatch --dependency=afterany:${{jidprod}} --parsable $scripts_dir/run_extract_output_slurm.sh ${{trans_array[i]}} ${{eng_array[i]}})
-# echo "Extraction jobid for ${{trans_array[i]}}, ${{eng_array[i]}} is $jidextract"
-# extract commented out as only needed if transfering files from cluster --dependency=afterany:${{jidextract}}
-jidana=$(sbatch --dependency=afterany:${{jidprod}} --parsable $scripts_dir/run_analysis_slurm.sh ${{trans_array[i]}} ${{eng_array[i]}})
+jidextract=$(sbatch --dependency=afterany:${{jidprod}} --parsable $scripts_dir/run_extract_output_slurm.sh ${{trans_array[i]}} ${{eng_array[i]}})
+echo "Extraction jobid for ${{trans_array[i]}}, ${{eng_array[i]}} is $jidextract"
+jidana=$(sbatch --dependency=afterany:${{jidextract}} --parsable $scripts_dir/run_analysis_slurm.sh ${{trans_array[i]}} ${{eng_array[i]}})
 echo "Analysis jobid for ${{trans_array[i]}}, ${{eng_array[i]}} is $jidana"
 done        
 

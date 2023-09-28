@@ -9,6 +9,8 @@ from rdkit import Chem
 import math
 import logging
 
+from typing import Union, Optional
+
 import matplotlib
 import matplotlib.pyplot as plt
 import csv
@@ -22,7 +24,7 @@ font = {"family": "normal", "weight": "bold", "size": 22}
 matplotlib.rc("font", **{"size": 10})
 
 
-def get_ligands_from_perts(perturbations):
+def get_ligands_from_perts(perturbations: list) -> list:
     perturbations = validate.is_list(perturbations)
     ligands = []
 
@@ -37,7 +39,7 @@ def get_ligands_from_perts(perturbations):
     return ligands
 
 
-def get_info_network(net_file=None, results_files=None, extra_options=None):
+def get_info_network(net_file: Optional[str] = None, results_files: Optional[list] = None, extra_options: Optional[dict] = None) -> tuple:
     """get information about the network from the network file
 
     Args:
@@ -107,9 +109,7 @@ def get_info_network(net_file=None, results_files=None, extra_options=None):
 
                 if (
                     "lig0" in line
-                    or "lig1" in line
                     or "lig_0" in line
-                    or "lig_1" in line
                 ):
                     use_line = False
 
@@ -140,9 +140,7 @@ def get_info_network(net_file=None, results_files=None, extra_options=None):
 
                     if (
                         "lig0" in line
-                        or "lig1" in line
                         or "lig_0" in line
-                        or "lig_1" in line
                     ):
                         use_line = False
 
@@ -158,7 +156,7 @@ def get_info_network(net_file=None, results_files=None, extra_options=None):
     return (perturbations, ligands)
 
 
-def get_info_network_from_dict(res_dict):
+def get_info_network_from_dict(res_dict: dict) -> tuple:
     """get list of perturbations and ligands from a dictionary
 
     Args:
@@ -183,7 +181,7 @@ def get_info_network_from_dict(res_dict):
 
 
 class net_graph:
-    def __init__(self, ligands, perturbations, file_dir=None, ligands_folder=None):
+    def __init__(self, ligands: list, perturbations: list, file_dir: Optional[str] = None, ligands_folder: Optional[str] = None):
         """_summary_
 
         Args:
@@ -226,7 +224,7 @@ class net_graph:
 
         self.graph = graph
 
-    def draw_graph(self, file_dir=None):
+    def draw_graph(self, file_dir: Optional[str] = None):
         """draw the network x graph.
 
         Args:
@@ -237,7 +235,7 @@ class net_graph:
 
         # Plot the networkX graph.
         pos = nx.kamada_kawai_layout(graph)
-        plt.figure(figsize=(8, 8), dpi=150)
+        fig, ax = plt.figure(figsize=(8, 8), dpi=150)
         nx.draw(
             graph,
             pos,
@@ -257,9 +255,9 @@ class net_graph:
             file_dir = validate.folder_path(file_dir, create=True)
             plt.savefig(f"{file_dir}/network.png", dpi=300)
 
-        plt.show()
+        return ax
 
-    def _ligand_image(self, ligand):
+    def _ligand_image(self, ligand: str):
         if not self.ligands_folder:
             raise ValueError("please provide a ligands dir w the files inside.")
 
@@ -270,7 +268,7 @@ class net_graph:
 
         return img
 
-    def draw_ligand(self, ligand):
+    def draw_ligand(self, ligand: str):
         img = self._ligand_image(ligand)
         fig, ax = plt.subplots(1, 1)
         ax.imshow(img)
@@ -279,7 +277,7 @@ class net_graph:
 
         return fig
 
-    def draw_all_ligands(self, file_dir=None):
+    def draw_all_ligands(self, file_dir: Optional[str] = None):
         if not self.ligands_folder:
             raise ValueError("please provide a ligands dir w the files inside.")
 
@@ -305,7 +303,7 @@ class net_graph:
 
         return fig
 
-    def draw_perturbation(self, pert):
+    def draw_perturbation(self, pert: str):
         lig_0 = pert.split("~")[0]
         lig_1 = pert.split("~")[1]
 
@@ -324,12 +322,12 @@ class net_graph:
 
         return fig
 
-    def disconnected_ligands(self):
+    def disconnected_ligands(self) -> list:
         ligs = [lig for lig in nx.isolates(self.graph)]
 
         return ligs
 
-    def cycle_closures(self):
+    def cycle_closures(self) -> list:
         """get cycle closures in the network
 
         Returns:
@@ -362,11 +360,11 @@ class net_graph:
 
         return cycle_closures
 
-    def add_weight(self, input_data):
+    def add_weight(self, input_data: Union[dict,str]):
         """add weights to the network x graph for the edges and each perturbation.
 
         Args:
-            input_data (str or dict, optional): file path or dict of the weights for the perturbation edges.
+            input_data (str or dict): file path or dict of the weights for the perturbation edges.
 
         Raises:
             TypeError: if dict, must be of format {(lig_0, lig_1): weight}
@@ -398,7 +396,7 @@ class net_graph:
         nx.set_edge_attributes(self.graph, weight_dict, name="weight")
 
     # from alvaro
-    def get_average_weighted_simple_paths(self):
+    def get_average_weighted_simple_paths(self) -> float:
         """Calculate the average number of connection between each pair of nodes."""
 
         G = self.graph

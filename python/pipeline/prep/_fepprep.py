@@ -4,12 +4,12 @@ import warnings as _warnings
 import logging
 
 try:
-    amber_version = BSS._amber_version
+    amber_version = float(BSS._amber_version)
     # assume the amber version is 20
     if not amber_version:
-        amber_version = 20
+        amber_version = 22
 except:
-    amber_version = 20
+    amber_version = 22
 
 from ..utils import *
 from ._merge import *
@@ -130,7 +130,6 @@ def check_hmr(system:  BSS._SireWrappers.System, protocol:  BSS.Protocol, engine
         pass
 
     return system
-
 
 class fepprep:
     """class for fepprep
@@ -264,20 +263,21 @@ class fepprep:
 
         if protocol.engine() == "AMBER":
             # for amber, this will be 1/value to give 2 for the collision frequency in ps-1
-            eq_thermostat_time_constant=BSS.Types.Time(2, "picosecond")
             thermostat_time_constant=BSS.Types.Time(0.5, "picosecond")
+            eq_timestep = 2
         elif protocol.engine() == "GROMACS":
             # in gromacs this is the tau-t in ps
-            eq_thermostat_time_constant=BSS.Types.Time(2, "picosecond")
             thermostat_time_constant=BSS.Types.Time(2, "picosecond")
+            eq_timestep = protocol.timestep()
 
         if protocol.engine() == "AMBER" or protocol.engine() == "GROMACS":
             min_protocol = BSS.Protocol.FreeEnergyMinimisation(
                 num_lam=protocol.num_lambda(),
                 steps=protocol.min_steps(),
             )
+            # TODO: 2 fs timestep for equilibration?
             heat_protocol = BSS.Protocol.FreeEnergyEquilibration(
-                timestep=protocol.timestep() * protocol.timestep_unit(),
+                timestep=eq_timestep * protocol.timestep_unit(),
                 num_lam=protocol.num_lambda(),
                 runtime=protocol.eq_runtime() * protocol.eq_runtime_unit(),
                 pressure=None,
@@ -287,11 +287,11 @@ class fepprep:
                 * protocol.temperature_unit(),
                 restart_interval=restart_interval,
                 hmr_factor=protocol.hmr_factor(),
-                thermostat_time_constant=eq_thermostat_time_constant,
+                thermostat_time_constant=thermostat_time_constant,
 
             )
             eq_protocol = BSS.Protocol.FreeEnergyEquilibration(
-                timestep=protocol.timestep() * protocol.timestep_unit(),
+                timestep=eq_timestep * protocol.timestep_unit(),
                 num_lam=protocol.num_lambda(),
                 runtime=protocol.eq_runtime() * protocol.eq_runtime_unit(),
                 temperature=protocol.temperature() * protocol.temperature_unit(),
@@ -389,6 +389,7 @@ class fepprep:
         freenrg_protocol = self._freenrg_protocol
 
         logging.info(f"setting up FEP run in {work_dir}...")
+           
 
         if protocol.engine() == "AMBER" or protocol.engine() == "GROMACS":
             # set up for each the bound and the free leg
@@ -420,6 +421,7 @@ class fepprep:
                     work_dir=f"{work_dir}/{leg}_{rep}/min",
                     extra_options=min_extra_options,
                     ignore_warnings=True,
+                    explicit_dummies=True, # set True for AMBER, does not affect the other engines
                 )
 
                 BSS.FreeEnergy.Relative(
@@ -429,6 +431,7 @@ class fepprep:
                     work_dir=f"{work_dir}/{leg}_{rep}/heat",
                     extra_options=heat_extra_options,
                     ignore_warnings=True,
+                    explicit_dummies=True, # set True for AMBER, does not affect the other engines
                 )
 
                 BSS.FreeEnergy.Relative(
@@ -438,6 +441,7 @@ class fepprep:
                     work_dir=f"{work_dir}/{leg}_{rep}/eq",
                     extra_options=eq_extra_options,
                     ignore_warnings=True,
+                    explicit_dummies=True, # set True for AMBER, does not affect the other engines
                 )
 
                 BSS.FreeEnergy.Relative(
@@ -447,6 +451,7 @@ class fepprep:
                     work_dir=f"{work_dir}/{leg}_{rep}",
                     extra_options=prod_extra_options,
                     ignore_warnings=True,
+                    explicit_dummies=True, # set True for AMBER, does not affect the other engines
                 )
 
         if protocol.engine() == "SOMD":
@@ -500,12 +505,11 @@ class fepprep:
                 )
             # get which repeat on
             rep = len(b_folders)
-            start_rep = rep + 1
+            start_rep = rep
+            self._pipeline_protocol.rerepeat(start_rep)
+            self._pipeline_protocol.rewrite_protocol()
             if (self._pipeline_protocol.repeats() - rep) <= 0:
                 raise ValueError("all repeats folders already exist.")
-            else:
-                self._pipeline_protocol.rerepeat(start_rep)
-                self._pipeline_protocol.rewrite_protocol()
         else:
             work_dir = validate.folder_path(work_dir, create=True)
             rep = 0
@@ -523,8 +527,11 @@ class fepprep:
 
         if amber_version < 22:
             if self._pipeline_protocol.hmr:
-                kwarg_dict["PRUNECROSSINGCONSTRAINTS"] = True
-                # kwarg_dict["PRUNEATOMTYPES"] = True
+                if self._pipeline_protocol.engine() == "AMBER":
+                    kwarg_dict["PRUNECROSSINGCONSTRAINTS"] = True
+
+        if self._pipeline_protocol.engine() == "AMBER":
+            kwarg_dict["PRUNEATOMTYPES"] = True
 
         # any pipeline kwargs overwrite this
         for key, value in self._pipeline_protocol.kwargs().items():

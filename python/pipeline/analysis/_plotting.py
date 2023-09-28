@@ -9,6 +9,8 @@ import logging
 from scipy.stats import sem as sem
 from scipy.stats import bootstrap, norm
 
+from typing import Union, Optional
+
 from ..utils import *
 from ._network import *
 from ._analysis import *
@@ -16,7 +18,7 @@ from ._dictionaries import *
 
 
 class plotting_engines:
-    def __init__(self, analysis_object=None, output_folder=None, verbose=False):
+    def __init__(self, analysis_object=None, output_folder: str = None, verbose: bool = False):
         """for plotting analysis network results.
 
         Args:
@@ -56,7 +58,7 @@ class plotting_engines:
         # convert the dictionaries into dataframes for plotting
         self._analysis_dicts_to_df()
 
-    def is_verbose(self, value):
+    def is_verbose(self, value: bool) -> bool:
         verbose = validate.boolean(value)
         self._is_verbose = verbose
 
@@ -108,7 +110,7 @@ class plotting_engines:
         self.epert_bound_dict = ana_obj.epert_bound_dict
         self.epert_free_dict = ana_obj.epert_free_dict
 
-    def default_file_ext(self):
+    def default_file_ext(self) -> str:
         """file extension from the analysis object, if none is provided na.
 
         Returns:
@@ -122,7 +124,7 @@ class plotting_engines:
 
         return file_ext
 
-    def default_net_ext(self):
+    def default_net_ext(self) -> str:
         """the network extension
 
         Returns:
@@ -134,7 +136,7 @@ class plotting_engines:
 
         return net_ext
 
-    def file_extension(self, file_ext=None):
+    def file_extension(self, file_ext: str = None) -> str:
         """set or return the file extension
 
         Args:
@@ -151,7 +153,7 @@ class plotting_engines:
 
         return self.file_ext
 
-    def network_extension(self, net_ext=None):
+    def network_extension(self, net_ext: str = None) -> str:
         """set or return the network extension
 
         Args:
@@ -168,7 +170,7 @@ class plotting_engines:
 
         return self.net_ext
 
-    def _eng_other_list(self):
+    def _eng_other_list(self) -> list:
         """list of engines and any other results and the experimental.
 
         Returns:
@@ -190,7 +192,7 @@ class plotting_engines:
 
         return names_list
 
-    def _validate_in_names_list(self, name, make_list=False):
+    def _validate_in_names_list(self, name: str, make_list: bool = False) -> list:
         """validate if the name is in the names list
 
         Args:
@@ -226,7 +228,7 @@ class plotting_engines:
             self.freenrg_df_dict.update({name: None})
         self._calc_all_dict_to_df()
 
-    def _overall_dict(self):
+    def _overall_dict(self) -> dict:
         """create an overall dict with the information passed from the analysis network object.
 
         Returns:
@@ -297,7 +299,7 @@ class plotting_engines:
         for name in self.names_list:
             self._dict_to_df(x_name=name)
 
-    def _dict_to_df(self, x_name="experimental"):
+    def _dict_to_df(self, x_name: Optional[str] = "experimental") -> dict:
         """turn a dictionary of results into a dataframe
 
         Args:
@@ -349,7 +351,7 @@ class plotting_engines:
         return freenrg_df_dict
 
     @staticmethod
-    def match_dicts_to_df(dict_x, dict_y, x_name, y_name, values=None, verbose=False):
+    def match_dicts_to_df(dict_x: dict, dict_y: dict, x_name: str, y_name: str, values: Optional[list] = None):
         """match two dictionaries into one dataframe (to be used for plotting)
 
         Args:
@@ -378,9 +380,8 @@ class plotting_engines:
                 y_err = dict_y[value][1]
                 freenrg_dict[value] = [x_ddG, x_err, y_ddG, y_err]
             except Exception as e:
-                if verbose:
-                    logging.error(e)
-                    logging.error(f"{value} not in both dicts, {x_name} and {y_name}")
+                logging.error(e)
+                logging.error(f"{value} not in both dicts, {x_name} and {y_name}")
 
         freenrg_df = pd.DataFrame(
             freenrg_dict,
@@ -395,7 +396,7 @@ class plotting_engines:
         return freenrg_df
 
     @staticmethod
-    def _prune_perturbations(df, perturbations, remove=False):
+    def _prune_perturbations(df: pd.DataFrame, perturbations: list, remove: bool = False) -> pd.DataFrame:
         """keep or remove perturbations in list from the dataframe
 
         Args:
@@ -440,7 +441,7 @@ class plotting_engines:
         return df
 
     @staticmethod
-    def set_colours(colour_dict=None, other_results_names=None):
+    def set_colours(colour_dict: Optional[dict] = None, other_results_names: Optional[list] = None) -> dict:
         """set the colours of the bars or scatter plots.
 
         Args:
@@ -494,7 +495,7 @@ class plotting_engines:
         return default_colour_dict
 
     @staticmethod
-    def get_bar_spacing(names=None):
+    def get_bar_spacing(names: list = None) -> tuple:
         names = validate.is_list(names)
 
         # so experimental is the last thing plotted
@@ -600,7 +601,7 @@ class plotting_engines:
 
         return placement_dict, width
 
-    def _plotting_engines(self, engines_query):
+    def _plotting_engines(self, engines_query: list) -> list:
         """engines to be used for plotting
 
         Args:
@@ -624,7 +625,7 @@ class plotting_engines:
 
         return engines
 
-    def _parse_kwargs_graphs(self, graph=None, **kwargs):
+    def _parse_kwargs_graphs(self, graph: str = None, **kwargs):
         graph = validate.string(graph).upper()
         if graph not in ["BAR", "SCATTER", "OUTLIER"]:
             raise ValueError(f"graph argument must be bar, scatter or outlier.")
@@ -666,7 +667,7 @@ class plotting_engines:
             include_y_error,
         )
 
-    def bar(self, pert_val=None, names=None, values=None, **kwargs):
+    def bar(self, pert_val: str = None, names: Optional[list] = None, values: Optional[list] = None, **kwargs):
         """plot a bar plot of the results
 
         Args:
@@ -806,16 +807,17 @@ class plotting_engines:
             save_fig_location = f"{self.graph_folder}/barplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png"
 
         plt.savefig(save_fig_location, dpi=300, bbox_inches="tight")
-        plt.show()
+
+        return ax
 
     def scatter(
         self,
-        pert_val=None,
-        y_names=None,
-        x_name="experimental",
-        values=None,
-        outliers=False,
-        no_outliers=3,
+        pert_val: str = None,
+        y_names: Optional[list] = None,
+        x_name: str = "experimental",
+        values: Optional[list] = None,
+        outliers: bool = False,
+        no_outliers: int = 3,
         **kwargs,
     ):
         """plot scatter plot.
@@ -1034,11 +1036,12 @@ class plotting_engines:
                 save_fig_location = f"{self.graph_folder}/calc_vs_{x_name}_scatterplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png"
 
         plt.savefig(save_fig_location, dpi=300, bbox_inches="tight")
-        plt.show()
+        
+        return ax
 
     # some functions so cleaner in plotting functions
     @staticmethod
-    def _get_y_name(engines):
+    def _get_y_name(engines: list) -> str:
         """get the engine names for writing the titles and file names
 
         Args:
@@ -1053,7 +1056,7 @@ class plotting_engines:
         return eng_name
 
     @staticmethod
-    def _get_bounds_scatter(engines, freenrg_df_dict, pert_val, values, name):
+    def _get_bounds_scatter(engines: list, freenrg_df_dict: dict, pert_val: str, values: list, name: str):
         """get the upper and lower bounds of the scatter plot based on the results plotted.
 
         Args:
@@ -1288,7 +1291,8 @@ class plotting_histogram(plotting_engines):
             dpi=300,
             bbox_inches="tight",
         )
-        plt.show()
+        
+        return ax
 
     def histogram_distribution(self, names=None, type_error="SEM_pert"):
         for name in names:
@@ -1330,7 +1334,8 @@ class plotting_histogram(plotting_engines):
             dpi=300,
             bbox_inches="tight",
         )
-        plt.show()
+        
+        return ax
 
 
 # class plot_convergence():

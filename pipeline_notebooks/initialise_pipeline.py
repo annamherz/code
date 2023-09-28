@@ -137,7 +137,14 @@ def main():
     else:
         pass
 
-    # TODO change so can just do numbers of options?
+    run_reverse = str(
+        input("do you want to also run the perturbations in reverse? Please input True/False: ")
+    ).strip()
+    if run_reverse:
+        pl.run_reverse(run_reverse)
+    else:
+        pass
+
     pl.add_source_file(str(
         input("please state the bash file that includes all the source and module parameters: ")
     ).strip())

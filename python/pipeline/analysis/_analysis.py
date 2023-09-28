@@ -53,9 +53,10 @@ class analyse:
                 self.ligand_0 = self.perturbation.split("~")[0]
                 self.ligand_1 = self.perturbation.split("~")[1]
             except:
-                raise ValueError(
+                logging.critical(
                     "please seperate the ligands in the pert using '~' so ligand 0 and ligand 1 can be identified."
                 )
+
         else:
             try:
                 self.perturbation = self._work_dir.split("/")[-1]
@@ -130,7 +131,7 @@ class analyse:
             self.set_options(analysis_prot)
 
     @staticmethod
-    def _default_analysis_options_dict():
+    def _default_analysis_options_dict() -> dict:
         """the default analysis options dictionary
 
         Returns:
@@ -172,7 +173,7 @@ class analyse:
         return file_ext
 
     @staticmethod
-    def file_ext(options_dict: dict):
+    def file_ext(options_dict: dict) -> str:
         """write a file extension based on a protocol style options dictionary
 
         Args:
@@ -194,7 +195,7 @@ class analyse:
 
         return file_ext
 
-    def _pickle_ext(self):
+    def _pickle_ext(self) -> str:
         """the extension for the pickle files based on the file extension, engine, and perturbation
 
         Returns:
@@ -209,7 +210,7 @@ class analyse:
         return pickle_ext
 
     @staticmethod
-    def pickle_ext(options_dict: dict, perturbation: str, engine: str):
+    def pickle_ext(options_dict: dict, perturbation: str, engine: str) -> str:
         # validate any inputs in the dictionary
         options_dict = analyse._update_options_dict(options_dict)
 
@@ -220,7 +221,7 @@ class analyse:
         return pickle_ext
 
     @staticmethod
-    def _update_options_dict(options_dict, current_options=None):
+    def _update_options_dict(options_dict: dict, current_options: Optional[dict] = None) -> dict:
         """update the options dict, if no current one the default will be used.
 
         Args:
@@ -262,7 +263,7 @@ class analyse:
         return val_options_dict
 
     @staticmethod
-    def _validate_options_dict(options_dict):
+    def _validate_options_dict(options_dict: dict) -> dict:
         """validate the passed dictionary
 
         Args:
@@ -329,7 +330,7 @@ class analyse:
 
         return options_dict
 
-    def set_options(self, options_dict):
+    def set_options(self, options_dict: dict):
         """set the analysis options for this object
 
         Args:
@@ -383,7 +384,7 @@ class analyse:
                 + f"these are {self._b_folders} and {self._f_folders}."
             )
 
-    def _check_pickle(self):
+    def _check_pickle(self) -> bool:
         """check if there are all the pickle files present in the pickle folder.
 
         Returns:
@@ -438,7 +439,7 @@ class analyse:
 
         return try_pickle
 
-    def analyse_all_repeats(self):
+    def analyse_all_repeats(self) -> tuple:
         """Analyse all existing free-energy data from a simulation working directory.
 
         Returns:
@@ -580,7 +581,7 @@ class analyse:
 
         return (freenrg_rel, repeats_tuple_list)
 
-    def _analyse_all_repeats_pickle(self):
+    def _analyse_all_repeats_pickle(self) -> tuple:
         """Analyse all existing free-energy data from a simulation working directory in the pickle directory.
 
         Returns:
@@ -618,7 +619,7 @@ class analyse:
 
         return (freenrg_rel, repeats_tuple_list)
 
-    def _calculate_freenrg(self):
+    def _calculate_freenrg(self) -> tuple:
         """calculate the free energy.
 
         Returns:
@@ -763,7 +764,7 @@ class analyse:
                 logging.exception(e)
                 logging.warning("could not save pickle :( ")
 
-    def check_overlap(self):
+    def check_overlap(self) -> tuple:
         """check the overlap of the analysed object."""
 
         if not self.is_analysed:
@@ -904,7 +905,7 @@ class analyse:
 
         self.save_convergence_pickle()
 
-    def _check_convergence_pickle(self):
+    def _check_convergence_pickle(self) -> bool:
         """check if there are all the pickle files present in the pickle folder.
 
         Returns:
@@ -1012,13 +1013,13 @@ class analyse:
     
     @staticmethod
     def _calculate_truncated(
-        path_to_dir,
-        estimator,
-        start_end="start",
-        statsineff=False,
-        eq=False,
-        try_pickle=True,
-    ):
+        path_to_dir: str,
+        estimator: str,
+        start_end: str = "start",
+        statsineff: bool = False,
+        eq: bool = False,
+        try_pickle: bool = True,
+    ) -> tuple:
         start_end = validate.truncate_keep(start_end)
 
         # analyse the work dir
@@ -1054,7 +1055,7 @@ class analyse:
         return results_dict, bound_dict, free_dict
 
     @staticmethod
-    def single_pert_dict_into_df(pert_dict):
+    def single_pert_dict_into_df(pert_dict: dict):
         df = pd.DataFrame.from_dict(pert_dict)
         df = df.transpose()
         df.columns = ["avg", "max"]
@@ -1064,7 +1065,7 @@ class analyse:
 
     @staticmethod
     def plot_truncated(
-        sdf, edf, file_path=None, plot_error=False, plot_difference=True
+        sdf: pd.DataFrame, edf: pd.DataFrame, file_path: Optional[str] = None, plot_error: Optional[bool] = False, plot_difference: Optional[bool] = True
     ):
         include_key = True
 
@@ -1255,7 +1256,7 @@ class analyse:
                         header=False,
                     )
 
-    def get_files_temperatures_lambdas(self, work_dir):
+    def get_files_temperatures_lambdas(self, work_dir: str) -> tuple:
         function_glob_dict = {
             "SOMD": "**/simfile.dat",
             "GROMACS": "**/[!bar]*.xvg",

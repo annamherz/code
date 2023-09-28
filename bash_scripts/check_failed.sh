@@ -5,7 +5,7 @@ slurm_dir=$2
 
 echo checking $slurm_logs in $slurm_dir
 
-file_base="$slurm_dir/prod_$slurmlog_*"
+file_base="$slurm_dir/prod_$slurmlog\_*"
 
 declare regex="\s+STOP PMEMD Terminated Abnormally!\s+"
 

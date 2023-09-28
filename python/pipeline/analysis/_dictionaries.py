@@ -10,6 +10,8 @@ import numpy as np
 import pandas as pd
 import logging
 
+from typing import Union, Optional
+
 from ..utils import *
 from ._network import get_info_network
 from ._analysis import *
@@ -23,14 +25,14 @@ class make_dict:
 
     @staticmethod
     def comp_results(
-        results_files=None,
-        perturbations=None,
-        engine=None,
-        name=None,
-        method=None,
-        ana_protocol=None,
-        output_file=None,
-    ):
+        results_files: Optional[list] = None,
+        perturbations: Optional[list] = None,
+        engine: Optional[str] = None,
+        name: Optional[str] = None,
+        method: Optional[str] = None,
+        ana_protocol: Optional[str] = None,
+        output_file: Optional[str] = None,
+    ) -> dict:
         """write results files into different file or dictionary for certain perturbations.
 
         Args:
@@ -82,8 +84,7 @@ class make_dict:
         comp_err_dict_list = {}
 
         if make_pert_list:
-            perts, ligs = get_info_network(results_files=results_files)
-            perturbations = perts
+            perturbations, ligs = get_info_network(results_files=results_files)
 
         for pert in perturbations:
             comp_dict_list[pert] = []
@@ -100,7 +101,7 @@ class make_dict:
                 pass
             for index, row in res_df.iterrows():
                 if method:
-                    if method.lower() == row["method"].strip().lower():
+                    if method.lower() == str(row["method"]).strip().lower():
                         pass
                     else:
                         continue
@@ -220,7 +221,7 @@ class make_dict:
         return comp_diff_dict
 
     @staticmethod
-    def value_list_from_files(results_files, header="error"):
+    def value_list_from_files(results_files: list, header: Optional[str] = "error") -> list:
         """get list of errors from the files. Eg used for error histogram plotting.
 
         Args:
@@ -254,7 +255,7 @@ class make_dict:
         return error_list
 
     @staticmethod
-    def experimental_from_freenrgworkflows(experimental_DDGs, ligands, perturbations):
+    def experimental_from_freenrgworkflows(experimental_DDGs, ligands: list, perturbations: list) -> tuple:
         """get the experimental dicts from the freenergworkflows
 
         Args:
@@ -279,7 +280,7 @@ class make_dict:
         return exper_diff_dict, exper_val_dict
 
     @staticmethod
-    def _from_freenrgworkflows_experimental_val(experimental_DDGs, ligands):
+    def _from_freenrgworkflows_experimental_val(experimental_DDGs, ligands: list) -> dict:
         """get the experimental value dict from the freenergworkflows
 
         Args:
@@ -310,7 +311,7 @@ class make_dict:
         return exper_val_dict
 
     @staticmethod
-    def _from_freenrgworkflows_experimental_diff(exper_val_dict, perturbations):
+    def _from_freenrgworkflows_experimental_diff(exper_val_dict, perturbations: list) -> dict:
         """get the experimental difference dict from the freenergworkflows
 
         Args:
@@ -346,7 +347,7 @@ class make_dict:
         return exper_diff_dict
 
     @staticmethod
-    def from_freenrgworkflows_network_analyser(computed_relative_DDGs):
+    def from_freenrgworkflows_network_analyser(computed_relative_DDGs) -> dict:
         """convert freenergworkflows into a dictionary
 
         Args:
@@ -369,7 +370,7 @@ class make_dict:
         return freenrg_dict
 
     @staticmethod
-    def from_cinnabar_network_edges(network, calc_exp, perturbations):
+    def from_cinnabar_network_edges(network, calc_exp: str, perturbations: list) -> dict:
         """get a dictionary of results from a cinnabar network
 
         Args:
@@ -424,7 +425,7 @@ class make_dict:
         return freenrg_dict
 
     @staticmethod
-    def from_cinnabar_network_node(network, calc_exp, normalise=False):
+    def from_cinnabar_network_node(network, calc_exp: str, normalise: Optional[bool] = False) -> dict:
         """get value per ligand (node) from a cinnabar network as a dictionary.
 
         Args:
@@ -464,7 +465,7 @@ class make_dict:
             return freenrg_dict
 
     @staticmethod
-    def experimental_for_network(exper_dict, ligands, perturbations):
+    def experimental_for_network(exper_dict: dict, ligands: list, perturbations: list) -> tuple:
         """make experimental dicts based on certain ligands and perturbations
 
         Args:
@@ -487,7 +488,7 @@ class make_dict:
         return exper_diff_dict, exper_val_dict
 
     @staticmethod
-    def _exper_from_ligands(exper_val_dict, ligands, normalise=False):
+    def _exper_from_ligands(exper_val_dict: dict, ligands: list, normalise: Optional[bool] = False) -> dict:
         """make a new dict of experimental values, can normalise.
 
         Args:
@@ -521,7 +522,7 @@ class make_dict:
             return new_exper_val_dict
 
     @staticmethod
-    def _exper_from_perturbations(exper_val_dict, perturbations):
+    def _exper_from_perturbations(exper_val_dict: dict, perturbations: list) -> dict:
         """make experimental dict based on and perturbations
 
         Args:
@@ -548,7 +549,7 @@ class make_dict:
         return exper_diff_dict
 
     @staticmethod
-    def _normalise_data(data):
+    def _normalise_data(data: Union[list,dict]) -> Union[list, dict]:
         """normalise the data
 
         Args:
@@ -588,12 +589,12 @@ class make_dict:
             return normalised_data
 
     @staticmethod
-    def cycle_closures(pert_dict, cycle_closures):
-        """_summary_
+    def cycle_closures(pert_dict: dict, cycle_closures: list) -> tuple:
+        """compute cycle closures.
 
         Args:
-            pert_dict (_type_): _description_
-            cycle_closures (_type_): _description_
+            pert_dict (dict): _description_
+            cycle_closures (list): _description_
 
         Returns:
             tuple: (cycles_dict, cycle_vals, np.mean(cycle_vals), np.std(cycle_vals))

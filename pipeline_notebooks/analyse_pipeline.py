@@ -6,18 +6,6 @@ from scipy.stats import sem as sem
 import sys
 import glob
 
-if "/home/anna/Documents/cinnabar" not in sys.path:
-    sys.path.insert(1, "/home/anna/Documents/cinnabar")
-import cinnabar
-
-print("adding code to the pythonpath...")
-code = "/home/anna/Documents/code/python"
-if code not in sys.path:
-    sys.path.insert(1, code)
-import pipeline
-
-print(cinnabar.__file__)
-
 from pipeline import *
 from pipeline.utils import validate
 from pipeline.analysis import *
@@ -56,8 +44,8 @@ def analyse_results(main_dir, experimental_file):
     all_analysis_object.plot_scatter_pert(use_cinnabar=True)
 
     for eng in all_analysis_object.engines:
-        all_analysis_object.plot_scatter_lig(engine=eng)
-        all_analysis_object.plot_scatter_pert(engine=eng)
+        all_analysis_object.plot_scatter_lig(engines=eng)
+        all_analysis_object.plot_scatter_pert(engines=eng)
 
         # outliers
         all_analysis_object.plot_outliers(engine=eng)
@@ -73,9 +61,9 @@ def analyse_results(main_dir, experimental_file):
     all_analysis_object.plot_histogram_sem(pert_val="val")
 
     all_analysis_object.calc_mad_engines(pert_val="pert")
-    all_analysis_object.calc_mad_engines(pert_val="pert")
+    all_analysis_object.calc_mae_engines(pert_val="pert")
     all_analysis_object.calc_mad_engines(pert_val="val")
-    all_analysis_object.calc_mad_engines(pert_val="val")
+    all_analysis_object.calc_mae_engines(pert_val="val")
 
 
 
@@ -86,7 +74,7 @@ def check_arguments(args):
     else:
         main_folder = validate.folder_path(
             str(
-                input("what is the main folder where all the files should go?: ")
+                input("what is the main folder of the runs? : ")
             ).strip()
         )
 
@@ -95,7 +83,7 @@ def check_arguments(args):
     else:
         experimental_file = validate.file_path(
             str(
-                input("what is the main folder where all the files should go?: ")
+                input("what is the path to the experimental results?: ")
             ).strip()
         )
 

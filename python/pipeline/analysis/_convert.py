@@ -8,6 +8,8 @@ import numpy as np
 from ..utils import *
 from ._dictionaries import *
 
+from typing import Union, Optional
+
 # conversion of constants
 from scipy.constants import R, calorie
 
@@ -23,7 +25,7 @@ class convert:
         pass
 
     @staticmethod
-    def yml_into_freenrgworkflows(exp_file, exp_file_dat):
+    def yml_into_freenrgworkflows(exp_file: str, exp_file_dat: str):
         """convert yml format into one suitable for freenergworkflows
 
         Args:
@@ -66,137 +68,166 @@ class convert:
                     )
 
     @staticmethod
-    def convert_M_kcal(value, magnitude="uM", temp=300):
+    def convert_M_kcal(value: float, err: float, temperature: Optional[Union[int,float]] = 300) -> tuple:
         """convert value into kcal/mol
 
         Args:
             value (float): value
-            magnitude (str, optional): unit/magnitude of the value. uM or nM . Defaults to "uM".
-            temp (int, optional): temperature of the simulation. Defaults to 300.
+            temperature (int, optional): temperature of the simulation. Defaults to 300.
 
         Returns:
             string: value in kcal/mol
         """
-        if magnitude == "uM":
-            power = 10**-6
-        if magnitude == "nM":
-            power = 10**-9
-        # gas constant in kcal per Kelvin per mol, exp val converted into M
-        kcal_val = R_kcalmol * temp * np.log(value * (power))
 
-        return kcal_val
+        # gas constant in kcal per Kelvin per mol, exp val converted into M
+        kcal_val = R_kcalmol * temperature * np.log(value) # value is /1 as the concentration of substrate
+
+        # propagate the error
+        kcal_err = R_kcalmol * temperature * ( err / (value * np.log(10)) )
+        
+        return kcal_val, kcal_err
 
     @staticmethod
-    def yml_into_exper_dict(exp_file, temp=300):
+    def yml_into_exper_dict(exp_file, temperature: Optional[Union[int,float]] = 300) -> dict:
         """convert yml file into experimental dictionary of values.
 
         Args:
             exp_file (str): yml file. Each key is a ligand, with a 'measurement' that has 'unit', 'value', 'error'. Unit in uM or nM.
-            temp (int, optional): Temperature to use during the conversion. Defaults to 300.
+            temperature (int, optional): Temperature to use during the conversion. Defaults to 300.
 
         Returns:
             dict: kcal/mol value for each ligand
         """
 
         exp_file = validate.file_path(exp_file)
-        temp = validate.is_float(temp)
+        temperature = validate.is_float(temperature)
 
         with open(exp_file, "r") as file:
             data = yaml.safe_load(file)  # loads as dictionary
 
         exper_raw_dict = {}
         for key in data.keys():  # write for each ligand that was in yaml file
+
+            # check what type of data
+            if data[key]["measurement"]["type"].lower().strip() == "ki":
+                # assuming concentration of substrate in the assay is 1, IC50 is approx Ki*2
+                factor = 2
+            elif data[key]["measurement"]["type"].lower().strip() == "ic50":
+                factor = 1
+            else:
+                factor = 1
+                logging.error("the type of data was not recognised. Must be IC50 or Ki. Assuming IC50 ...")
+
             if data[key]["measurement"]["unit"] == "uM":
-                exper_raw_dict[key] = (
-                    data[key]["measurement"]["value"],
-                    data[key]["measurement"]["error"],
-                )
+                magnitude = 10**-6
             elif data[key]["measurement"]["unit"] == "nM":
+                magnitude = 10**-9
+            else:
+                logging.critical("only nM and uM recognised as units!")
+                magnitude = 1
+
                 exper_raw_dict[key] = (
-                    "{:.4f}".format(data[key]["measurement"]["value"] / 1000),
-                    data[key]["measurement"]["error"] / 1000,
+                    data[key]["measurement"]["value"]*factor *magnitude,
+                    data[key]["measurement"]["error"]*factor *magnitude,
                 )
 
-        exper_val_dict = convert.exper_raw_dict_into_val_dict(exper_raw_dict, temp)
+        exper_val_dict = convert.exper_raw_dict_into_val_dict(exper_raw_dict, temperature)
 
         return exper_val_dict
 
     @staticmethod
-    def csv_into_exper_dict(exp_file, temp=300):
+    def csv_into_exper_dict(exp_file: str, temperature: Optional[Union[int,float]] = 300) -> dict:
         """convert csv file into experimental dictionary of values.
 
         Args:
             exp_file (str): csv file. Has columns 'ligand', 'unit', 'value', 'error'. Unit in uM or nM.
-            temp (int, optional): Temperature to use during the conversion. Defaults to 300.
+            temperature (int, optional): Temperature to use during the conversion. Defaults to 300.
 
         Returns:
             dict: kcal/mol value for each ligand
         """
 
         exp_file = validate.file_path(exp_file)
-        temp = validate.is_float(temp)
+        temperature = validate.is_float(temperature)
 
         res_df = pd.read_csv(exp_file)
 
         exper_raw_dict = {}
 
         for index, row in res_df.iterrows():
+
+            if row["type"].lower().strip() == "ki":
+                # assuming concentration of substrate in the assay is 1, IC50 is approx Ki*2
+                factor = 2
+            elif row["type"].lower().strip() == "ic50":
+                factor = 1
+            else:
+                factor = 1
+                logging.error("the type of data was not recognised. Must be IC50 or Ki. Assuming IC50 ...")
+
             if row["unit"].strip() == "uM":
-                exper_raw_dict[row["ligand"].strip()] = (
-                    row["value"].strip(),
-                    row["error"].strip(),
-                )
+                magnitude = 10**-6
             elif row["unit"].strip() == "nM":
-                exper_raw_dict[key] = (
-                    float(row["value"].strip()) / 1000,
-                    float(row["value"].strip()) / 1000,
+                magnitude = 10**-9
+            else:
+                logging.critical("only nM and uM recognised as units!")
+                magnitude = 1
+            
+            value = float(row["value"].strip()) *factor *magnitude
+
+            try:
+                err = float(row["error"].strip()) *factor *magnitude,
+            except:
+                err = None
+
+                exper_raw_dict[row["ligand"]] = (
+                    value,
+                    err
                 )
 
-        exper_val_dict = convert.exper_raw_dict_into_val_dict(exper_raw_dict, temp)
+        exper_val_dict = convert.exper_raw_dict_into_val_dict(exper_raw_dict, temperature)
 
         return exper_val_dict
-
+    
     @staticmethod
-    def exper_raw_dict_into_val_dict(exper_raw_dict, temp=300):
+    def exper_raw_dict_into_val_dict(exper_raw_dict: dict, temperature: Optional[Union[int,float]] = 300) -> dict:
         """convert raw exp data dict in uM to kcal/mol
 
         Args:
             exper_raw_dict (dict): the experimental data in uM with {ligand:(value, error)}
-            temp (int, optional): temperature for conversion. Defaults to 300.
+            temperature (int, optional): temperature for conversion. Defaults to 300.
 
         Returns:
             _type_: _description_
         """
 
         exper_raw_dict = validate.dictionary(exper_raw_dict)
-        temp = validate.is_float(temp)
+        temperature = validate.is_float(temperature)
 
         exper_val_dict = {}
 
         for key in exper_raw_dict.keys():
             lig = str(key)
 
-            exp_val = float(exper_raw_dict[key][0])
-            # convert into kcal mol
-            exp_kcal = convert.convert_M_kcal(exp_val, temp=temp)
+            exp_val = float(exper_raw_dict[key][0]) # this is in IC50 from reading in the files
+            err_val = float(exper_raw_dict[key][1])
+            # if there is no error, assign based on https://doi.org/10.1016/j.drudis.2009.01.012
+            # ie that assay error is usually 0.3 log units standard deviation pIC50 or a factor of 2 in IC50
+            if not err_val: # ie there is no provided error
+                # median standard deviation is 0.3
+                err_val = 0.3 + np.log(10) * exp_val
 
-            # convert both upper and lower error bounds for this too
-            # get average and keep this as the error
-            err = float(exper_raw_dict[key][1])
-            exp_upper = exp_val + err
-            exp_lower = exp_val - err
-            exp_upper_kcal = convert.convert_M_kcal(exp_upper, temp=temp)
-            exp_lower_kcal = convert.convert_M_kcal(exp_lower, temp=temp)
-            err_kcal = abs(exp_upper_kcal - exp_lower_kcal) / 2
+            # convert into kcal mol
+            kcal_val, kcal_err = convert.convert_M_kcal(exp_val, err_val, temperature=temperature)
 
             # add to dict
-            exper_val_dict.update({lig: (exp_kcal, err_kcal)})
+            exper_val_dict.update({lig: (kcal_val, kcal_err)})
 
         return exper_val_dict
 
     @staticmethod
     def cinnabar_file(
-        results_files, exper_val, output_file, perturbations=None, method=None
+        results_files: list, exper_val: Union[dict,str], output_file: str, perturbations: Optional[list] = None, method: Optional[str] = None
     ):
         """convert results files into format needed for cinnabar. If multiple results files, uses the average of a perturbation.
 

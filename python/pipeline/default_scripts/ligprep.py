@@ -43,7 +43,11 @@ def lig_prep(
     try:
         prot_wat = BSS.IO.readMolecules([f"{protein_file}.rst7", f"{protein_file}.prm7"])
     except:
-        prot_wat = BSS.IO.readMolecules([f"{protein_file}.top", f"{protein_file}.gro"])
+        try:
+            prot_wat = BSS.IO.readMolecules([f"{protein_file}.top", f"{protein_file}.gro"])
+        except:
+            logging.critical("could not read in parameterised protein file. Use either rst7/top with prm7/gro.")
+
 
     # load ligand, these should already be in the correct position
     try:  # sdf first
