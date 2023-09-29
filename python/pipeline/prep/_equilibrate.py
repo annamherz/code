@@ -9,7 +9,13 @@ import pipeline
 from ..utils._validate import *
 
 
-def run_process(system: BSS._SireWrappers.System, protocol: str, engine: str = "AMBER", exe: Optional[str] = None, work_dir: Optional[str] =None) -> BSS._SireWrappers.System:
+def run_process(
+    system: BSS._SireWrappers.System,
+    protocol: str,
+    engine: str = "AMBER",
+    exe: Optional[str] = None,
+    work_dir: Optional[str] = None,
+) -> BSS._SireWrappers.System:
     """Given a solvated system (BSS object) and BSS protocol, run a process workflow with either
     AMBER or GROMACS. Returns the processed system.
 
@@ -33,14 +39,16 @@ def run_process(system: BSS._SireWrappers.System, protocol: str, engine: str = "
         "SOMD": BSS.Process.Somd,
     }
 
-    func = eng_proc_dict[engine] # validate.engine(engine)
+    func = eng_proc_dict[engine]  # validate.engine(engine)
 
     if exe:
         pass
     else:
-        found_engines, found_exes = _find_md_engines(system, protocol, engine, gpu_support=True)
+        found_engines, found_exes = _find_md_engines(
+            system, protocol, engine, gpu_support=True
+        )
         exe = found_exes[0]
-    
+
     logging.info(f"using {exe} as an engine for the process...")
 
     # Create the process passing a working directory.
@@ -62,7 +70,7 @@ def run_process(system: BSS._SireWrappers.System, protocol: str, engine: str = "
     return system
 
 
-def min_prots(lig_fep: str) -> (BSS.Protocol,BSS.Protocol):
+def min_prots(lig_fep: str) -> (BSS.Protocol, BSS.Protocol):
     """define the minimisation protocols for the equilibration. For fepprep is at lambda 0.5
 
     Args:
@@ -91,7 +99,7 @@ def min_prots(lig_fep: str) -> (BSS.Protocol,BSS.Protocol):
     return protocol_min_rest, protocol_min
 
 
-def nvt_prots(lig_fep: str) -> (BSS.Protocol,BSS.Protocol,BSS.Protocol):
+def nvt_prots(lig_fep: str) -> (BSS.Protocol, BSS.Protocol, BSS.Protocol):
     """define the nvt protocols for the equilibration. For fepprep is at lambda 0.5
 
     Args:
@@ -121,10 +129,10 @@ def nvt_prots(lig_fep: str) -> (BSS.Protocol,BSS.Protocol,BSS.Protocol):
         temperature_start=0 * BSS.Units.Temperature.kelvin,
         temperature_end=temperature * BSS.Units.Temperature.kelvin,
         restraint="all",
-        timestep=1*BSS.Units.Time.femtosecond,
+        timestep=1 * BSS.Units.Time.femtosecond,
         force_constant=100,
         restart=False,
-        **args
+        **args,
     )
 
     # NVT restraining all backbone/heavy atoms
@@ -133,22 +141,22 @@ def nvt_prots(lig_fep: str) -> (BSS.Protocol,BSS.Protocol,BSS.Protocol):
         temperature=temperature * BSS.Units.Temperature.kelvin,
         restraint="heavy",
         force_constant=25,
-    #    restart=True,
-        **args
+        #    restart=True,
+        **args,
     )
     # NVT no restraints
     protocol_nvt = func(
         runtime=200 * BSS.Units.Time.picosecond,
         # temperature_start=0 * BSS.Units.Temperature.kelvin,
-        temperature=temperature * BSS.Units.Temperature.kelvin, # temperature
-      #  restart=True,
-        **args
+        temperature=temperature * BSS.Units.Temperature.kelvin,  # temperature
+        #  restart=True,
+        **args,
     )
 
     return protocol_nvt_sol, protocol_nvt_heavy, protocol_nvt
 
 
-def npt_prots(lig_fep: str) -> (BSS.Protocol,BSS.Protocol,BSS.Protocol):
+def npt_prots(lig_fep: str) -> (BSS.Protocol, BSS.Protocol, BSS.Protocol):
     """define the npt protocols for the equilibration. For fepprep is at lambda 0.5
 
     Args:
@@ -180,7 +188,7 @@ def npt_prots(lig_fep: str) -> (BSS.Protocol,BSS.Protocol,BSS.Protocol):
         restraint="all",
         force_constant=50,
         restart=False,
-        **args
+        **args,
     )
     # NPT with gradual release of restraints
     protocol_npt_heavy_lighter = func(
@@ -190,7 +198,7 @@ def npt_prots(lig_fep: str) -> (BSS.Protocol,BSS.Protocol,BSS.Protocol):
         restraint="heavy",
         force_constant=10,
         restart=False,
-        **args
+        **args,
     )
     # NPT no restraints
     protocol_npt = func(
@@ -198,7 +206,7 @@ def npt_prots(lig_fep: str) -> (BSS.Protocol,BSS.Protocol,BSS.Protocol):
         pressure=1 * BSS.Units.Pressure.atm,
         temperature=temperature * BSS.Units.Temperature.kelvin,
         restart=False,
-        **args
+        **args,
     )
 
     return protocol_npt_heavy, protocol_npt_heavy_lighter, protocol_npt
@@ -235,7 +243,7 @@ def md_prots(runtime: int, **kwargs) -> BSS.Protocol:
         pressure=1 * BSS.Units.Pressure.atm,
         temperature=temperature * BSS.Units.Temperature.kelvin,
         restart=False,
-        **args
+        **args,
     )
 
     return protocol_md
@@ -243,12 +251,12 @@ def md_prots(runtime: int, **kwargs) -> BSS.Protocol:
 
 def minimise_equilibrate_leg(
     system_solvated: BSS._SireWrappers.System,
-    engine: str ="AMBER",
+    engine: str = "AMBER",
     pmemd: Optional[str] = None,
     lig_fep: str = "ligprep",
     work_dir: Optional[str] = None,
     timestep: int = 2,
-) ->  BSS._SireWrappers.System:  # times at the top
+) -> BSS._SireWrappers.System:  # times at the top
     """minimse and equilibrate for the given leg of the pipeline
 
     Args:
@@ -287,7 +295,11 @@ def minimise_equilibrate_leg(
     if lig_fep == "ligprep":
         logging.info("minimising...")
         minimised1 = run_process(
-            system_solvated, protocol_min_rest, engine, pmemd, work_dir=f"{work_dir}/min1"
+            system_solvated,
+            protocol_min_rest,
+            engine,
+            pmemd,
+            work_dir=f"{work_dir}/min1",
         )
         minimised2 = run_process(
             minimised1, protocol_min, engine, pmemd, work_dir=f"{work_dir}/min2"
@@ -309,7 +321,11 @@ def minimise_equilibrate_leg(
             equil1, protocol_npt_heavy, engine, pmemd, work_dir=f"{work_dir}/npt1"
         )
         equil5 = run_process(
-            equil4, protocol_npt_heavy_lighter, engine, pmemd, work_dir=f"{work_dir}/npt2"
+            equil4,
+            protocol_npt_heavy_lighter,
+            engine,
+            pmemd,
+            work_dir=f"{work_dir}/npt2",
         )
         sys_equil_fin = run_process(
             equil5, protocol_npt, engine, pmemd, work_dir=f"{work_dir}/npt3"
@@ -328,8 +344,13 @@ def minimise_equilibrate_leg(
 
 
 def md_leg(
-    system_equil:  BSS._SireWrappers.System, engine: str = "AMBER", pmemd: Optional[str] = None, runtime: int = 10, work_dir: Optional[str] = None, timestep: int = 2
-) ->  BSS._SireWrappers.System:  # times at the top
+    system_equil: BSS._SireWrappers.System,
+    engine: str = "AMBER",
+    pmemd: Optional[str] = None,
+    runtime: int = 10,
+    work_dir: Optional[str] = None,
+    timestep: int = 2,
+) -> BSS._SireWrappers.System:  # times at the top
     """minimse and equilibrate for the given leg of the pipeline
 
     Args:

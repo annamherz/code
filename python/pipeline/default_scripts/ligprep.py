@@ -12,6 +12,7 @@ from pipeline.prep import *
 
 # TODO logger file and path for it. slurm log print the logging output.
 
+
 def lig_prep(
     main_dir,
     protocol_file,
@@ -27,7 +28,11 @@ def lig_prep(
             sys.exit(0)
 
     # make other folders that need to be made for the prepped files
-    folders = [f"{main_dir}/prep", f"{main_dir}/prep/pre_run", f"{main_dir}/prep/solvation"]
+    folders = [
+        f"{main_dir}/prep",
+        f"{main_dir}/prep/pre_run",
+        f"{main_dir}/prep/solvation",
+    ]
     for folder in folders:
         if not os.path.exists(folder):
             os.mkdir(folder)
@@ -41,13 +46,18 @@ def lig_prep(
     # load, solvate and run the systems.
     # load the protein, this was paramaterised during the setup stage.
     try:
-        prot_wat = BSS.IO.readMolecules([f"{protein_file}.rst7", f"{protein_file}.prm7"])
+        prot_wat = BSS.IO.readMolecules(
+            [f"{protein_file}.rst7", f"{protein_file}.prm7"]
+        )
     except:
         try:
-            prot_wat = BSS.IO.readMolecules([f"{protein_file}.top", f"{protein_file}.gro"])
+            prot_wat = BSS.IO.readMolecules(
+                [f"{protein_file}.top", f"{protein_file}.gro"]
+            )
         except:
-            logging.critical("could not read in parameterised protein file. Use either rst7/top with prm7/gro.")
-
+            logging.critical(
+                "could not read in parameterised protein file. Use either rst7/top with prm7/gro."
+            )
 
     # load ligand, these should already be in the correct position
     try:  # sdf first
@@ -75,7 +85,7 @@ def lig_prep(
             protocol.box_type(),
             protocol.box_edges(),
             protocol.box_edges_unit(),
-            work_dir=f"{main_dir}/prep/solvation/{lig_name}"
+            work_dir=f"{main_dir}/prep/solvation/{lig_name}",
         )
 
         # saving pre runs
@@ -131,7 +141,6 @@ def check_arguments(args):
     else:
         protocol_file = str(input("what is the path to the protocol file?: ").strip())
 
-
     return main_folder, protocol_file, protein_path, ligands_folder, lig_name
 
 
@@ -182,9 +191,7 @@ def main():
 
     engine = "AMBER"
 
-    lig_prep(
-        main_dir, protocol_file, protein_file, ligands_folder, lig_name, engine
-    )
+    lig_prep(main_dir, protocol_file, protein_file, ligands_folder, lig_name, engine)
 
 
 if __name__ == "__main__":

@@ -40,7 +40,7 @@ class stats_engines(plotting_engines):
 
         # make stats dict for each name and each stat
         self.statistics_dict = {}
-        for pert_val in ["pert", "val","bound","free"]:
+        for pert_val in ["pert", "val", "bound", "free"]:
             self.statistics_dict[pert_val] = {}
             for namex in self.names_list:
                 self.statistics_dict[pert_val][namex] = {}
@@ -51,14 +51,14 @@ class stats_engines(plotting_engines):
 
     def _get_x_y(
         self,
-        pert_val=None,
-        data_x=None,
-        data_y=None,
-        x=None,
-        y=None,
-        xerr=None,
-        yerr=None,
-    ):
+        pert_val: str = None,
+        data_x: str = None,
+        data_y: str = None,
+        x: Optional[list] = None,
+        y: Optional[list] = None,
+        xerr: Optional[list] = None,
+        yerr: Optional[list] = None,
+    ) -> tuple:
         """get the x and y data from the dataframes from the inherited plotting object.
 
         Args:
@@ -102,15 +102,21 @@ class stats_engines(plotting_engines):
         return x, y, xerr, yerr
 
     @staticmethod
-    def compute_stats(x=None, y=None, xerr=None, yerr=None, statistic=None):
+    def compute_stats(
+        x: list = None,
+        y: list = None,
+        xerr: Optional[list] = None,
+        yerr: Optional[list] = None,
+        statistic: str = None,
+    ) -> tuple:
         """static method for computing various statistics.
 
         Args:
-            x (list, optional): ordered list of x data. Defaults to None.
-            y (list, optional): ordered list of y data. Defaults to None.
+            x (list): ordered list of x data. Defaults to None.
+            y (list): ordered list of y data. Defaults to None.
             xerr (list, optional): ordered list of xerr data. Defaults to None.
             yerr (list, optional): ordered list of yerr data. Defaults to None.
-            statistic (str, optional): name of statistic to use. Defaults to None.
+            statistic (str): name of statistic to use. Defaults to None.
 
         Raises:
             ValueError: statistic must be an available statistic
@@ -135,15 +141,15 @@ class stats_engines(plotting_engines):
 
     def _compute_stats(
         self,
-        pert_val=None,
-        data_x=None,
-        data_y=None,
-        statistic=None,
-        x=None,
-        y=None,
-        xerr=None,
-        yerr=None,
-    ):
+        pert_val: str = None,
+        data_x: str = None,
+        data_y: str = None,
+        x: Optional[list] = None,
+        y: Optional[list] = None,
+        xerr: Optional[list] = None,
+        yerr: Optional[list] = None,
+        statistic: str = None,
+    ) -> tuple:
         """internal to get data from df and then pass to static method
 
         Args:
@@ -167,7 +173,7 @@ class stats_engines(plotting_engines):
 
         return values
 
-    def compute_statistics(self, names=None):
+    def compute_statistics(self, names: Optional[list] = None) -> dict:
         """compute all statistics compared to experimental values.
 
         Args:
@@ -201,14 +207,16 @@ class stats_engines(plotting_engines):
 
         return self.statistics_dict
 
-    def _compute_base(self, pert_val=None, y=None, x=None, statistic=None):
+    def _compute_base(
+        self, pert_val: str = None, y: str = None, x: str = None, statistic: str = None
+    ) -> tuple:
         """base function to pass data to cinnabar stats compute function.
 
         Args:
-            pert_val (str, optional): whether for 'pert' or 'val'. Defaults to None.
-            y (str, optional): name of y data. Defaults to None.
-            x (str, optional): name of x data. Defaults to None.
-            statistic (str, optional): statistic to calculate. Defaults to None.
+            pert_val (str): whether for 'pert' or 'val'. Defaults to None.
+            y (str): name of y data. Defaults to None.
+            x (str): name of x data. Defaults to None.
+            statistic (str): statistic to calculate. Defaults to None.
 
         Raises:
             ValueError: must be one of the available statistics
@@ -223,13 +231,17 @@ class stats_engines(plotting_engines):
         pert_val = validate.pert_val(pert_val)
 
         if statistic not in stats_engines.available_statistics():
-            raise ValueError(f"please use one of the statistics in {stats_engines.available_statistics()}, not {statistic}")
+            raise ValueError(
+                f"please use one of the statistics in {stats_engines.available_statistics()}, not {statistic}"
+            )
 
         values = self._compute_stats(pert_val, data_x=x, data_y=y, statistic=statistic)
 
         return values
 
-    def compute_mue(self, pert_val=None, y=None, x="experimental"):
+    def compute_mue(
+        self, pert_val: str = None, y: str = None, x: str = "experimental"
+    ) -> tuple:
         """compute MUE for two names in names list.
 
         Args:
@@ -245,7 +257,9 @@ class stats_engines(plotting_engines):
         self.statistics_dict[pert_val][x][y]["MUE"] = values
         return values
 
-    def compute_rmse(self, pert_val=None, y=None, x="experimental"):
+    def compute_rmse(
+        self, pert_val: str = None, y: str = None, x: str = "experimental"
+    ) -> tuple:
         """compute RMSE for two names in names list.
 
         Args:
@@ -261,7 +275,9 @@ class stats_engines(plotting_engines):
         self.statistics_dict[pert_val][x][y]["RMSE"] = values
         return values
 
-    def compute_r2(self, pert_val=None, y=None, x="experimental"):
+    def compute_r2(
+        self, pert_val: str = None, y: str = None, x: str = "experimental"
+    ) -> tuple:
         """compute R2 for two names in names list.
 
         Args:
@@ -277,7 +293,9 @@ class stats_engines(plotting_engines):
         self.statistics_dict[pert_val][x][y]["R2"] = values
         return values
 
-    def compute_rho(self, pert_val=None, y=None, x="experimental"):
+    def compute_rho(
+        self, pert_val: str = None, y: str = None, x: str = "experimental"
+    ) -> tuple:
         """compute rho for two names in names list.
 
         Args:
@@ -293,7 +311,9 @@ class stats_engines(plotting_engines):
         self.statistics_dict[pert_val][x][y]["rho"] = values
         return values
 
-    def compute_rae(self, pert_val=None, y=None, x="experimental"):
+    def compute_rae(
+        self, pert_val: str = None, y: str = None, x: str = "experimental"
+    ) -> tuple:
         """compute RAE for two names in names list.
 
         Args:
@@ -309,7 +329,9 @@ class stats_engines(plotting_engines):
         self.statistics_dict[pert_val][x][y]["RAE"] = values
         return values
 
-    def compute_ktau(self, pert_val=None, y=None, x="experimental"):
+    def compute_ktau(
+        self, pert_val: str = None, y: str = None, x: str = "experimental"
+    ) -> tuple:
         """compute KTAU for two names in names list.
 
         Args:

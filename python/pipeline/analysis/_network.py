@@ -39,7 +39,11 @@ def get_ligands_from_perts(perturbations: list) -> list:
     return ligands
 
 
-def get_info_network(net_file: Optional[str] = None, results_files: Optional[list] = None, extra_options: Optional[dict] = None) -> tuple:
+def get_info_network(
+    net_file: Optional[str] = None,
+    results_files: Optional[list] = None,
+    extra_options: Optional[dict] = None,
+) -> tuple:
     """get information about the network from the network file
 
     Args:
@@ -72,7 +76,9 @@ def get_info_network(net_file: Optional[str] = None, results_files: Optional[lis
                 validate.file_path(file)
         except Exception as e:
             logging.error(e)
-            logging.error("cant use network or results files, please provide one or the other.")
+            logging.error(
+                "cant use network or results files, please provide one or the other."
+            )
             return (None, None)
 
     # set extra_options variables as defaults
@@ -107,10 +113,7 @@ def get_info_network(net_file: Optional[str] = None, results_files: Optional[lis
                 else:
                     use_line = True
 
-                if (
-                    "lig0" in line
-                    or "lig_0" in line
-                ):
+                if "lig0" in line or "lig_0" in line:
                     use_line = False
 
                 if use_line:
@@ -138,10 +141,7 @@ def get_info_network(net_file: Optional[str] = None, results_files: Optional[lis
                     else:
                         use_line = True
 
-                    if (
-                        "lig0" in line
-                        or "lig_0" in line
-                    ):
+                    if "lig0" in line or "lig_0" in line:
                         use_line = False
 
                     if use_line:
@@ -181,7 +181,13 @@ def get_info_network_from_dict(res_dict: dict) -> tuple:
 
 
 class net_graph:
-    def __init__(self, ligands: list, perturbations: list, file_dir: Optional[str] = None, ligands_folder: Optional[str] = None):
+    def __init__(
+        self,
+        ligands: list,
+        perturbations: list,
+        file_dir: Optional[str] = None,
+        ligands_folder: Optional[str] = None,
+    ):
         """_summary_
 
         Args:
@@ -360,7 +366,7 @@ class net_graph:
 
         return cycle_closures
 
-    def add_weight(self, input_data: Union[dict,str]):
+    def add_weight(self, input_data: Union[dict, str]):
         """add weights to the network x graph for the edges and each perturbation.
 
         Args:

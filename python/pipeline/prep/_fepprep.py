@@ -24,8 +24,9 @@ from scipy.constants import physical_constants
 hydrogen_amu = proton_mass / (physical_constants["atomic mass constant"][0])
 
 
-def check_hmr(system:  BSS._SireWrappers.System, protocol:  BSS.Protocol, engine: str) ->  BSS._SireWrappers.System:
-    
+def check_hmr(
+    system: BSS._SireWrappers.System, protocol: BSS.Protocol, engine: str
+) -> BSS._SireWrappers.System:
     # from bss code
 
     system = validate.system(system)
@@ -131,15 +132,18 @@ def check_hmr(system:  BSS._SireWrappers.System, protocol:  BSS.Protocol, engine
 
     return system
 
+
 class fepprep:
     """class for fepprep
     makes all the protocols and writes the folders
     """
 
-    def __init__(self, free_system:  Optional[BSS._SireWrappers.System] = None,
-                 bound_system:  Optional[BSS._SireWrappers.System] = None,
-                 protocol:  Optional[str] = None # TODO fix
-                 ):
+    def __init__(
+        self,
+        free_system: Optional[BSS._SireWrappers.System] = None,
+        bound_system: Optional[BSS._SireWrappers.System] = None,
+        protocol: Optional[str] = None,  # TODO fix
+    ):
         # instantiate the class with the system and pipeline_protocol
         if free_system:
             self._merge_free_system = validate.system(free_system).copy()
@@ -165,7 +169,12 @@ class fepprep:
         # generate the BSS protocols from the pipeline protocol
         fepprep._generate_bss_protocols(self)
 
-    def add_system(self, system: BSS._SireWrappers.System, free_bound: Optional[str] = None, start_end: Optional[str] = None):
+    def add_system(
+        self,
+        system: BSS._SireWrappers.System,
+        free_bound: Optional[str] = None,
+        start_end: Optional[str] = None,
+    ):
         """add a merged system to the fepprep and which state it is meant to represent;
         either the free/bound leg or the state at start(lambda 0.0)/end(lambda 1.0)
 
@@ -193,7 +202,9 @@ class fepprep:
         if free_bound == "bound" and start_end == "end":
             self._bound_system_1 = validate.system(system).copy()
 
-    def merge_systems(self, align_to: str = "lig0", **kwargs) -> (BSS._SireWrappers.System,BSS._SireWrappers.System):
+    def merge_systems(
+        self, align_to: str = "lig0", **kwargs
+    ) -> (BSS._SireWrappers.System, BSS._SireWrappers.System):
         """merge the systems based on whether aligning to the lambda 0.0 coordinates or the lmabda 1.0 coordinates.
 
         Args:
@@ -239,8 +250,10 @@ class fepprep:
                 self._bound_system_0, self._bound_system_1, **kwarg_dict
             )
         except:
-            logging.error("could not merge with the existing protocol. Will try merging with the allow ring breaking and allow ring size change arguments set to True...")
-            update_kwarg_dict = {"ALLOWRINGBREAKING":True, "ALLOWRINGSIZECHANGE":True}
+            logging.error(
+                "could not merge with the existing protocol. Will try merging with the allow ring breaking and allow ring size change arguments set to True..."
+            )
+            update_kwarg_dict = {"ALLOWRINGBREAKING": True, "ALLOWRINGSIZECHANGE": True}
             kwarg_dict.update(update_kwarg_dict)
             free_system = merge.merge_system(
                 self._free_system_0, self._free_system_1, **kwarg_dict
@@ -263,11 +276,11 @@ class fepprep:
 
         if protocol.engine() == "AMBER":
             # for amber, this will be 1/value to give 2 for the collision frequency in ps-1
-            thermostat_time_constant=BSS.Types.Time(0.5, "picosecond")
+            thermostat_time_constant = BSS.Types.Time(0.5, "picosecond")
             eq_timestep = 2
         elif protocol.engine() == "GROMACS":
             # in gromacs this is the tau-t in ps
-            thermostat_time_constant=BSS.Types.Time(2, "picosecond")
+            thermostat_time_constant = BSS.Types.Time(2, "picosecond")
             eq_timestep = protocol.timestep()
 
         if protocol.engine() == "AMBER" or protocol.engine() == "GROMACS":
@@ -288,7 +301,6 @@ class fepprep:
                 restart_interval=restart_interval,
                 hmr_factor=protocol.hmr_factor(),
                 thermostat_time_constant=thermostat_time_constant,
-
             )
             eq_protocol = BSS.Protocol.FreeEnergyEquilibration(
                 timestep=eq_timestep * protocol.timestep_unit(),
@@ -342,7 +354,7 @@ class fepprep:
         self._eq_protocol = eq_protocol
         self._freenrg_protocol = freenrg_protocol
 
-    def prep_system_middle(self, pmemd_path, work_dir=None):
+    def prep_system_middle(self, pmemd_path: str, work_dir: Optional[str] = None):
         """trying to prep the system at lambda 0.5 (not very robust currently)
 
         Args:
@@ -373,7 +385,13 @@ class fepprep:
 
         return self._merge_free_system, self._merge_bound_system
 
-    def _generate_folders(self, system_free, system_bound, work_dir, rep=0):
+    def _generate_folders(
+        self,
+        system_free: BSS._SireWrappers.System,
+        system_bound: BSS._SireWrappers.System,
+        work_dir: str,
+        rep: int = 0,
+    ):
         """generating the folders for the free and the bound system
 
         Args:
@@ -389,12 +407,10 @@ class fepprep:
         freenrg_protocol = self._freenrg_protocol
 
         logging.info(f"setting up FEP run in {work_dir}...")
-           
 
         if protocol.engine() == "AMBER" or protocol.engine() == "GROMACS":
             # set up for each the bound and the free leg
             for leg, system in zip(["bound", "free"], [system_bound, system_free]):
-
                 min_extra_options = {}
                 heat_extra_options = {}
                 eq_extra_options = {}
@@ -421,7 +437,7 @@ class fepprep:
                     work_dir=f"{work_dir}/{leg}_{rep}/min",
                     extra_options=min_extra_options,
                     ignore_warnings=True,
-                    explicit_dummies=True, # set True for AMBER, does not affect the other engines
+                    explicit_dummies=True,  # set True for AMBER, does not affect the other engines
                 )
 
                 BSS.FreeEnergy.Relative(
@@ -431,7 +447,7 @@ class fepprep:
                     work_dir=f"{work_dir}/{leg}_{rep}/heat",
                     extra_options=heat_extra_options,
                     ignore_warnings=True,
-                    explicit_dummies=True, # set True for AMBER, does not affect the other engines
+                    explicit_dummies=True,  # set True for AMBER, does not affect the other engines
                 )
 
                 BSS.FreeEnergy.Relative(
@@ -441,7 +457,7 @@ class fepprep:
                     work_dir=f"{work_dir}/{leg}_{rep}/eq",
                     extra_options=eq_extra_options,
                     ignore_warnings=True,
-                    explicit_dummies=True, # set True for AMBER, does not affect the other engines
+                    explicit_dummies=True,  # set True for AMBER, does not affect the other engines
                 )
 
                 BSS.FreeEnergy.Relative(
@@ -451,7 +467,7 @@ class fepprep:
                     work_dir=f"{work_dir}/{leg}_{rep}",
                     extra_options=prod_extra_options,
                     ignore_warnings=True,
-                    explicit_dummies=True, # set True for AMBER, does not affect the other engines
+                    explicit_dummies=True,  # set True for AMBER, does not affect the other engines
                 )
 
         if protocol.engine() == "SOMD":
@@ -489,7 +505,7 @@ class fepprep:
                     ignore_warnings=True,
                 )
 
-    def generate_folders(self, work_dir, **kwargs):
+    def generate_folders(self, work_dir: str, **kwargs):
         """generate the folders for the RBFE run.
 
         Args:

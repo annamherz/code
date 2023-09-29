@@ -4,6 +4,8 @@ import BioSimSpace as BSS
 import shutil
 from collections import OrderedDict
 
+from typing import Union, Optional
+
 from ..utils._validate import *
 from ..utils._files import *
 from ..utils._files import write_network as _write_network
@@ -34,7 +36,7 @@ class initialise_pipeline:
         self._is_ligands_setup = False
         self._is_network_setup = False
 
-    def ligands_folder(self, folder_path=None):
+    def ligands_folder(self, folder_path: str = None) -> str:
         """set the folder that contains the ligand files if passed, else state the current ligands folder.
 
         Args:
@@ -63,7 +65,9 @@ class initialise_pipeline:
 
         return self._ligands_folder
 
-    def main_folder(self, folder_path=None, create_exec_folder=True):
+    def main_folder(
+        self, folder_path: str = None, create_exec_folder: bool = True
+    ) -> str:
         """create the main folder path for the pipeline, else return its location.
 
         Args:
@@ -86,7 +90,7 @@ class initialise_pipeline:
 
         return self._main_folder
 
-    def exec_folder(self, folder_path=None):
+    def exec_folder(self, folder_path: str = None) -> str:
         """create the execution model folder path for the pipeline, else return its location.
 
         Args:
@@ -103,7 +107,7 @@ class initialise_pipeline:
 
         return self._exec_folder
 
-    def protein_path(self, protein_path=None):
+    def protein_path(self, protein_path: str = None) -> str:
         """set the protein path for the parameterised protein used for the pipeline.
 
         Args:
@@ -136,7 +140,7 @@ class initialise_pipeline:
         return self._protein_path
 
     @staticmethod
-    def _setup_ligands(path_to_ligands, file_name):
+    def _setup_ligands(path_to_ligands: str, file_name: str) -> dict:
         """setup the ligands based on the folder.
 
         Args:
@@ -153,7 +157,6 @@ class initialise_pipeline:
         ligands_dict = OrderedDict()
 
         for filepath in ligand_files:
-
             lig = BSS.IO.readMolecules(filepath)[0]
             lig_name = filepath.split("/")[-1].replace(".sdf", "")
 
@@ -168,7 +171,7 @@ class initialise_pipeline:
 
         return ligands_dict
 
-    def setup_ligands(self, file_name=None):
+    def setup_ligands(self, file_name: str = None):
         """setup the ligands
 
         Args:
@@ -206,7 +209,7 @@ class initialise_pipeline:
 
         self._is_ligands_setup = True
 
-    def remove_ligand(self, lig):
+    def remove_ligand(self, lig: str):
         """remove a ligand from the ligands for the pipeline.
 
         Args:
@@ -219,7 +222,9 @@ class initialise_pipeline:
                 del self.ligands_dict[lig]
 
             # write ligands file again as updted
-            write_ligands(list(self.ligands_dict.keys()), f"{self._exec_folder}/ligands.dat")
+            write_ligands(
+                list(self.ligands_dict.keys()), f"{self._exec_folder}/ligands.dat"
+            )
 
         else:
             print(
@@ -227,7 +232,9 @@ class initialise_pipeline:
             )
 
     @staticmethod
-    def _setup_network(ligands_dict, folder, links_file=None):
+    def _setup_network(
+        ligands_dict: dict, folder: str, links_file: Optional[str] = None
+    ) -> dict:
         """setup a network
 
         Args:
@@ -261,7 +268,7 @@ class initialise_pipeline:
 
         return pert_network_dict
 
-    def setup_network(self, folder="LOMAP", links_file=None):
+    def setup_network(self, folder: str = "LOMAP", links_file: str = None):
         """setup the network for the ligands, write the scores used for each perturbation and get the perturbations.
 
         Args:
@@ -274,10 +281,8 @@ class initialise_pipeline:
             return
 
         pert_network_dict = initialise_pipeline._setup_network(
-            self.ligands_dict,
-            f"{self.exec_folder()}/{folder}",
-            links_file=links_file
-            )
+            self.ligands_dict, f"{self.exec_folder()}/{folder}", links_file=links_file
+        )
 
         self.pert_network_dict = pert_network_dict
         self.perturbations = [f"{key[0]}~{key[1]}" for key in pert_network_dict.keys()]
@@ -285,7 +290,7 @@ class initialise_pipeline:
         self._is_network_setup = True
         self.write_network()
 
-    def remove_perturbation(self, pert):
+    def remove_perturbation(self, pert: str):
         """remove a perturbation from the network for the pipeline.
 
         Args:
@@ -304,7 +309,7 @@ class initialise_pipeline:
         else:
             print("please setup network first before removing any perturbations")
 
-    def add_perturbation(self, pert, links_file=None):
+    def add_perturbation(self, pert: str, links_file: Optional[str] = None):
         """add a perturbation from the network for the pipeline. Can use a links file for the score.
 
         Args:
@@ -342,7 +347,7 @@ class initialise_pipeline:
         self.protocol.reverse(reverse)
         self.protocol.rewrite_protocol(file_path=f"{self.exec_folder()}/protocol.dat")
 
-    def draw_network(self, folder=None):
+    def draw_network(self, folder: Optional[str] = None):
         """draw the network.
 
         Args:
@@ -359,7 +364,9 @@ class initialise_pipeline:
         graph = net_graph(list(self.ligands_dict.keys()), self.perturbations)
         graph.draw_graph(file_dir=folder)
 
-    def setup_protocols(self, protocol_dictionary=None, ana_protocol_dictionary=None):
+    def setup_protocols(
+        self, protocol_dictionary: dict = None, ana_protocol_dictionary: dict = None
+    ):
         """set default protocols for the pipeline, consider any passed dictionaries.
 
         Args:
@@ -379,7 +386,7 @@ class initialise_pipeline:
         )
         self.analysis_protocol = ana_protocol
 
-    def add_pipeline_protocol(self, protocol):
+    def add_pipeline_protocol(self, protocol: pipeline_protocol):
         """add a pipeline protocol object.
 
         Args:
@@ -389,7 +396,7 @@ class initialise_pipeline:
         self.protocol = validate.pipeline_protocol(protocol)
         self.protocol.rewrite_protocol(file_path=f"{self.exec_folder()}/protocol.dat")
 
-    def add_analysis_protocol(self, protocol):
+    def add_analysis_protocol(self, protocol: analysis_protocol):
         """add an analysis protocol object.
 
         Args:
@@ -401,7 +408,7 @@ class initialise_pipeline:
             file_path=f"{self.exec_folder()}/analysis_protocol.dat"
         )
 
-    def write_network(self, file_path=None):
+    def write_network(self, file_path: str = None):
         """write the network file for the pipeline.
 
         Args:
@@ -419,7 +426,7 @@ class initialise_pipeline:
         else:
             print("please setup network first before writing the network file.")
 
-    def add_source_file(self, file):
+    def add_source_file(self, file: str):
         """source file that has info for modules, conda paths, MD engines, etc.
 
         Args:
@@ -430,12 +437,17 @@ class initialise_pipeline:
 
     def write_run_all(self):
         """write the run all file needed to run the pipeline. This file should be checked manually."""
-        
+
         # copy over the files
         print("copying default scripts...")
-        shutil.copytree(f"{pipeline.__file__.split('__init__.py')[0]}default_scripts",f"{self._main_folder}/scripts")
+        shutil.copytree(
+            f"{pipeline.__file__.split('__init__.py')[0]}default_scripts",
+            f"{self._main_folder}/scripts",
+        )
         if self.source_file:
-            shutil.copyfile(self.source_file, f"{self._main_folder}/scripts/source_file.sh")
+            shutil.copyfile(
+                self.source_file, f"{self._main_folder}/scripts/source_file.sh"
+            )
         else:
             print("there is no source file. this will create an issue.")
 
@@ -508,6 +520,11 @@ echo "ligand prep jobid is $jidlig"
 jidfep=$(sbatch --dependency=afterany:${{jidlig}} --parsable --array=0-$((${{#trans_array[@]}}-1)) $scripts_dir/run_fepprep_slurm.sh)
 echo "FEP prep jobid is $jidfep"
 
+# incase rewritten during fepprep, clean protocol file again
+cp $prot_file $prot_file\_0
+sed 's/\r$//' $prot_file\_0 > $prot_file
+rm $prot_file\_0
+
 # Production runs and analysis for the transformation
 for i in "${{!trans_array[@]}}"; do
 jidprod=$(sbatch --dependency=afterany:${{jidfep}} --parsable --array=0-$((${{win_array[i]}}-1)) $scripts_dir/run_production_slurm.sh ${{trans_array[i]}}$name ${{eng_array[i]}} ${{win_array[i]}})
@@ -519,4 +536,4 @@ echo "Analysis jobid for ${{trans_array[i]}}, ${{eng_array[i]}} is $jidana"
 done        
 
 """
-                )
+            )

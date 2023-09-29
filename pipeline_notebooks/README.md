@@ -8,10 +8,10 @@ alternatively:
 and it will also ask for the above folder/file paths.
 
 Additional input that will be asked for during setup:
-Sampling time (per window) - Q can be excluded?
+Sampling time (per window)
 MD engines to use
-Whether HMR should be applied - Q can be excluded?
-How many repeats to run - Q can be excluded?
+Whether HMR should be applied
+How many repeats to run
 Whether to save the trajectories
 
 Then, the network can be edited as follows:
@@ -51,6 +51,33 @@ run_all_slurm.sh
 
 The run_* files in the scripts folder need to be adjusted for the slurm scheduler. - Q incl this in the setup ? can change for branch in 
 
-running the run_all_slurm.sh should start all the runs. - Q keep analysis and extract seperately? as not using GPUs
+The first job, ligprep, parameterises the ligands, adds them to the protein system, solvates and equilibrates. It makes the prep folder of all the prepped ligands, which also contains folders where the equilibration files are kept. The ligand files are named sys for protein+ligand and lig for just the solvated ligand.
 
-The results can then be computed using the analyse_pipeline.py, but it is better to use the notebook (analysis_notebook.ipynb). - Q I have used branch of cinnabar, but can also find the actual version?
+Fepprep creates all the input files for the runs. This includes merging the ligands and generating the files in the outputs folder.
+
+Prod(uction) executes a bash script for running all the AFE runs with their respective MD engines. The allocation is one lambda window per GPU. 
+
+Extract creates the outputs_extracted folder. This is incase the trajectory files as a result of the production runs need to be moved to alternative storage locations. The folder structure is the same as for the outputs folder. A config file for lambda_0.0 for each part of the run is also copied over to keep track of any passed settings.
+
+Ana(lysis) analyses the outputs. This creates a results folder in the outputs_extracted folder, which contains the final_summary_*, free_repeat_*, bound_repeat_*, freenrg_repeat_* files, extension depending on engine and analysis method. These are needed later for the analysis notebook. By default, pickles are also saved of the analysed objects in a pickle folder.
+
+running the run_all_slurm.sh should start all the runs.
+
+The final directory structure should be:
+
+main folder
+ |_ execution_model
+    |_ ligands file, network file, protocol files
+ |_ prep
+    |_ prepped ligand files
+ |_ outputs
+    |_ ENGINE
+        |_ lig_0~lig_1
+            |_ bound_0
+            |_ free_0
+ |_ outputs_extracted
+    |_ ENGINE ....
+    |_ results
+ |_ scripts
+
+The results can then be computed using the analyse_pipeline.py, but it is better to use the notebook (analysis_notebook.ipynb).

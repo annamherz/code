@@ -4,13 +4,15 @@ import numpy as np
 import pandas as pd
 import logging
 
+from typing import Union, Optional
+
 from ._validate import *
 from ..analysis._network import get_info_network
 
 csv.QUOTE_NONE
 
 
-def write_analysis_file(analysis, results_dir, method=None):
+def write_analysis_file(analysis, results_dir: str, method=None):
     """write the analysis file for the analysis object
 
     Args:
@@ -208,7 +210,14 @@ def write_analysis_file(analysis, results_dir, method=None):
                     writer.writerow(data_point)
 
 
-def write_atom_mappings(lig_0, lig_1, ligand_0, ligand_1, mapping, output_file):
+def write_atom_mappings(
+    lig_0: str,
+    lig_1: str,
+    ligand_0: list,
+    ligand_1: list,
+    mapping: dict,
+    output_file: str,
+):
     """write the atom mappings previously found using merge.atom_mappings() to a file.
 
     Args:
@@ -250,8 +259,12 @@ def write_atom_mappings(lig_0, lig_1, ligand_0, ligand_1, mapping, output_file):
 
 
 def write_modified_results_files(
-    results_files, perturbations=None, name=None, output_folder=None, **kwargs
-):
+    results_files: list,
+    perturbations: Optional[list] = None,
+    name: Optional[str] = None,
+    output_folder: Optional[str] = None,
+    **kwargs,
+) -> list:
     """write modified results files that contain only specific perturbations.
     In the extra options, can specify 'engine' or 'engines'.
 
@@ -356,7 +369,7 @@ def write_modified_results_files(
     return mod_results_files
 
 
-def write_protocol(query_dict, file_path):
+def write_protocol(query_dict: dict, file_path: str):
     """write the protocol dictionary as a file for the pipeline scripts.
 
     Args:
@@ -368,12 +381,12 @@ def write_protocol(query_dict, file_path):
     query_dict = validate.dictionary(query_dict)
 
     # write in the style needed for the protocol
-    with open(file, "w", encoding="utf-8", newline='\n') as protocol_file:
+    with open(file, "w", encoding="utf-8", newline="\n") as protocol_file:
         writer = csv.writer(protocol_file, delimiter=";")
         for query in query_dict.keys():
             if query == "config options":
                 pass
-            elif not query_dict[query]: # do not write if None value
+            elif not query_dict[query]:  # do not write if None value
                 pass
             elif isinstance(query_dict[query], list):
                 value = ",".join(query_dict[query])
@@ -385,7 +398,7 @@ def write_protocol(query_dict, file_path):
                 writer.writerow([f"{query} = {query_dict[query]}"])
 
 
-def write_ligands(ligand_names, file_path):
+def write_ligands(ligand_names: list, file_path: str):
     """write the ligands to a file for the pipeline scripts.
 
     Args:
@@ -396,13 +409,13 @@ def write_ligands(ligand_names, file_path):
     ligand_names = validate.is_list(ligand_names)
     file = validate.string(file_path)
 
-    with open(file, "w", encoding="utf-8", newline='\n') as ligands_file:
+    with open(file, "w", encoding="utf-8", newline="\n") as ligands_file:
         writer = csv.writer(ligands_file)
         for lig in ligand_names:
             writer.writerow([lig])
 
 
-def write_lomap_scores(pert_network_dict, file_path):
+def write_lomap_scores(pert_network_dict: dict, file_path: str):
     """write the lomap scores to a file.
 
     Args:
@@ -413,7 +426,7 @@ def write_lomap_scores(pert_network_dict, file_path):
     file = validate.string(file_path)
     pert_network_dict = validate.dictionary(pert_network_dict)
 
-    with open(file, "w", encoding="utf-8", newline='\n') as scores_file:
+    with open(file, "w", encoding="utf-8", newline="\n") as scores_file:
         writer = csv.writer(scores_file)
 
         for transf in sorted(pert_network_dict.keys()):
@@ -421,7 +434,7 @@ def write_lomap_scores(pert_network_dict, file_path):
             writer.writerow([transf[0], transf[1], score])
 
 
-def write_network(pert_network_dict, protocol, file_path):
+def write_network(pert_network_dict: dict, protocol, file_path: str):
     """write the network to a file using the protocol for the pipeline.
 
     Args:
@@ -438,11 +451,10 @@ def write_network(pert_network_dict, protocol, file_path):
     # write perts file. Base the lambda schedule on the file generated in the previous cell.
     np.set_printoptions(formatter={"float": "{: .4f}".format})
 
-    with open(file, "w", encoding="utf-8", newline='\n') as network_file:
+    with open(file, "w", encoding="utf-8", newline="\n") as network_file:
         writer = csv.writer(network_file, delimiter=" ")
 
         for pert, lomap_score in pert_network_dict.items():
-
             num_lambda = protocol.num_lambda()  # same no lamdda windows for all
 
             # given the number of allocated lambda windows, generate an array for parsing downstream.
@@ -462,4 +474,6 @@ def write_network(pert_network_dict, protocol, file_path):
                 writer.writerow([pert[0], pert[1], len(lam_array_np), lam_array, eng])
 
                 if protocol.reverse():
-                    writer.writerow([pert[1], pert[0], len(lam_array_np), lam_array, eng])
+                    writer.writerow(
+                        [pert[1], pert[0], len(lam_array_np), lam_array, eng]
+                    )

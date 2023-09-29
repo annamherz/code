@@ -18,7 +18,11 @@ from ._dictionaries import *
 
 
 class plotting_engines:
-    def __init__(self, analysis_object=None, output_folder: str = None, verbose: bool = False):
+    def __init__(
+        self,
+        analysis_object=None,
+        output_folder: str = None,
+    ):
         """for plotting analysis network results.
 
         Args:
@@ -28,8 +32,6 @@ class plotting_engines:
         Raises:
             ValueError: must provide an analysis network object.
         """
-
-        self.is_verbose(verbose)
 
         if analysis_object:
             self._analysis_object = analysis_object
@@ -57,12 +59,6 @@ class plotting_engines:
 
         # convert the dictionaries into dataframes for plotting
         self._analysis_dicts_to_df()
-
-    def is_verbose(self, value: bool) -> bool:
-        verbose = validate.boolean(value)
-        self._is_verbose = verbose
-
-        return verbose
 
     def analysis_obj_into_format(self):
         """turn the passed pipeline.analysis.analysis_network object into format for this class"""
@@ -336,7 +332,6 @@ class plotting_engines:
                     x_name,
                     "calc",
                     self.values_dict[x_name][which_list],
-                    verbose=self._is_verbose,
                 )
 
                 freenrg_df_dict[name][pv] = freenrg_df
@@ -351,7 +346,13 @@ class plotting_engines:
         return freenrg_df_dict
 
     @staticmethod
-    def match_dicts_to_df(dict_x: dict, dict_y: dict, x_name: str, y_name: str, values: Optional[list] = None):
+    def match_dicts_to_df(
+        dict_x: dict,
+        dict_y: dict,
+        x_name: str,
+        y_name: str,
+        values: Optional[list] = None,
+    ):
         """match two dictionaries into one dataframe (to be used for plotting)
 
         Args:
@@ -396,7 +397,9 @@ class plotting_engines:
         return freenrg_df
 
     @staticmethod
-    def _prune_perturbations(df: pd.DataFrame, perturbations: list, remove: bool = False) -> pd.DataFrame:
+    def _prune_perturbations(
+        df: pd.DataFrame, perturbations: list, remove: bool = False
+    ) -> pd.DataFrame:
         """keep or remove perturbations in list from the dataframe
 
         Args:
@@ -441,7 +444,9 @@ class plotting_engines:
         return df
 
     @staticmethod
-    def set_colours(colour_dict: Optional[dict] = None, other_results_names: Optional[list] = None) -> dict:
+    def set_colours(
+        colour_dict: Optional[dict] = None, other_results_names: Optional[list] = None
+    ) -> dict:
         """set the colours of the bars or scatter plots.
 
         Args:
@@ -667,7 +672,13 @@ class plotting_engines:
             include_y_error,
         )
 
-    def bar(self, pert_val: str = None, names: Optional[list] = None, values: Optional[list] = None, **kwargs):
+    def bar(
+        self,
+        pert_val: str = None,
+        names: Optional[list] = None,
+        values: Optional[list] = None,
+        **kwargs,
+    ):
         """plot a bar plot of the results
 
         Args:
@@ -1036,7 +1047,7 @@ class plotting_engines:
                 save_fig_location = f"{self.graph_folder}/calc_vs_{x_name}_scatterplot_{pert_val}_{self.file_ext}_{self.net_ext}_{eng_name}.png"
 
         plt.savefig(save_fig_location, dpi=300, bbox_inches="tight")
-        
+
         return ax
 
     # some functions so cleaner in plotting functions
@@ -1056,7 +1067,9 @@ class plotting_engines:
         return eng_name
 
     @staticmethod
-    def _get_bounds_scatter(engines: list, freenrg_df_dict: dict, pert_val: str, values: list, name: str):
+    def _get_bounds_scatter(
+        engines: list, freenrg_df_dict: dict, pert_val: str, values: list, name: str
+    ):
         """get the upper and lower bounds of the scatter plot based on the results plotted.
 
         Args:
@@ -1092,11 +1105,13 @@ class plotting_engines:
 
         return min_lim, max_lim
 
-    def plot_convergence(self, engines=None):
+    def plot_convergence(self, engines: Optional[str] = None):
         engines = validate.engines(engines)
 
         for engine in engines:
-            logging.info(f"plotting diff to final result for all perturbations in {engine}...")
+            logging.info(
+                f"plotting diff to final result for all perturbations in {engine}..."
+            )
             sdf = plotting_engines.pert_dict_into_conv_df(
                 self.spert_results_dict[engine], plot_error=False, plot_difference=True
             )
@@ -1112,7 +1127,9 @@ class plotting_engines:
             logging.info(f"saved images in {self.graph_folder}.")
 
     @staticmethod
-    def pert_dict_into_conv_df(pert_dict, plot_error=False, plot_difference=True):
+    def pert_dict_into_conv_df(
+        pert_dict: dict, plot_error: bool = False, plot_difference: bool = True
+    ) -> pd.DataFrame:
         df = pd.DataFrame.from_dict(pert_dict)
         perts = list(df.columns)
         df = df.reset_index().dropna()
@@ -1166,7 +1183,11 @@ class plotting_engines:
 
 
 class plotting_histogram(plotting_engines):
-    def __init__(self, analysis_object=None, output_folder=None, verbose=False):
+    def __init__(
+        self,
+        analysis_object=None,
+        output_folder: Optional[str] = None,
+    ):
         """for plotting histograms.
 
         Args:
@@ -1176,8 +1197,6 @@ class plotting_histogram(plotting_engines):
         Raises:
             ValueError: must provide an analysis network object.
         """
-
-        self.is_verbose(verbose)
 
         if analysis_object:
             self._analysis_object = analysis_object
@@ -1245,7 +1264,7 @@ class plotting_histogram(plotting_engines):
                 except:
                     self.error_dict[err][name] = []
 
-    def histogram(self, name=None, type_error="SEM_pert"):
+    def histogram(self, name: str = None, type_error: str = "SEM_pert"):
         if type_error not in self.error_type:
             raise ValueError(f"error name must be in {self.error_type}")
         name = self._validate_in_names_list(name)
@@ -1291,10 +1310,10 @@ class plotting_histogram(plotting_engines):
             dpi=300,
             bbox_inches="tight",
         )
-        
+
         return ax
 
-    def histogram_distribution(self, names=None, type_error="SEM_pert"):
+    def histogram_distribution(self, names: str = None, type_error: str = "SEM_pert"):
         for name in names:
             name = self._validate_in_names_list(name)
             if name in self.best_fit_dict[type_error].keys():
@@ -1334,178 +1353,5 @@ class plotting_histogram(plotting_engines):
             dpi=300,
             bbox_inches="tight",
         )
-        
+
         return ax
-
-
-# class plot_convergence():
-#     """class to plot convergence
-#     """
-
-#     def __init__(self, outputs_dir, perturbations=None, engines=None, file_ext=None, res_folder=None):
-#         """ plot convergence for the different perturbations.
-
-#         Args:
-#             outputs_dir (str): folder where the outputs to plot are located.
-#             perturbations (list, optional): list of perturbations to consider. Defaults to None.
-#             engines (list, optional): list of engines to plot for. Defaults to None.
-#             file_ext (str, optional): file extension to use. Defaults to None.
-#             res_folder (str, optional): directory to save the plots. Defaults to None.
-
-#         Raises:
-#             ValueError: need to include the perturbations
-#         """
-
-#         # need the outputs directory
-#         self.outputs_dir = validate.folder_path(outputs_dir)
-#         self.engines = validate.engines(engines)
-
-#         self.file_ext = validate.string(file_ext)
-
-#         if not perturbations:
-#             raise ValueError("please include perturbations")
-#         else:
-#             self.perturbations = validate.is_list(perturbations)
-
-#         if not res_folder:
-#             self.res_folder = validate.folder_path(f"{outputs_dir}/convergence", create=True)
-#         else:
-#             self.res_folder = validate.folder_path(res_folder, create=True)
-
-#         self.set_colours()
-
-#     def set_colours(self, colour_dict=None):
-#         """set the colours for the convergence. Use the default colours from plotting if not provided.
-
-#         Args:
-#             colour_dict (dict, optional): dicitonary of colours for the engines. Defaults to None.
-
-#         Returns:
-#            dict: colour dictionary
-#         """
-
-#         set_colour_dict = plotting_engines._set_colours(colour_dict)
-#         self.colours = set_colour_dict
-
-#         return set_colour_dict
-
-#     def plot_convergence_all(self):
-#         """plot convergence for all perturbations
-#         """
-
-#         for pert in self.perturbations:
-#             lig_0 = pert.split("~")[0]
-#             lig_1 = pert.split("~")[1]
-
-#             self.plot_convergence_single(pert, engines=self.engines)
-
-
-#     def plot_convergence_single(self, perturbation, engines=None):
-#         """plot convergence for a single perturbation
-
-#         Args:
-#             perturbation (str): name of the perturbation
-#             engines (list, optional): list of the engines. Defaults to None.
-#         """
-
-#         for leg in [ 'free','bound']:
-
-#             plt.figure()
-#             lines = []
-
-#             for eng in engines:
-#                 col = self.colours[eng]
-#                 with open (f'{self.outputs_dir}/{eng}/{perturbation}/pickle/{leg}_pmf_{perturbation}_{eng}_{self.file_ext}.pickle', 'rb') as handle:
-#                     pmf_dict = pickle.load(handle)
-#                 lines += plt.plot(0,0,c=col, label=eng)
-#                 for repeat in pmf_dict:
-#                     pmf = pmf_dict[repeat]
-#                     x =[]
-#                     y=[]
-#                     yerr = []
-#                     for p in pmf:
-#                         x.append(p[0])
-#                         y.append(p[1]*(1/BSS.Units.Energy.kcal_per_mol))
-#                         yerr.append(p[2]*(1/BSS.Units.Energy.kcal_per_mol))
-#                     plt.errorbar(x,y,yerr=yerr,color=col)
-#             plt.xlim(xmin=0,xmax=1)
-#             plt.ylabel("Computed $\Delta$G$_{transformation}$ / kcal$\cdot$mol$^{-1}$")
-#             plt.xlabel("Lambda")
-#             labels = [l.get_label() for l in lines]
-#             plt.legend(lines, labels)
-#             plt.title(f"Convergence, {leg} for {perturbation}")
-#             plt.savefig(f'{self.res_folder}/{perturbation}_convergence_{leg}.png')
-
-#         # plotting delta delta G
-
-#         plt.figure()
-#         lines = []
-#         for eng in engines:
-#             # open the pickles
-#             with open (f'{self.outputs_dir}/{eng}/{perturbation}/pickle/bound_pmf_{perturbation}_{eng}_{self.file_ext}.pickle', 'rb') as handle:
-#                 bound_pmf_dict = pickle.load(handle)
-#             with open (f'{self.outputs_dir}/{eng}/{perturbation}/pickle/free_pmf_{perturbation}_{eng}_{self.file_ext}.pickle', 'rb') as handle:
-#                 free_pmf_dict = pickle.load(handle)
-#             lines += plt.plot(0,0,c=self.colours[eng], label=eng)
-#             for repf,repb in zip(free_pmf_dict,bound_pmf_dict):
-#                 bound_pmf = bound_pmf_dict[repb]
-#                 free_pmf = free_pmf_dict[repf]
-#                 x = []
-#                 y = []
-#                 yerr = []
-#                 for pb,pf in zip(bound_pmf,free_pmf):
-#                     x.append(pb[0])
-#                     y.append((pb[1]*(1/BSS.Units.Energy.kcal_per_mol))-(pf[1]*(1/BSS.Units.Energy.kcal_per_mol)))
-#                     yerr.append((pb[2]*(1/BSS.Units.Energy.kcal_per_mol))+(pf[2]*(1/BSS.Units.Energy.kcal_per_mol)))
-#                 plt.errorbar(x,y,yerr=yerr,color=self.colours[eng])
-#         plt.xlim(xmin=0,xmax=1)
-#         plt.ylabel("Computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
-#         plt.xlabel("Lambda")
-#         labels = [l.get_label() for l in lines]
-#         plt.legend(lines, labels)
-#         plt.title(f"Convergence for {perturbation}")
-#         plt.savefig(f'{self.res_folder}/{perturbation}_convergence_deltadeltaG.png')
-
-
-#         # TODO plot average of each window
-
-#         plt.figure()
-#         lines = []
-#         for eng in engines:
-#             with open (f'{self.outputs_dir}/{eng}/{perturbation}/pickle/bound_pmf_{perturbation}_{eng}_{self.file_ext}.pickle', 'rb') as handle:
-#                 bound_pmf_dict = pickle.load(handle)
-#             with open (f'{self.outputs_dir}/{eng}/{perturbation}/pickle/free_pmf_{perturbation}_{eng}_{self.file_ext}.pickle', 'rb') as handle:
-#                 free_pmf_dict = pickle.load(handle)
-#             lines += plt.plot(0,0,c=self.colours[eng], label=eng)
-
-#             # get the x (lambda) windows
-#             x = []
-#             for pf in free_pmf_dict[0]:
-#                 x.append(pf[0])
-
-#             y_avg = []
-#             y_err = []
-
-#             for val in x:
-
-#                 y = []
-#                 yerr = []
-
-#             for repf,repb in zip(free_pmf_dict,bound_pmf_dict):
-#                 bound_pmf = bound_pmf_dict[repb]
-#                 free_pmf = free_pmf_dict[repf]
-
-#                 for pb,pf in zip(bound_pmf,free_pmf):
-#                     y.append((pb[1]*(1/BSS.Units.Energy.kcal_per_mol))-(pf[1]*(1/BSS.Units.Energy.kcal_per_mol)))
-#                     yerr.append((pb[2]*(1/BSS.Units.Energy.kcal_per_mol))+(pf[2]*(1/BSS.Units.Energy.kcal_per_mol)))
-
-
-#             plt.errorbar(x,y_avg,yerr=yerr,color=self.colours[eng])
-
-#         plt.xlim(xmin=0,xmax=1)
-#         plt.ylabel("Computed $\Delta\Delta$G$_{bind}$ / kcal$\cdot$mol$^{-1}$")
-#         plt.xlabel("Lambda")
-#         labels = [l.get_label() for l in lines]
-#         plt.legend(lines, labels)
-#         plt.title(f"Convergence for {perturbation}")
-#         plt.savefig(f'{self.res_folder}/{perturbation}_convergence_deltadeltaG.png')

@@ -3,13 +3,15 @@ import shutil
 import subprocess
 import logging
 
+from typing import Union, Optional
+
 import MDAnalysis as mda
 import MDAnalysis.transformations as trans
 
 from ._validate import *
 
 
-def get_repeat_folders(work_dir):
+def get_repeat_folders(work_dir: str) -> tuple:
     """how many of each the free and bound repeat folders there are in work dir.
 
     Args:
@@ -48,7 +50,7 @@ def get_repeat_folders(work_dir):
     return b_folders, f_folders
 
 
-def add_header_simfile(trans_dir):
+def add_header_simfile(trans_dir: str):
     """Adds header to simfiles if failed to generate.
 
     Args:
@@ -192,7 +194,7 @@ def add_header_simfile(trans_dir):
 class extract:
     """class for extracting output data"""
 
-    def __init__(self, trans_dir, extract_dir=None):
+    def __init__(self, trans_dir: str, extract_dir: Optional[str] = None):
         self.trans_dir = validate.folder_path(trans_dir)
         # need to check that the trans directory contains outputs
         if not "outputs" in self.trans_dir:
@@ -224,7 +226,7 @@ class extract:
         extract._extract_config(self.trans_dir, self.extract_dir)
 
     @staticmethod
-    def _extract_config(folder, extract_dir):
+    def _extract_config(folder: str, extract_dir: str):
         """extract sample config files used for run at lambda=0.0000.
 
         Args:
@@ -286,7 +288,7 @@ class extract:
         extract._extract_output(self.trans_dir, self.extract_dir)
 
     @staticmethod
-    def _extract_output(folder, extract_dir):
+    def _extract_output(folder: str, extract_dir: str):
         """extract simulation output needed for the AFE analysis.
 
         Args:
@@ -340,7 +342,12 @@ class extract:
                 "no directories were found to extract from! make sure there is not min/heat/eq in the main folder path as these will be excluded."
             )
 
-    def extract_frames(self, traj_lambdas=None, rmsd=True, overwrite=False):
+    def extract_frames(
+        self,
+        traj_lambdas: Optional[list] = None,
+        rmsd: Optional[bool] = True,
+        overwrite: bool = False,
+    ):
         """extract the rmsd and/or frames for certain lambda windows.
 
         Args:
@@ -461,7 +468,7 @@ class extract:
                     pass
 
     @staticmethod
-    def centre_molecule(universe, selection):
+    def centre_molecule(universe: mda.Universe, selection: str):
         """centre the molecule (eg either 'resname LIG' or 'protein') in the mda universe/
 
         Args:
@@ -487,7 +494,7 @@ class extract:
         return u
 
     @staticmethod
-    def _write_traj_frames(universe, traj_extract_dir):
+    def _write_traj_frames(universe: mda.Universe, traj_extract_dir: str):
         """write 5 evenly spaced trajectory frames from the universe. Start, three evenly spaced from the middle, end.
 
         Args:
@@ -518,7 +525,7 @@ class extract:
         logging.info("finished writing 5 frames to pdb.")
 
     @staticmethod
-    def _rmsd_trajectory(universe, traj_extract_dir):
+    def _rmsd_trajectory(universe: mda.Universe, traj_extract_dir: str):
         """rmsd of the ligand (with name 'LIG') over the course of the trajectory
 
         Args:
@@ -557,7 +564,7 @@ class extract:
         )
 
     @staticmethod
-    def extract_output_all(main_dir, extract_dir=None):
+    def extract_output_all(main_dir: str, extract_dir: Optional[str] = None):
         """Extracts only the output files if an output directory is given.
 
         Args:

@@ -1,6 +1,6 @@
 import BioSimSpace as BSS
 from BioSimSpace import _Exceptions
-import logging 
+import logging
 
 from ..utils._validate import *
 
@@ -9,7 +9,11 @@ class merge:
     """class of static methods for merging ligands and systems"""
 
     @staticmethod
-    def merge_ligands(ligand_0, ligand_1, **kwargs):
+    def merge_ligands(
+        ligand_0: BSS._SireWrappers._molecule.Molecule,
+        ligand_1: BSS._SireWrappers._molecule.Molecule,
+        **kwargs,
+    ) -> BSS._SireWrappers._molecule.Molecule:
         """Merges two ligands in preperation for FEP run.
 
         Args:
@@ -70,8 +74,10 @@ class merge:
         # check no of perturbing atoms in each molecule on average
         no_atoms = (len(l0a) + len(l1a)) / 2 - len(mapping)
         if no_atoms > 25:
-            logging.critical(f"the mapping results in more than 25 perturbable atoms per molecule on average, which is not ideal.\
-                                check if mapping is reasonable?")
+            logging.critical(
+                f"the mapping results in more than 25 perturbable atoms per molecule on average, which is not ideal.\
+                                check if mapping is reasonable?"
+            )
 
         inv_mapping = {v: k for k, v in mapping.items()}
         logging.info(
@@ -108,7 +114,9 @@ class merge:
         return merged_ligands
 
     @staticmethod
-    def extract_ligand(system):
+    def extract_ligand(
+        system: BSS._SireWrappers._system.System,
+    ) -> BSS._SireWrappers._molecule.Molecule:
         """extracts the ligand from a BSS system
 
         Args:
@@ -136,7 +144,11 @@ class merge:
         return ligand
 
     @staticmethod
-    def merge_system(system0=None, system1=None, **kwargs):
+    def merge_system(
+        system0: BSS._SireWrappers._system.System = None,
+        system1: BSS._SireWrappers._system.System = None,
+        **kwargs,
+    ) -> BSS._SireWrappers._system.System:
         """merges to BSS systems for FEP.
 
         Args:
@@ -193,7 +205,11 @@ class merge:
         return system_final
 
     @staticmethod
-    def atom_mappings(system0, system1, **kwargs):
+    def atom_mappings(
+        system0: BSS._SireWrappers._system.System,
+        system1: BSS._SireWrappers._system.System,
+        **kwargs,
+    ) -> dict:
         """get the atoms and mappings for ligands in two systems
 
         Args:
@@ -255,7 +271,7 @@ class merge:
             "complete_rings_only",
             "prune_perturbed_constraints",
             "prune_crossing_constraints",
-            "prune_atom_types"
+            "prune_atom_types",
         ]:
             try:
                 del kwargs[name]
@@ -282,7 +298,11 @@ class merge:
         return (ligand_0.getAtoms(), ligand_1.getAtoms(), mapping)
 
     @staticmethod
-    def no_perturbing_atoms_average(system0, system1, **kwargs):
+    def no_perturbing_atoms_average(
+        system0: BSS._SireWrappers._system.System,
+        system1: BSS._SireWrappers._system.System,
+        **kwargs,
+    ) -> float:
         """rough indication of avg no of perturbing atoms per ligand -
         avg len of atoms in ligands - mapping
 
@@ -302,7 +322,11 @@ class merge:
         return no_atoms
 
     @staticmethod
-    def no_perturbing_atoms(system0, system1, **kwargs):
+    def no_perturbing_atoms(
+        system0: BSS._SireWrappers._system.System,
+        system1: BSS._SireWrappers._system.System,
+        **kwargs,
+    ) -> int:
         """rough indication of no of perturbing atoms in the system -
         len of atoms in ligands - mapping*2
 

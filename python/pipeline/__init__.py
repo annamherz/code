@@ -2,10 +2,11 @@
 
 import warnings as _warnings
 import logging
-from importlib.metadata import version
+
+# from importlib.metadata import version
 
 __all__ = ["analysis", "prep", "utils"]
-__version__ = version("pipeline")
+# __version__ = version("pipeline")
 
 # check for BioSimSpace
 with _warnings.catch_warnings():

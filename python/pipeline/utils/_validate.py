@@ -6,6 +6,8 @@ import warnings
 import networkx as nx
 import logging
 
+from typing import Union, Optional
+
 import pipeline
 
 
@@ -16,7 +18,7 @@ class validate:
         pass
 
     @staticmethod
-    def string(string):
+    def string(string: str) -> str:
         """validates the string
 
         Args:
@@ -34,7 +36,7 @@ class validate:
         return string
 
     @staticmethod
-    def dictionary(dictionary):
+    def dictionary(dictionary: dict) -> dict:
         """validates the dictionary
 
         Args:
@@ -70,7 +72,7 @@ class validate:
         return nxgraph
 
     @staticmethod
-    def is_list(a_list, make_list=False):
+    def is_list(a_list: list, make_list: bool = False) -> list:
         """validates the list
 
         Args:
@@ -94,7 +96,7 @@ class validate:
         return a_list
 
     @staticmethod
-    def file_path(file_path, create=False):
+    def file_path(file_path: str) -> str:
         """validates the provided file path
 
         Args:
@@ -116,7 +118,7 @@ class validate:
         return file_path
 
     @staticmethod
-    def folder_path(folder_path, create=False):
+    def folder_path(folder_path: str, create: bool = False) -> str:
         """validates the provided file path
 
         Args:
@@ -145,7 +147,7 @@ class validate:
         return folder_path
 
     @staticmethod
-    def engine(engine):
+    def engine(engine: str) -> str:
         """validates the provided engine
 
         Args:
@@ -167,7 +169,7 @@ class validate:
         return engine.upper()
 
     @staticmethod
-    def engines(engines=None):
+    def engines(engines: Union[str, list] = None) -> list:
         """_summary_
 
         Args:
@@ -211,7 +213,7 @@ class validate:
         return engines
 
     @staticmethod
-    def lig_ff(lig_ff):
+    def lig_ff(lig_ff: str) -> str:
         """validates the provided ligand forcefield
 
         Args:
@@ -252,7 +254,7 @@ class validate:
         return lig_ff
 
     @staticmethod
-    def prot_ff(prot_ff):
+    def prot_ff(prot_ff: str) -> str:
         """validates the provided protein forcefield
 
         Args:
@@ -276,7 +278,7 @@ class validate:
         return prot_ff
 
     @staticmethod
-    def solvent_ff(solvent_ff):
+    def solvent_ff(solvent_ff: str) -> str:
         """validates the provided solvent forcefield / water model
 
         Args:
@@ -301,7 +303,7 @@ class validate:
         return solvent_ff.lower()
 
     @staticmethod
-    def integer(integer):
+    def integer(integer: int) -> int:
         """validates the provided integer so that it is an integer
 
         Args:
@@ -339,7 +341,7 @@ class validate:
         return integer
 
     @staticmethod
-    def is_float(value):
+    def is_float(value: float) -> float:
         """validates the provided value so that it is a float
 
         Args:
@@ -366,7 +368,7 @@ class validate:
         return value
 
     @staticmethod
-    def time_unit(time_unit):
+    def time_unit(time_unit: BSS.Types.Time) -> BSS.Types.Time:
         """validates the sampling unit
 
         Args:
@@ -402,7 +404,7 @@ class validate:
         return time_unit
 
     @staticmethod
-    def box_edges_unit(box_edges_unit):
+    def box_edges_unit(box_edges_unit: BSS.Types.Length) -> BSS.Types.Length:
         """validates the box edges unit
 
         Args:
@@ -438,7 +440,9 @@ class validate:
         return box_edges_unit
 
     @staticmethod
-    def temperature_unit(temperature_unit):
+    def temperature_unit(
+        temperature_unit: BSS.Types.Temperature,
+    ) -> BSS.Types.Temperature:
         """validates the temperature unit
 
         Args:
@@ -473,7 +477,7 @@ class validate:
         return temperature_unit
 
     @staticmethod
-    def pressure_unit(pressure_unit):
+    def pressure_unit(pressure_unit: BSS.Types.Pressure) -> BSS.Types.Pressure:
         """validates the pressure unit
 
         Args:
@@ -508,7 +512,7 @@ class validate:
         return pressure_unit
 
     @staticmethod
-    def box_type(box_type):
+    def box_type(box_type: str) -> str:
         """validates the box type
 
         Args:
@@ -532,7 +536,7 @@ class validate:
         return box_type
 
     @staticmethod
-    def boolean(boolean):
+    def boolean(boolean: bool) -> bool:
         """validates boolean input
 
         Args:
@@ -569,7 +573,7 @@ class validate:
         return boolean
 
     @staticmethod
-    def trajectories(trajectories):
+    def trajectories(trajectories: str) -> str:
         """validate input for trajectories being saved or not
 
         Args:
@@ -593,7 +597,7 @@ class validate:
         return trajectories
 
     @staticmethod
-    def pert_val(pert_val):
+    def pert_val(pert_val: str) -> str:
         """validates if pert or val
 
         Args:
@@ -614,7 +618,7 @@ class validate:
         return pert_val
 
     @staticmethod
-    def estimator(estimator):
+    def estimator(estimator: str) -> str:
         """validates the estimator provided
 
         Args:
@@ -639,7 +643,7 @@ class validate:
         return estimator
 
     @staticmethod
-    def analysis_method(analysis_method):
+    def analysis_method(analysis_method: str) -> str:
         """validates method to be used for analysis
 
         Args:
@@ -665,7 +669,7 @@ class validate:
         return analysis_method
 
     @staticmethod
-    def mbar_method(mbar_method):
+    def mbar_method(mbar_method: str) -> str:
         """validates if the mbar method is accepted
 
         Args:
@@ -693,7 +697,7 @@ class validate:
         return mbar_method
 
     @staticmethod
-    def truncate_keep(truncate_keep):
+    def truncate_keep(truncate_keep: str) -> str:
         """validates if the kept truncated string is accepted
 
         Args:
@@ -719,7 +723,7 @@ class validate:
         return truncate_keep
 
     @staticmethod
-    def num_lambda(num_lambda):
+    def num_lambda(num_lambda: int) -> int:
         """validate number of lambdas to be run
 
         Args:
@@ -742,7 +746,11 @@ class validate:
         return num_lambda
 
     @staticmethod
-    def pipeline_protocol(protocol, auto_validate=True, fepprep=False):
+    def pipeline_protocol(
+        protocol,
+        auto_validate: bool = True,
+        fepprep: bool = False,
+    ):
         """check if the passed protocol is a correct pipeline_protocol
 
         Args:
@@ -785,7 +793,7 @@ class validate:
         return protocol
 
     @staticmethod
-    def analysis_protocol(protocol, auto_validate=True):
+    def analysis_protocol(protocol, auto_validate: bool = True):
         """check if the passed protocol is a correct analysis_protocol
 
         Args:
@@ -811,7 +819,7 @@ class validate:
         return protocol
 
     @staticmethod
-    def system(system):
+    def system(system: _System) -> _System:
         """checks if it is a BSS system
 
         Args:
@@ -852,7 +860,7 @@ class validate:
         return protocol
 
     @staticmethod
-    def molecule(molecule):
+    def molecule(molecule: _Molecule) -> _Molecule:
         """Check if BSS molecule
 
         Args:
@@ -878,7 +886,7 @@ class validate:
         return molecule
 
     @staticmethod
-    def analysis(analysis, analysed=True):
+    def analysis(analysis, analysed: bool = True):
         """checks if it is an analysed pipeline.analysis.analyse
 
         Args:

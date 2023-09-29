@@ -94,7 +94,7 @@ class make_dict:
         for res_file in results_files:
             res_df = pd.read_csv(res_file)
             # drop any none values in freenrg
-            res_df = res_df[res_df['freenrg'].notna()]
+            res_df = res_df[res_df["freenrg"].notna()]
             try:
                 res_df = res_df[res_df["freenrg"].str.contains("nan") == False]
             except:
@@ -221,7 +221,9 @@ class make_dict:
         return comp_diff_dict
 
     @staticmethod
-    def value_list_from_files(results_files: list, header: Optional[str] = "error") -> list:
+    def value_list_from_files(
+        results_files: list, header: Optional[str] = "error"
+    ) -> list:
         """get list of errors from the files. Eg used for error histogram plotting.
 
         Args:
@@ -255,7 +257,9 @@ class make_dict:
         return error_list
 
     @staticmethod
-    def experimental_from_freenrgworkflows(experimental_DDGs, ligands: list, perturbations: list) -> tuple:
+    def experimental_from_freenrgworkflows(
+        experimental_DDGs, ligands: list, perturbations: list
+    ) -> tuple:
         """get the experimental dicts from the freenergworkflows
 
         Args:
@@ -280,7 +284,9 @@ class make_dict:
         return exper_diff_dict, exper_val_dict
 
     @staticmethod
-    def _from_freenrgworkflows_experimental_val(experimental_DDGs, ligands: list) -> dict:
+    def _from_freenrgworkflows_experimental_val(
+        experimental_DDGs, ligands: list
+    ) -> dict:
         """get the experimental value dict from the freenergworkflows
 
         Args:
@@ -311,7 +317,9 @@ class make_dict:
         return exper_val_dict
 
     @staticmethod
-    def _from_freenrgworkflows_experimental_diff(exper_val_dict, perturbations: list) -> dict:
+    def _from_freenrgworkflows_experimental_diff(
+        exper_val_dict, perturbations: list
+    ) -> dict:
         """get the experimental difference dict from the freenergworkflows
 
         Args:
@@ -370,7 +378,9 @@ class make_dict:
         return freenrg_dict
 
     @staticmethod
-    def from_cinnabar_network_edges(network, calc_exp: str, perturbations: list) -> dict:
+    def from_cinnabar_network_edges(
+        network, calc_exp: str, perturbations: list
+    ) -> dict:
         """get a dictionary of results from a cinnabar network
 
         Args:
@@ -420,12 +430,16 @@ class make_dict:
                     )
                 except Exception as e:
                     logging.exception(e)
-                    logging.error(f"{pert_name} value not computed. cannot add to dictionary")
+                    logging.error(
+                        f"{pert_name} value not computed. cannot add to dictionary"
+                    )
 
         return freenrg_dict
 
     @staticmethod
-    def from_cinnabar_network_node(network, calc_exp: str, normalise: Optional[bool] = False) -> dict:
+    def from_cinnabar_network_node(
+        network, calc_exp: str, normalise: Optional[bool] = False
+    ) -> dict:
         """get value per ligand (node) from a cinnabar network as a dictionary.
 
         Args:
@@ -456,7 +470,9 @@ class make_dict:
                     }
                 )
             except:
-                logging.warning(f"{node[1]['name']} value not computed. cannot add to dictionary")
+                logging.warning(
+                    f"{node[1]['name']} value not computed. cannot add to dictionary"
+                )
 
         if normalise:
             normalised_freenrg_dict = make_dict._normalise_data(freenrg_dict)
@@ -465,7 +481,9 @@ class make_dict:
             return freenrg_dict
 
     @staticmethod
-    def experimental_for_network(exper_dict: dict, ligands: list, perturbations: list) -> tuple:
+    def experimental_for_network(
+        exper_dict: dict, ligands: list, perturbations: list
+    ) -> tuple:
         """make experimental dicts based on certain ligands and perturbations
 
         Args:
@@ -488,7 +506,9 @@ class make_dict:
         return exper_diff_dict, exper_val_dict
 
     @staticmethod
-    def _exper_from_ligands(exper_val_dict: dict, ligands: list, normalise: Optional[bool] = False) -> dict:
+    def _exper_from_ligands(
+        exper_val_dict: dict, ligands: list, normalise: Optional[bool] = False
+    ) -> dict:
         """make a new dict of experimental values, can normalise.
 
         Args:
@@ -549,7 +569,7 @@ class make_dict:
         return exper_diff_dict
 
     @staticmethod
-    def _normalise_data(data: Union[list,dict]) -> Union[list, dict]:
+    def _normalise_data(data: Union[list, dict]) -> Union[list, dict]:
         """normalise the data
 
         Args:
@@ -645,7 +665,7 @@ class make_dict:
 
             cycles_dict.update({"_".join(cycle): (sum(cycle_val), sum(cycle_val_err))})
 
-            cycle_vals_not_nan = [abs(x) for x in cycle_vals if str(x) != 'nan']
+            cycle_vals_not_nan = [abs(x) for x in cycle_vals if str(x) != "nan"]
             avg_cc = np.mean(cycle_vals_not_nan)
             std_cc = np.std(cycle_vals_not_nan)
 

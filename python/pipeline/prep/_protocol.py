@@ -1,11 +1,17 @@
 import logging
 
+from typing import Union, Optional
+
 from ..utils import *
 
 
 class protocol:
     def __init__(
-        self, file=None, auto_validate=False, verbose=True, protocol_type=None
+        self,
+        file: str = None,
+        auto_validate: bool = False,
+        verbose: bool = True,
+        protocol_type: str = None,
     ):
         """class for storing and validating protocol options from files or dictionary.
 
@@ -77,12 +83,12 @@ class protocol:
         else:
             self._is_validated = False
 
-    def default_dict(self):
+    def default_dict(self) -> dict:
         default_dict = {"name": None, "kwargs": {}}
 
         return default_dict
 
-    def dictionary(self):
+    def dictionary(self) -> dict:
         """calls the dictionary made from the file, validated or not.
 
         Returns:
@@ -106,7 +112,7 @@ class protocol:
                 f"There is a problem with the input provided in {self._prot_file}.\n Error is:\n {e}"
             )
 
-    def _read_protocol(self, file=None):
+    def _read_protocol(self, file: str = None) -> dict:
         """reads the protocol file into a dictionary
 
         Raises:
@@ -145,7 +151,7 @@ class protocol:
 
         return query_dict
 
-    def _check_query(self):
+    def _check_query(self) -> dict:
         """fills in any gaps of the dict from the protocol file
 
         Returns:
@@ -177,7 +183,7 @@ class protocol:
 
         return query_dict
 
-    def rewrite_protocol(self, file_path=None):
+    def rewrite_protocol(self, file_path: str = None):
         """rewrite the protocol to the same file after validation
 
         Args:
@@ -210,7 +216,7 @@ class protocol:
             for query in query_dict.keys():
                 print(f"{query} : {query_dict[query]}")
 
-    def kwargs(self, value=None):
+    def kwargs(self, value: Optional[dict] = None) -> dict:
         if value:
             value = validate.dictionary(value)
             self._query_dict["kwargs"] = value
@@ -224,7 +230,7 @@ class protocol:
 
         return value
 
-    def name(self, value=None):
+    def name(self, value: str = None) -> str:
         if value:
             value = validate.string(value)
             self._query_dict["name"] = value
@@ -239,11 +245,13 @@ class protocol:
 
 
 class pipeline_protocol(protocol):
-    def __init__(self, file=None, auto_validate=False, verbose=False):
+    def __init__(
+        self, file: str = None, auto_validate: bool = False, verbose: bool = False
+    ):
         # inherit the init from other protocol too
         super().__init__(file, auto_validate, verbose, "pipeline")
 
-    def default_dict(self):
+    def default_dict(self) -> dict:
         """the default dictionary for the protocol
 
         Returns:
@@ -288,7 +296,7 @@ class pipeline_protocol(protocol):
 
         return default_dict
 
-    def _config_dict(self):
+    def _config_dict(self) -> dict:
         legs = ["min", "eq", "heat", "prod", "all"]
         query_dict = {}
         for leg in legs:
@@ -296,7 +304,7 @@ class pipeline_protocol(protocol):
 
         return query_dict
 
-    def _read_config_file(self, file=None):
+    def _read_config_file(self, file: str = None) -> dict:
         """reads the config file into a dictionary
 
         Raises:
@@ -388,7 +396,7 @@ class pipeline_protocol(protocol):
 
     # this is not part of the default protocol and is found in the network file
     # it needs to be allocated before fepprep
-    def fepprep(self, value=None):
+    def fepprep(self, value: Optional[str] = None) -> str:
         """set the fepprep in the protocol or return its value.
 
         Args:
@@ -413,7 +421,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def num_lambda(self, value=None):
+    def num_lambda(self, value: Optional[int] = None) -> int:
         """set the number of lambda windows in the protocol or return its value.
 
         Args:
@@ -432,7 +440,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def engine(self, value=None):
+    def engine(self, value: Optional[str] = None) -> str:
         """set the engine in the protocol or return its value.
 
         Args:
@@ -451,7 +459,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def engines(self, value=None):
+    def engines(self, value: Optional[list] = None) -> list:
         """set the engines in the protocol or return its value.
 
         Args:
@@ -470,7 +478,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def ligand_forcefield(self, value=None):
+    def ligand_forcefield(self, value: Optional[str] = None) -> str:
         """set the ligand forcefield in the protocol or return its value.
 
         Args:
@@ -489,7 +497,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def protein_forcefield(self, value=None):
+    def protein_forcefield(self, value: Optional[str] = None) -> str:
         """set the protein forcefield in the protocol or return its value.
 
         Args:
@@ -508,7 +516,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def solvent(self, value=None):
+    def solvent(self, value: Optional[str] = None) -> str:
         """set the solvent forcefield in the protocol or return its value.
 
         Args:
@@ -527,7 +535,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def box_edges(self, value=None):
+    def box_edges(self, value: Optional[int] = None) -> int:
         """set the box edges length in the protocol or return its value.
 
         Args:
@@ -546,14 +554,14 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def box_edges_unit(self, value=None):
+    def box_edges_unit(self, value: Optional[str] = None):
         """set the box edges unit in the protocol or return its value.
 
         Args:
             value (str, optional): box edges unit. Defaults to None.
 
         Returns:
-            str: box edges unit
+            BSS.Units.Length: box edges unit
         """
 
         if value:
@@ -565,7 +573,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def box_type(self, value=None):
+    def box_type(self, value: Optional[str] = None) -> str:
         """set the box type in the protocol or return its value.
 
         Args:
@@ -584,7 +592,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def sampling(self, value=None):
+    def sampling(self, value: Optional[int] = None) -> int:
         """set the sampling value in the protocol or return its value.
 
         Args:
@@ -603,7 +611,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def sampling_unit(self, value=None):
+    def sampling_unit(self, value: Optional[str] = None):
         """set the sampling unit in the protocol or return its value.
 
         Args:
@@ -622,7 +630,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def repeats(self, value=None):
+    def repeats(self, value: Optional[int] = None) -> int:
         """set the number of repeats in the protocol or return its value.
 
         Args:
@@ -641,7 +649,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def trajectories(self, value=None):
+    def trajectories(self, value: Optional[str] = None) -> str:
         """set the trajectories to keep in the protocol or return its value.
 
         Args:
@@ -660,18 +668,18 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def start_temperature(self, value=None):
+    def start_temperature(self, value: Optional[float] = None) -> float:
         """set the start temperature at equilibration in the protocol or return its value.
 
         Args:
-            value (int, optional): the start temperature. Defaults to None.
+            value (float, optional): the start temperature. Defaults to None.
 
         Returns:
-            int: start temperature
+            float: start temperature
         """
 
         if value:
-            value = validate.integer(value)
+            value = validate.is_float(value)
             self._query_dict["start temperature"] = value
             self._start_temperature = value
         else:
@@ -684,18 +692,18 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def end_temperature(self, value=None):
+    def end_temperature(self, value: Optional[float] = None) -> float:
         """set the end temperature at equilibration in the protocol or return its value.
 
         Args:
-            value (int, optional): the end temperature. Defaults to None.
+            value (float, optional): the end temperature. Defaults to None.
 
         Returns:
-            int: end temperature
+            float: end temperature
         """
 
         if value:
-            value = validate.integer(value)
+            value = validate.is_float(value)
             self._query_dict["end temperature"] = value
             self._end_temperature = value
         else:
@@ -703,18 +711,18 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def temperature(self, value=None):
+    def temperature(self, value: Optional[float] = None) -> float:
         """set the temperature of the simulation in the protocol or return its value.
 
         Args:
-            value (int, optional): the temperature. Defaults to None.
+            value (float, optional): the temperature. Defaults to None.
 
         Returns:
-            int: temperature
+            float: temperature
         """
 
         if value:
-            value = validate.integer(value)
+            value = validate.is_float(value)
             self._query_dict["temperature"] = value
             self._temperature = value
         else:
@@ -722,7 +730,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def temperature_unit(self, value=None):
+    def temperature_unit(self, value: Optional[str] = None) -> str:
         """set the temperature unit of the simulation in the protocol or return its value.
 
         Args:
@@ -741,7 +749,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def pressure(self, value=None):
+    def pressure(self, value: Optional[float] = None) -> float:
         """set the pressure of the simulation in the protocol or return its value.
 
         Args:
@@ -752,7 +760,7 @@ class pipeline_protocol(protocol):
         """
 
         if value:
-            value = validate.integer(value)
+            value = validate.is_float(value)
             self._query_dict["pressure"] = value
             self._pressure = value
         else:
@@ -760,7 +768,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def pressure_unit(self, value=None):
+    def pressure_unit(self, value: Optional[str] = None) -> str:
         """set the pressure unit of the simulation in the protocol or return its value.
 
         Args:
@@ -779,7 +787,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def min_steps(self, value=None):
+    def min_steps(self, value: Optional[int] = None) -> int:
         """set the number of minimisation steps in the protocol or return its value.
 
         Args:
@@ -798,7 +806,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def eq_runtime(self, value=None):
+    def eq_runtime(self, value: Optional[int] = None) -> int:
         """set the equilibrium runtime in the protocol or return its value.
 
         Args:
@@ -817,7 +825,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def eq_runtime_unit(self, value=None):
+    def eq_runtime_unit(self, value: Optional[str] = None) -> str:
         """set the equilibrium runtime unit of the simulation in the protocol or return its value.
 
         Args:
@@ -836,7 +844,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def hmr(self, value=None):
+    def hmr(self, value: Optional[bool] = None) -> bool:
         """set whether HMR is applied to the system in the protocol or return its value.
 
         Args:
@@ -855,7 +863,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def hmr_factor(self, value=None):
+    def hmr_factor(self, value: Optional[int] = None) -> int:
         """set the hmr factor in the protocol or return its value.
 
         Args:
@@ -896,7 +904,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def timestep_overwrite(self, value=None):
+    def timestep_overwrite(self, value: Optional[bool] = None) -> bool:
         """set whether the timestep in the protocol should be overwritten based on the HMR or return its value.
         If True, overwrite the timestep to 4 fs if HMR is applied or 2 fs if not.
 
@@ -924,7 +932,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def timestep_unit(self, value=None):
+    def timestep_unit(self, value: Optional[str] = None) -> str:
         """set the timestep unit of the simulation in the protocol or return its value.
 
         Args:
@@ -943,18 +951,18 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def timestep(self, value=None):
+    def timestep(self, value: Optional[float] = None) -> float:
         """set the timestep in the protocol or return its value.
 
         Args:
-            value (int, optional): the timestep. Defaults to None.
+            value (float, optional): the timestep (ideally in femtoseconds). Defaults to None.
 
         Returns:
-            int: the timestep
+            float: the timestep
         """
 
         if value:
-            value = validate.integer(value)
+            value = validate.is_float(value)
             self._query_dict["timestep"] = value
             self._timestep = value
         else:
@@ -962,8 +970,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def config_options(self, value=None):
-
+    def config_options(self, value: Optional[dict] = None) -> dict:
         if value:
             try:
                 value = validate.file_path(value)
@@ -971,7 +978,9 @@ class pipeline_protocol(protocol):
                 self._query_dict["config options file"] = value
                 self._config_options_file = value
             except:
-                logging.error("config options not a file, trying to read in as dictionary...")
+                logging.error(
+                    "config options not a file, trying to read in as dictionary..."
+                )
                 try:
                     value_dict = value
                     value = validate.dictionary(value_dict)
@@ -990,8 +999,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def config_options_file(self, value=None):
-        
+    def config_options_file(self, value: Optional[str] = None) -> str:
         if value:
             try:
                 value = validate.file_path(value)
@@ -1000,7 +1008,7 @@ class pipeline_protocol(protocol):
             except:
                 logging.error(f"could not validate config options file path, {value}")
                 value = None
-                self._config_options_file = value                
+                self._config_options_file = value
         else:
             try:
                 value = self._config_options_file
@@ -1010,7 +1018,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def rerun(self, value=None):
+    def rerun(self, value: Optional[bool] = None) -> bool:
         """set whether its reruns/additional runs or return its value.
         This runs so that all the repeats are done.
 
@@ -1030,7 +1038,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def rerepeat(self, value=None):
+    def rerepeat(self, value: Optional[int] = None) -> int:
         if value:
             value = validate.integer(value)
             self._query_dict["rerun start repeat"] = value
@@ -1040,7 +1048,7 @@ class pipeline_protocol(protocol):
 
         return value
 
-    def reverse(self, value=None):
+    def reverse(self, value: Optional[bool] = None) -> bool:
         """set whether to also run perturbations in the reverse direction.
         This will write a network file containing the reverse perturbations during the setup stages.
 
@@ -1060,13 +1068,14 @@ class pipeline_protocol(protocol):
 
         return value
 
+
 class analysis_protocol(protocol):
     def __init__(self, file=None, auto_validate=False, verbose=False):
         # inherit the init from other protocol too
         super().__init__(file, auto_validate, verbose, "analysis")
-        
+
     # check query also inherited but with new default dict
-    def default_dict(self):
+    def default_dict(self) -> dict:
         default_dict = {
             "estimator": "MBAR",
             "method": "alchemlyb",
@@ -1106,8 +1115,7 @@ class analysis_protocol(protocol):
         # is now validated
         self._is_validated = True
 
-
-    def estimator(self, value=None):
+    def estimator(self, value: Optional[str] = None) -> str:
         """set the estimator in the analysis protocol or return its value.
 
         Args:
@@ -1126,7 +1134,7 @@ class analysis_protocol(protocol):
 
         return value
 
-    def analysis_method(self, value=None):
+    def analysis_method(self, value: Optional[str] = None) -> str:
         """set the analysis method (eg native, alchemlyb) in the analysis protocol or return its value.
 
         Args:
@@ -1145,7 +1153,7 @@ class analysis_protocol(protocol):
 
         return value
 
-    def check_overlap(self, value=None):
+    def check_overlap(self, value: Optional[bool] = None) -> bool:
         """set whether to check the overlap in the analysis protocol or return its value.
 
         Args:
@@ -1162,7 +1170,7 @@ class analysis_protocol(protocol):
         else:
             value = self._check_overlap
 
-    def try_pickle(self, value=None):
+    def try_pickle(self, value: Optional[bool] = None) -> bool:
         """set whether to try to find/use pickle files in the analysis protocol or return its value.
 
         Args:
@@ -1184,7 +1192,7 @@ class analysis_protocol(protocol):
 
         return value
 
-    def save_pickle(self, value=None):
+    def save_pickle(self, value: Optional[bool] = None) -> bool:
         """set whether to try to save pickle files in the analysis protocol or return its value.
 
         Args:
@@ -1206,7 +1214,7 @@ class analysis_protocol(protocol):
 
         return value
 
-    def auto_equilibration(self, value=None):
+    def auto_equilibration(self, value: Optional[bool] = None) -> bool:
         """set whether to use auto equilibration in the analysis protocol or return its value.
 
         Args:
@@ -1228,7 +1236,7 @@ class analysis_protocol(protocol):
 
         return value
 
-    def statistical_inefficiency(self, value=None):
+    def statistical_inefficiency(self, value: Optional[bool] = None) -> bool:
         """set whether to use statistical inefficiency in the analysis protocol or return its value.
 
         Args:
@@ -1250,7 +1258,7 @@ class analysis_protocol(protocol):
 
         return value
 
-    def truncate_percentage(self, value=None):
+    def truncate_percentage(self, value: Optional[int] = None) -> int:
         """set how much percentage-wise to truncate the data by in the analysis protocol or return its value.
 
         Args:
@@ -1273,7 +1281,7 @@ class analysis_protocol(protocol):
 
         return value
 
-    def truncate_keep(self, value=None):
+    def truncate_keep(self, value: Optional[str] = None) -> str:
         """set which part of the truncated to keep (start or end) in the analysis protocol or return its value.
 
         Args:
@@ -1292,7 +1300,7 @@ class analysis_protocol(protocol):
 
         return value
 
-    def mbar_method(self, value=None):
+    def mbar_method(self, value: Optional[str] = None) -> str:
         """set the mbar method for use with pymbar in the analysis protocol or return its value.
 
         Args:

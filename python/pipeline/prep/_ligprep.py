@@ -3,6 +3,8 @@ from BioSimSpace.Units.Length import angstrom as _angstrom
 import logging
 from ..utils._validate import *
 
+from typing import Union, Optional
+
 
 class ligprep:
     """class to store lig prep functions."""
@@ -11,7 +13,9 @@ class ligprep:
         pass
 
     @staticmethod
-    def lig_paramaterise(molecule, ligff_query):
+    def lig_paramaterise(
+        molecule: BSS._SireWrappers._molecule.Molecule, ligff_query: str
+    ):
         """_summary_
 
         Args:
@@ -32,13 +36,13 @@ class ligprep:
 
     @staticmethod
     def minimum_solvation(
-        system,
-        solvent,
-        box_type,
-        box_edges,
-        box_edges_unit="angstrom",
-        ion_conc=0.15,
-        work_dir=None
+        system: BSS._SireWrappers.System,
+        solvent: str,
+        box_type: str,
+        box_edges: Union[int, float],
+        box_edges_unit: str = "angstrom",
+        ion_conc: float = 0.15,
+        work_dir: Optional[str] = None,
     ):
         """minimum solvation
 
@@ -102,7 +106,12 @@ class ligprep:
         box, angles = boxtype_func(max(box_sizes))
 
         mol_solvated = BSS.Solvent.solvate(
-            solvent, molecule=system, box=box, angles=angles, ion_conc=ion_conc, work_dir=work_dir
+            solvent,
+            molecule=system,
+            box=box,
+            angles=angles,
+            ion_conc=ion_conc,
+            work_dir=work_dir,
         )
 
         nmols = mol_solvated.nMolecules()

@@ -49,7 +49,6 @@ class analysis_network:
             TypeError: analysis ext must be the correct type.
         """
 
-
         if method:
             self.method = validate.string(method)
         else:
@@ -105,7 +104,7 @@ class analysis_network:
             self._results_files = self._get_results_files()
             self._results_value_files = {}
         else:
-            logging.error(
+            logging.critical(
                 "There is no provided results directory. There are no results to analyse. This will probably create an issue for many other functions. please reinstantiate the object with a results directory."
             )
             self._results_directory = None
@@ -163,7 +162,7 @@ class analysis_network:
 
         self._set_dictionary_outputs()
 
-    def _get_results_repeat_files(self, leg=None):
+    def _get_results_repeat_files(self, leg: Optional[str] = None) -> dict:
         """get the files of all the repeats for a specific leg. Used during init to set free and bound repeat files.
 
         Args:
@@ -200,7 +199,7 @@ class analysis_network:
 
         return files_dict
 
-    def _get_results_files(self):
+    def _get_results_files(self) -> dict:
         """get the summary results files
 
         Returns:
@@ -336,7 +335,7 @@ class analysis_network:
         # for stats
         self._stats_object = None
 
-    def set_options(self, options_dict):
+    def set_options(self, options_dict: dict):
         """set the options based on the options dict.
 
         Args:
@@ -363,7 +362,7 @@ class analysis_network:
         if "try_pickle" in options_dict:
             self._try_pickle = validate.boolean(options_dict["try_pickle"])
 
-    def get_experimental(self, exp_file=None):
+    def get_experimental(self, exp_file: str = None) -> tuple:
         """get the experimental value dictionaries from a given yml file.
 
         Args:
@@ -388,11 +387,11 @@ class analysis_network:
 
         if exp_file.split(".")[-1] == "yml":
             exper_val_dict = convert.yml_into_exper_dict(
-                exp_file, temp=self.temperature
+                exp_file, temperature=self.temperature
             )  # this output is in kcal/mol
         elif exp_file.split(".")[-1] == "csv":
             exper_val_dict = convert.csv_into_exper_dict(
-                exp_file, temp=self.temperature
+                exp_file, temperature=self.temperature
             )  # this output is in kcal/mol
         else:
             logging.error(
@@ -412,7 +411,7 @@ class analysis_network:
 
         return new_exper_val_dict, normalised_exper_val_dict
 
-    def get_experimental_pert(self, exper_val_dict=None):
+    def get_experimental_pert(self, exper_val_dict: Optional[dict] = None) -> dict:
         """calculate the experimental relative values (pert) for the network from the provided experimental values
 
         Args:
@@ -435,7 +434,7 @@ class analysis_network:
 
         return pert_dict
 
-    def _validate_in_names_list(self, name, make_list=False):
+    def _validate_in_names_list(self, name: str, make_list: bool = False) -> list:
         """validate if the name is in the names list
 
         Args:
@@ -463,7 +462,7 @@ class analysis_network:
 
         return names
 
-    def remove_perturbations(self, perts, name=None):
+    def remove_perturbations(self, perts: list, name: Optional[str] = None):
         """remove perturbations from the network used.
 
         Args:
@@ -490,7 +489,7 @@ class analysis_network:
         self._histogram_object = None
         self._stats_object = None
 
-    def remove_ligands(self, ligs, name=None):
+    def remove_ligands(self, ligs: list, name: Optional[str] = None):
         """remove ligand and assosciated perturbations from the network used.
 
         Args:
@@ -524,7 +523,7 @@ class analysis_network:
         self._histogram_object = None
         self._stats_object = None
 
-    def change_name(self, old_name, new_name):
+    def change_name(self, old_name: str, new_name: str):
         """change the name of the data. Can be used for engine or other result names. Will update the self.dicts with this new name.
 
         Args:
@@ -643,7 +642,9 @@ class analysis_network:
 
             self._compute_cinnabar_dict(files, eng, method=self.method)
 
-    def _compute_cinnabar_dict(self, files, eng, method=None):
+    def _compute_cinnabar_dict(
+        self, files: list, eng: str, method: Optional[str] = None
+    ):
         """compute cinnabar and get the dictionaries from it."""
 
         perts, ligs = get_info_network_from_dict(self.calc_pert_dict[eng])
@@ -707,7 +708,13 @@ class analysis_network:
             self.cinnabar_exper_val_dict.update({eng: None})
 
     @staticmethod
-    def write_vals_file(val_dict, file_path, eng=None, ana=None, method=None):
+    def write_vals_file(
+        val_dict,
+        file_path: str,
+        eng: Optional[str] = None,
+        analysis_string: Optional[str] = None,
+        method: str = None,
+    ):
         val_dict = validate.dictionary(val_dict)
 
         with open(f"{file_path}.csv", "w") as file:
@@ -717,10 +724,15 @@ class analysis_network:
             )
 
             for key, value in val_dict.items():
-                writer.writerow([key, value[0], value[1], eng, ana, method])
+                writer.writerow([key, value[0], value[1], eng, analysis_string, method])
 
     def compute_other_results(
-        self, file_names=None, name=None, method=None, bound_files=None, free_files=None
+        self,
+        file_names: Optional[list] = None,
+        name: Optional[str] = None,
+        method: Optional[str] = None,
+        bound_files: Optional[list] = None,
+        free_files: Optional[list] = None,
     ):
         """compute other results in a similar manner to the engine results.
 
@@ -791,7 +803,7 @@ class analysis_network:
         self._initialise_plotting_object(check=False)
         self._initialise_stats_object(check=False)
 
-    def compute_convergence(self, main_dir):
+    def compute_convergence(self, main_dir: str):
         main_dir = validate.folder_path(main_dir)
 
         for engine in self.engines:
@@ -873,7 +885,7 @@ class analysis_network:
                         f"could not load pickles for {pert} in {engine}. Was it analysed for convergence?"
                     )
 
-    def successful_runs(self, eng, perts=None):
+    def successful_runs(self, eng: str, perts: Optional[list] = None) -> tuple:
         """calculate how many successful runs
 
         Args:
@@ -902,14 +914,16 @@ class analysis_network:
 
             percen = (val / len(perts)) * 100
 
-            logging.info(f"{val} out of {len(perts)} have results, which is {percen} %.")
+            logging.info(
+                f"{val} out of {len(perts)} have results, which is {percen} %."
+            )
             return (val, percen, perturbations)
 
         else:
             logging.error("please compute results from results files first.")
             return (None, None, None)
 
-    def failed_runs(self, eng):
+    def failed_runs(self, eng: str) -> list:
         eng = validate.engine(eng)
 
         val, percen, perturbations = self.successful_runs(eng)
@@ -922,7 +936,7 @@ class analysis_network:
 
         return failed_perts
 
-    def disconnected_ligands(self, eng):
+    def disconnected_ligands(self, eng: str) -> list:
         eng = validate.engine(eng)
         val, percen, perturbations = self.successful_runs(eng)
         graph = net_graph(self.ligands, perturbations)
@@ -930,21 +944,24 @@ class analysis_network:
 
         return ligs
 
-    def draw_failed_perturbations(self, eng):
+    def draw_failed_perturbations(self, eng: str) -> list:
         eng = validate.engine(eng)
 
         perturbations = self.failed_runs(eng)
 
-        self._initialise_graph_object(check=True)
-        for pert in perturbations:
-            self.network_graph.draw_perturbation(pert)
+        if perturbations:
+            self._initialise_graph_object(check=True)
+            for pert in perturbations:
+                self.network_graph.draw_perturbation(pert)
 
-    def draw_perturbations(self, pert_list):
+    def draw_perturbations(self, pert_list: list):
         self._initialise_graph_object(check=True)
         for pert in pert_list:
             self.network_graph.draw_perturbation(pert)
 
-    def get_outliers(self, threshold=10, name=None):
+    def get_outliers(
+        self, threshold: Union[int, float] = 10, name: Optional[str] = None
+    ) -> list:
         """get outliers above a certain difference to the experimental.
 
         Args:
@@ -985,7 +1002,9 @@ class analysis_network:
 
         return perts
 
-    def remove_outliers(self, threshold=10, name=None):
+    def remove_outliers(
+        self, threshold: Union[int, float] = 10, name: Optional[str] = None
+    ):
         """remove outliers above a certain difference to the experimental.
 
         Args:
@@ -1007,19 +1026,22 @@ class analysis_network:
         self._histogram_object = None
         self._stats_object = None
 
-    def sort_ligands_by_binding_affinity(self, engine=None):
+    def sort_ligands_by_binding_affinity(self, engine: Optional[str] = None) -> list:
         if not self._is_computed_dicts:
             self._compute_dicts()
 
         if engine:
-            engines = validate.engines(engine)
+            engine = validate.engine(engine)
         else:
-            engines = self.engines
+            self.compute_consensus()
+            logging.info(
+                "sorting ligands based on consensus scoring, as no engine was provided."
+            )
+            engine = f"consensus_{'_'.join(str(eng) for eng in self.engines)}"
 
-        for eng in engines:
-            df = pd.DataFrame(
-                self.cinnabar_calc_val_dict[eng], index=["value", "error"]
-            ).transpose()
+        df = pd.DataFrame(
+            self.cinnabar_calc_val_dict[engine], index=["value", "error"]
+        ).transpose()
 
         return df.sort_values(by="value", ascending=True)
 
@@ -1028,7 +1050,51 @@ class analysis_network:
 
         return df.sort_values(by="value", ascending=True)
 
-    def add_ligands_folder(self, folder):
+    def compute_consensus(self, names: Optional[list] = None):
+        if names:
+            self._validate_in_names_list(names, make_list=True)
+        else:
+            names = self.engines
+
+        consensus_pert_dict = {}
+
+        for pert in self.perturbations:
+            consensus_pert_dict[pert] = []
+
+            for eng in names:
+                consensus_pert_dict[pert].append(self.calc_pert_dict[eng][pert][0])
+
+            consensus_pert_dict[pert] = (
+                np.mean(consensus_pert_dict[pert]),
+                sem(consensus_pert_dict[pert]),
+            )
+
+            df = pd.DataFrame.from_dict(
+                consensus_pert_dict, orient="index", columns=["freenrg", "error"]
+            )
+            df.index.name = "perturbations"
+            df = df.reset_index()
+            df[["lig_0", "lig_1"]] = df["perturbations"].str.split("~", expand=True)
+            df["engine"] = f"consensus_{'_'.join(str(eng) for eng in names)}"
+            df["analysis"] = self.file_ext
+            df["method"] = "None"
+            df = df.drop(labels="perturbations", axis=1)
+            df = df[
+                ["lig_0", "lig_1", "freenrg", "error", "engine", "analysis", "method"]
+            ]
+
+            df.to_csv(
+                f"{self.output_folder}/consensus_score_{self.engines}_{self.file_ext}.csv",
+                sep=",",
+                index=False,
+            )
+
+        self.compute_other_results(
+            f"{self.output_folder}/consensus_score_{self.engines}_{self.file_ext}.csv",
+            name="consensus",
+        )
+
+    def add_ligands_folder(self, folder: str):
         """add a ligands folder so the ligands can be visualised
 
         Args:
@@ -1037,7 +1103,7 @@ class analysis_network:
 
         self.ligands_folder = validate.folder_path(folder)
 
-    def _initialise_graph_object(self, check=False):
+    def _initialise_graph_object(self, check: bool = False):
         """intialise the graph object
 
         Args:
@@ -1068,15 +1134,19 @@ class analysis_network:
         return self.network_graph
 
     def draw_graph(
-        self, output_dir=None, use_cinnabar=False, engines=None, successful_runs=True
+        self,
+        output_dir: Optional[str] = None,
+        use_cinnabar: bool = False,
+        engines: Optional[list] = None,
+        successful_runs: bool = True,
     ):
         """draw the network graph.
 
         Args:
             output_dir (str, optional): folder to save the image in. Defaults to None.
-            use_cinnabar (bool, optional): whether to use the cinnabar data or the self computed data. Defaults to False.
+            use_cinnabar (bool): whether to use the cinnabar data or the self computed data. Defaults to False.
             engines (str/list, optional): engine to draw the network for. Defaults to None, draws for each engine.
-            successful_runs (bool, optional): whether to only draw the successful runs. Only useable if cinnabar is set to False. Defaults to True.
+            successful_runs (bool): whether to only draw the successful runs. Only useable if cinnabar is set to False. Defaults to True.
         """
 
         if engines:
@@ -1135,7 +1205,7 @@ class analysis_network:
 
         return self.cycle_dict
 
-    def _initialise_plotting_object(self, check=False):
+    def _initialise_plotting_object(self, check: bool = False):
         """intialise the plotting object
 
         Args:
@@ -1147,20 +1217,16 @@ class analysis_network:
 
         # if not checking, always make
         if not check:
-            self._plotting_object = plotting_engines(
-                analysis_object=self
-            )
+            self._plotting_object = plotting_engines(analysis_object=self)
 
         # if checking, first see if it exists and if not make
         elif check:
             if not self._plotting_object:
-                self._plotting_object = plotting_engines(
-                    analysis_object=self
-                )
+                self._plotting_object = plotting_engines(analysis_object=self)
 
         return self._plotting_object
 
-    def _initialise_histogram_object(self, check=False):
+    def _initialise_histogram_object(self, check: bool = False):
         """intialise the histogram plotting object
 
         Args:
@@ -1172,24 +1238,20 @@ class analysis_network:
 
         # if not checking, always make
         if not check:
-            self._histogram_object = plotting_histogram(
-                analysis_object=self
-            )
+            self._histogram_object = plotting_histogram(analysis_object=self)
 
         # if checking, first see if it exists and if not make
         elif check:
             if not self._histogram_object:
-                self._histogram_object = plotting_histogram(
-                    analysis_object=self
-                )
+                self._histogram_object = plotting_histogram(analysis_object=self)
 
         return self._histogram_object
 
-    def plot_bar_pert(self, engines=None, **kwargs):
+    def plot_bar_pert(self, engines: Optional[list] = None, **kwargs):
         """plot the bar plot of the perturbations.
 
         Args:
-            engine (str, optional): engine to plot for. Defaults to None, will use all.
+            engines (str, optional): engine to plot for. Defaults to None, will use all.
         """
         if engines:
             engines = self._validate_in_names_list(engines, make_list=True)
@@ -1197,16 +1259,14 @@ class analysis_network:
             engines = self.engines + self.other_results_names
         engines.append("experimental")
 
-        plot_obj = self._initialise_plotting_object(
-            check=True
-        )
+        plot_obj = self._initialise_plotting_object(check=True)
         plot_obj.bar(pert_val="pert", names=engines, **kwargs)
 
-    def plot_bar_lig(self, engines=None, **kwargs):
+    def plot_bar_lig(self, engines: Optional[list] = None, **kwargs):
         """plot the bar plot of the values per ligand.
 
         Args:
-            engine (str, optional): engine to plot for. Defaults to None, will use all.
+            engines (str, optional): engine to plot for. Defaults to None, will use all.
         """
         if engines:
             engines = self._validate_in_names_list(engines, make_list=True)
@@ -1214,17 +1274,13 @@ class analysis_network:
             engines = self.engines + self.other_results_names
         engines.append("experimental")
 
-        plot_obj = self._initialise_plotting_object(
-            check=True
-        )
+        plot_obj = self._initialise_plotting_object(check=True)
         plot_obj.bar(pert_val="val", names=engines, **kwargs)
 
     def plot_bar_leg(self, engine, leg="bound", **kwargs):
         engine = validate.is_list(engine, make_list=True)
 
-        plot_obj = self._initialise_plotting_object(
-            check=True
-        )
+        plot_obj = self._initialise_plotting_object(check=True)
 
         plotting_dict = {
             "title": f"{leg} for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}"
@@ -1234,7 +1290,9 @@ class analysis_network:
 
         plot_obj.bar(pert_val=leg, names=engine, **plotting_dict)
 
-    def plot_scatter_pert(self, engines=None, use_cinnabar=False, **kwargs):
+    def plot_scatter_pert(
+        self, engines: Optional[list] = None, use_cinnabar: bool = False, **kwargs
+    ):
         """plot the scatter plot of the perturbations.
 
         Args:
@@ -1257,12 +1315,12 @@ class analysis_network:
                 )  # with {self.file_ext}
 
         else:
-            plot_obj = self._initialise_plotting_object(
-                check=True
-            )
+            plot_obj = self._initialise_plotting_object(check=True)
             plot_obj.scatter(pert_val="pert", y_names=engines, **kwargs)
 
-    def plot_scatter_lig(self, engines=None, use_cinnabar=False, **kwargs):
+    def plot_scatter_lig(
+        self, engines: Optional[list] = None, use_cinnabar: bool = False, **kwargs
+    ):
         """plot the scatter plot of the values per ligand.
 
         Args:
@@ -1285,23 +1343,25 @@ class analysis_network:
                 )
 
         else:
-            plot_obj = self._initialise_plotting_object(
-                check=True
-            )
+            plot_obj = self._initialise_plotting_object(check=True)
             plot_obj.scatter(pert_val="val", y_names=engines, **kwargs)
 
-    def plot_eng_vs_eng(self, engine_a=None, engine_b=None, pert_val="pert", **kwargs):
+    def plot_eng_vs_eng(
+        self,
+        engine_a: str = None,
+        engine_b: str = None,
+        pert_val: str = "pert",
+        **kwargs,
+    ):
         """plot scatter plot of engine_a vs engine_b
 
         Args:
-            engine_a (str, optional): engine_a. Defaults to None.
-            engine_b (str, optional): engine_b. Defaults to None.
-            pert_val (str, optional): whether perturbations 'pert' or values per ligand 'val'. Defaults to "pert".
+            engine_a (str): engine_a. Defaults to None.
+            engine_b (str): engine_b. Defaults to None.
+            pert_val (str): whether perturbations 'pert' or values per ligand 'val'. Defaults to "pert".
         """
 
-        plot_obj = self._initialise_plotting_object(
-            check=True
-        )
+        plot_obj = self._initialise_plotting_object(check=True)
 
         if pert_val == "pert":
             binding = "$\Delta\Delta$G$_{bind}$ (kcal/mol)"
@@ -1313,14 +1373,20 @@ class analysis_network:
             "x label": f"{engine_b} " + binding,
             "key": False,
         }
-        for key,value in kwargs.items():
+        for key, value in kwargs.items():
             plotting_dict[key] = value
 
         plot_obj.scatter(
             pert_val=pert_val, y_names=engine_a, x_name=engine_b, **plotting_dict
         )
 
-    def plot_outliers(self, engines=None, no_outliers=5, pert_val="pert", **kwargs):
+    def plot_outliers(
+        self,
+        engines: Optional[list] = None,
+        no_outliers: int = 5,
+        pert_val: str = "pert",
+        **kwargs,
+    ):
         """plot scatter plot with annotated outliers.
 
         Args:
@@ -1330,9 +1396,7 @@ class analysis_network:
 
         """
 
-        plot_obj = self._initialise_plotting_object(
-            check=True
-        )
+        plot_obj = self._initialise_plotting_object(check=True)
         plot_obj.scatter(
             pert_val=pert_val,
             y_names=engines,
@@ -1341,7 +1405,9 @@ class analysis_network:
             **kwargs,
         )
 
-    def plot_histogram_sem(self, engines=None, pert_val="pert"):
+    def plot_histogram_sem(
+        self, engines: Optional[list] = None, pert_val: str = "pert"
+    ):
         """plot histograms for the sem of the result (either pert or val).
 
         Args:
@@ -1358,7 +1424,7 @@ class analysis_network:
 
         self._plot_histogram(engines, type_error)
 
-    def plot_histogram_legs(self, engines=None):
+    def plot_histogram_legs(self, engines: Optional[list] = None):
         """plot histograms for the errors per leg.
 
         Args:
@@ -1367,7 +1433,7 @@ class analysis_network:
 
         self._plot_histogram(engines, ["bound", "free"])
 
-    def plot_histogram_repeats(self, engines=None):
+    def plot_histogram_repeats(self, engines: Optional[list] = None):
         """plot histograms for the errors per repeat.
 
         Args:
@@ -1375,17 +1441,10 @@ class analysis_network:
         """
         self._plot_histogram(engines, ["repeat"])
 
-    def _plot_histogram(self, engines, type_errors):
-        """internal function for plotting histograms
+    def _plot_histogram(self, engines: Optional[list] = None, type_errors: str = None):
+        """internal function for plotting histograms"""
 
-        Args:
-            engines (_type_): _description_
-            type_errors (_type_): _description_
-        """
-
-        hist_obj = self._initialise_histogram_object(
-            check=True
-        )
+        hist_obj = self._initialise_histogram_object(check=True)
 
         if not engines:
             engines = self.engines
@@ -1397,24 +1456,22 @@ class analysis_network:
                 hist_obj.histogram(name=eng, type_error=type_error)
             hist_obj.histogram_distribution(names=engines, type_error=type_error)
 
-    def plot_convergence(self, engine=None):
+    def plot_convergence(self, engines: Optional[list] = None):
         if not self.spert_results_dict:
             raise EnvironmentError(
                 f"please run 'calculate_convergence' first with the main_dir set."
             )
 
         else:
-            if not engine:
-                engine = self.engines
+            if not engines:
+                engines = self.engines
             else:
-                engine = validate.engines(engine)
+                engines = validate.engines(engines)
 
-            plot_obj = self._initialise_plotting_object(
-                check=True
-            )
-            plot_obj.plot_convergence(engines=engine)
+            plot_obj = self._initialise_plotting_object(check=True)
+            plot_obj.plot_convergence(engines=engines)
 
-    def _initialise_stats_object(self, check=False):
+    def _initialise_stats_object(self, check: bool = False):
         """intialise the object for statistical analysis.
 
         Args:
@@ -1435,7 +1492,9 @@ class analysis_network:
 
         return self._stats_object
 
-    def _calc_mae_iterations(self, pert_val=None, enginesa=None, enginesb=None):
+    def _calc_mae_iterations(
+        self, pert_val: str = None, enginesa: list = None, enginesb: list = None
+    ):
         stats_obj = self._initialise_stats_object(check=True)
 
         pv = validate.pert_val(pert_val)
@@ -1458,7 +1517,7 @@ class analysis_network:
 
         return mae_df, mae_df_err
 
-    def calc_mae_engines(self, pert_val=None, engines=None):
+    def calc_mae_engines(self, pert_val: str = None, engines: Optional[list] = None):
         """calculate the Mean Absolute Error (MAE) vs experimental results
 
         Args:
@@ -1487,7 +1546,7 @@ class analysis_network:
 
         return mae_df, mae_df_err
 
-    def calc_mad_engines(self, pert_val=None, engines=None):
+    def calc_mad_engines(self, pert_val: str = None, engines: Optional[list] = None):
         """calculate the Mean Absolute Deviation (MAD) for between all the engines.
 
         Args:
@@ -1514,7 +1573,7 @@ class analysis_network:
 
         return mad_df, mad_df_err
 
-    def calc_stats(self, engines=None):
+    def calc_stats(self, engines: Optional[list] = None):
         self._initialise_stats_object(check=True)
 
         if not engines:
@@ -1528,7 +1587,7 @@ class analysis_network:
         # maybe TODO write an output file for the dictionary
 
     # freenergworkflows stuff for comparison
-    def _add_fwf_path(self, fwf_path):
+    def _add_fwf_path(self, fwf_path: str):
         # using freenergworkflows
         if not fwf_path:
             raise ValueError("pls incl the path to freenergworkflows")
@@ -1540,7 +1599,7 @@ class analysis_network:
 
         self._fwf_path = fwf_path
 
-    def _get_exp_fwf(self):
+    def _get_exp_fwf(self) -> tuple:
         """get experimental values using freenergworkflows
 
         Returns:
@@ -1566,11 +1625,11 @@ class analysis_network:
 
         return exp_lig_dict, exp_pert_dict
 
-    def _get_ana_fwf(self, engine=None):
+    def _get_ana_fwf(self, engine: str = None) -> dict:
         """get experimental values using freenergworkflows
 
         Args:
-            engine (str, optional): name of engine. Defaults to None.
+            engine (str): name of engine. Defaults to None.
 
         Raises:
             ValueError: need an engine
@@ -1625,11 +1684,11 @@ class analysis_network:
 
         return freenrg_dict
 
-    def _get_stats_fwf(self, engine=None):
+    def _get_stats_fwf(self, engine: str = None) -> tuple:
         """get stats using freenergworkflows for the ligands
 
         Args:
-            engine (str, optional): name of engine. Defaults to None.
+            engine (str): name of engine. Defaults to None.
 
         Raises:
             ValueError: need an engine
@@ -1672,7 +1731,7 @@ class analysis_network:
 
         return r_confidence, tau_confidence, mue_confidence
 
-    def _get_mad_fwf(self, enginesa, enginesb):
+    def _get_mad_fwf(self, enginesa: str, enginesb: str) -> tuple:
         mad_df = pd.DataFrame(columns=enginesa, index=enginesb)
         mad_df_err = pd.DataFrame(columns=enginesa, index=enginesb)
 
@@ -1720,7 +1779,9 @@ class analysis_network:
 
         return mad_df, mad_df_err
 
-    def perturbing_atoms_and_overlap(self, prep_dir=None, outputs_dir=None, **kwargs):
+    def perturbing_atoms_and_overlap(
+        self, prep_dir: str = None, outputs_dir: str = None, **kwargs
+    ):
         if prep_dir:
             prep_dir = validate.folder_path(prep_dir)
             calc_atom_mappings = True

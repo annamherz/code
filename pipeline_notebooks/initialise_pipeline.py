@@ -5,16 +5,34 @@ from pipeline.setup import *
 
 
 def ask_things():
+
     lig_ff = str(
-        input("what is the Ligand forcefield? (allowed: GAFF2, Parsely, Sage): ")
+        input("what is the Ligand forcefield? (allowed: GAFF2, Parsely, Sage. Default: GAFF2): ")
     ).strip()
-    sampling_time = str(input("what is the sampling time? (in ns): ")).strip()
-    engines = str(input("what is the engine? (allowed: SOMD, AMBER, GROMACS): ")).strip()
-    hmr = str(input("should HMR be applied? (allowed: True, False): ")).strip()
-    repeats = str(input("how many repeats? (recommended: 3): ")).strip()
+    if not lig_ff:
+        lig_ff = "GAFF2"
+
+    sampling_time = str(input("what is the sampling time? (in ns. Default: 4 ns.): ")).strip()
+    if not sampling_time:
+        sampling_time = 4
+
+    engines = str(input("what is the engine? (allowed: SOMD, AMBER, GROMACS. Default: SOMD): ")).strip()
+    if not engines:
+        engines = "SOMD"
+
+    hmr = str(input("should HMR be applied? (allowed: True, False. Default: True): ")).strip()
+    if not hmr:
+        hmr = True
+
+    repeats = str(input("how many repeats? (Default: 3): ")).strip()
+    if not repeats:
+        repeats = 3
+
     trajectories = str(
-        input("save the trajectories? (allowed: 'None', '0,0.5,1', '0,1', 'All'): ")
+        input("save the trajectories? (allowed: 'None', '0,0.5,1', '0,1', 'All'. Default: All): ")
     ).strip()
+    if not trajectories:
+        trajectories = "All"
 
     # make these into a dictionary for the setup
     protocol_dict = {
@@ -95,7 +113,7 @@ def main():
     print("checking the provided command line arguments...")
     pl = check_arguments(pl, args)
 
-    print("please decide some basic protocol settings:")
+    print("please decide some basic protocol settings. Leave blank for default values:")
     protocol_dict = ask_things()
     # fill in rest with default and save the files
     pl.setup_protocols(protocol_dict)

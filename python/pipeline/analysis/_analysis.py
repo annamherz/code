@@ -26,7 +26,13 @@ from ..prep import analysis_protocol
 class analyse:
     """class to analyse a work dir"""
 
-    def __init__(self, work_dir: str, pert: Optional[str] = None, engine: Optional[str] = None, analysis_prot: Optional[str] = None):
+    def __init__(
+        self,
+        work_dir: str,
+        pert: Optional[str] = None,
+        engine: Optional[str] = None,
+        analysis_prot: Optional[str] = None,
+    ):
         """class for analysing results in a directory for a single perturbation
 
         Args:
@@ -221,7 +227,9 @@ class analyse:
         return pickle_ext
 
     @staticmethod
-    def _update_options_dict(options_dict: dict, current_options: Optional[dict] = None) -> dict:
+    def _update_options_dict(
+        options_dict: dict, current_options: Optional[dict] = None
+    ) -> dict:
         """update the options dict, if no current one the default will be used.
 
         Args:
@@ -470,7 +478,9 @@ class analyse:
             if do_pickle:
                 logging.info("already using pickles, will not be saving again.")
             else:
-                logging.info("saving the pmf dictionaries for bound and free as pickles.")
+                logging.info(
+                    "saving the pmf dictionaries for bound and free as pickles."
+                )
             self.save_pickle()
 
         return (freenrg_rel[0], freenrg_rel[1], repeats_tuple_list)
@@ -835,7 +845,9 @@ class analyse:
                         name = str(b) + "_bound"
                         overlap = self._bound_matrix_dict[name]
                         ax = plot_mbar_overlap_matrix(overlap)
-                        ax.figure.savefig(f"{self._graph_dir}/{name}_overlap_MBAR_{self.pickle_extension}",)
+                        ax.figure.savefig(
+                            f"{self._graph_dir}/{name}_overlap_MBAR_{self.pickle_extension}",
+                        )
                     except Exception as e:
                         logging.exception(e)
                         logging.error(f"could not plt overlap matrix for {name}")
@@ -845,7 +857,9 @@ class analyse:
                         name = str(f) + "_free"
                         overlap = self._free_matrix_dict[name]
                         ax = plot_mbar_overlap_matrix(overlap)
-                        ax.figure.savefig(f"{self._graph_dir}/{name}_overlap_MBAR_{self.pickle_extension}",)
+                        ax.figure.savefig(
+                            f"{self._graph_dir}/{name}_overlap_MBAR_{self.pickle_extension}",
+                        )
                     except Exception as e:
                         logging.exception(e)
                         logging.error(f"could not plt overlap matrix for {name}")
@@ -856,7 +870,9 @@ class analyse:
                     overlap = self._bound_matrix_dict[name]
                     try:
                         ax = plot_ti_dhdl(overlap)
-                        ax.figure.savefig(f"{self._graph_dir}/{name}_dHdl_TI_{self.pickle_extension}",)
+                        ax.figure.savefig(
+                            f"{self._graph_dir}/{name}_dHdl_TI_{self.pickle_extension}",
+                        )
                     except Exception as e:
                         logging.exception(e)
                         logging.error(f"could not plt dhdl for {name}")
@@ -866,7 +882,9 @@ class analyse:
                     overlap = self._free_matrix_dict[name]
                     try:
                         ax = plot_ti_dhdl(overlap)
-                        ax.figure.savefig(f"{self._graph_dir}/{name}_dHdl_TI_{self.pickle_extension}",)
+                        ax.figure.savefig(
+                            f"{self._graph_dir}/{name}_dHdl_TI_{self.pickle_extension}",
+                        )
                     except Exception as e:
                         logging.exception(e)
                         logging.error(f"could not plt dhdl for {name}")
@@ -1010,7 +1028,7 @@ class analyse:
         except Exception as e:
             logging.exception(e)
             logging.error("failed to plot convergence, please check Exception message.")
-    
+
     @staticmethod
     def _calculate_truncated(
         path_to_dir: str,
@@ -1065,7 +1083,11 @@ class analyse:
 
     @staticmethod
     def plot_truncated(
-        sdf: pd.DataFrame, edf: pd.DataFrame, file_path: Optional[str] = None, plot_error: Optional[bool] = False, plot_difference: Optional[bool] = True
+        sdf: pd.DataFrame,
+        edf: pd.DataFrame,
+        file_path: Optional[str] = None,
+        plot_error: Optional[bool] = False,
+        plot_difference: Optional[bool] = True,
     ):
         include_key = True
 
