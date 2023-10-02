@@ -10,8 +10,8 @@ from pipeline import *
 from pipeline.utils import validate
 from pipeline.analysis import *
 
-def analyse_results(main_dir, experimental_file):
 
+def analyse_results(main_dir, experimental_file):
     # choose location for the files
     net_file = f"{main_dir}/execution_model/network.dat"
     ana_file = f"{main_dir}/execution_model/analysis_protocol.dat"
@@ -66,25 +66,20 @@ def analyse_results(main_dir, experimental_file):
     all_analysis_object.calc_mae_engines(pert_val="val")
 
 
-
 def check_arguments(args):
     # pass the checks to the other check functions
     if args.main_folder:
         main_folder = validate.folder_path(args.main_folder)
     else:
         main_folder = validate.folder_path(
-            str(
-                input("what is the main folder of the runs? : ")
-            ).strip()
+            str(input("what is the main folder of the runs? : ")).strip()
         )
 
     if args.experimental_file:
         experimental_file = validate.file_path(args.experimental_file)
     else:
         experimental_file = validate.file_path(
-            str(
-                input("what is the path to the experimental results?: ")
-            ).strip()
+            str(input("what is the path to the experimental results?: ")).strip()
         )
 
     return main_folder, experimental_file

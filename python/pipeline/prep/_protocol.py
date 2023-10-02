@@ -66,6 +66,7 @@ class protocol:
                     logging.error(
                         f"input was not recognised as a file/dictionary/protocol object."
                     )
+                    self._query_dict = {}
 
         else:
             logging.info("no file or dict passed, using entirely default values...")

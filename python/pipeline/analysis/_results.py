@@ -596,8 +596,14 @@ class analysis_network:
         # self.val_statistics.update({eng: self.compute_statistics(pert_val="val", engine=eng)})
         self._initialise_stats_object()
 
-    def compute_cycle_closures(self):
-        self._compute_cycle_closures()
+    def compute_cycle_closures(self, engines):
+        engines = validate.is_list(engines, make_list=True)
+
+        for eng in engines:
+            self._compute_cycle_closures(eng)
+            print(
+                f"cycle closure average is {self.cycle_dict[eng][2]} +/- {self.cycle_dict[eng][3]} kcal/mol"
+            )
 
     def _compute_dicts(self):
         """calculate the perturbation dicts from the previously passed repeat files."""
@@ -803,8 +809,9 @@ class analysis_network:
         self._initialise_plotting_object(check=False)
         self._initialise_stats_object(check=False)
 
-    def compute_convergence(self, main_dir: str):
+    def compute_convergence(self, main_dir: str, compute_missing: bool = False):
         main_dir = validate.folder_path(main_dir)
+        compute_missing = validate.boolean(compute_missing)
 
         for engine in self.engines:
             self.spert_results_dict[engine] = {}
@@ -880,10 +887,77 @@ class analysis_network:
                     self.epert_bound_dict[engine][pert] = ebound_dict
                     self.epert_free_dict[engine][pert] = efree_dict
 
+                    pickle_loaded = True
+
                 except:
                     logging.error(
                         f"could not load pickles for {pert} in {engine}. Was it analysed for convergence?"
                     )
+
+                    pickle_loaded = False
+
+                if compute_missing and not pickle_loaded:
+                    path_to_dir = f"{main_dir}/outputs_extracted/{engine}/{pert}{name}"
+                    try:
+                        validate.folder_path(path_to_dir)
+                    except:
+                        try:
+                            path_to_dir = f"{main_dir}/outputs/{engine}/{pert}{name}"
+                            validate.folder_path(path_to_dir)
+                        except:
+                            path_to_dir = None
+                            logging.error(
+                                f"{engine} {pert}{name} does not exist in the searched output locations."
+                            )
+                            continue
+
+                    analysed_pert = analyse(
+                        path_to_dir, pert=pert, analysis_prot=self.analysis_options
+                    )
+                    analysed_pert._save_pickle = True
+                    analysed_pert.calculate_convergence()
+
+                    pickle_ext = analyse.pickle_ext(
+                        self.analysis_options.dictionary(), pert, engine
+                    ).split("truncate")[0]
+
+                    with open(
+                        f"{path_to_dir}/pickle/spert_results_dict_{pickle_ext}.pickle",
+                        "rb",
+                    ) as file:
+                        sresults_dict = pickle.load(file)
+                    with open(
+                        f"{path_to_dir}/pickle/epert_results_dict_{pickle_ext}.pickle",
+                        "rb",
+                    ) as file:
+                        eresults_dict = pickle.load(file)
+                    with open(
+                        f"{path_to_dir}/pickle/spert_bound_dict_{pickle_ext}.pickle",
+                        "rb",
+                    ) as file:
+                        sbound_dict = pickle.load(file)
+                    with open(
+                        f"{path_to_dir}/pickle/epert_bound_dict_{pickle_ext}.pickle",
+                        "rb",
+                    ) as file:
+                        ebound_dict = pickle.load(file)
+                    with open(
+                        f"{path_to_dir}/pickle/spert_free_dict_{pickle_ext}.pickle",
+                        "rb",
+                    ) as file:
+                        sfree_dict = pickle.load(file)
+                    with open(
+                        f"{path_to_dir}/pickle/epert_free_dict_{pickle_ext}.pickle",
+                        "rb",
+                    ) as file:
+                        efree_dict = pickle.load(file)
+
+                    self.spert_results_dict[engine][pert] = sresults_dict
+                    self.spert_bound_dict[engine][pert] = sbound_dict
+                    self.spert_free_dict[engine][pert] = sfree_dict
+                    self.epert_results_dict[engine][pert] = eresults_dict
+                    self.epert_bound_dict[engine][pert] = ebound_dict
+                    self.epert_free_dict[engine][pert] = efree_dict
 
     def successful_runs(self, eng: str, perts: Optional[list] = None) -> tuple:
         """calculate how many successful runs
@@ -1135,7 +1209,6 @@ class analysis_network:
 
     def draw_graph(
         self,
-        output_dir: Optional[str] = None,
         use_cinnabar: bool = False,
         engines: Optional[list] = None,
         successful_runs: bool = True,
@@ -1143,7 +1216,6 @@ class analysis_network:
         """draw the network graph.
 
         Args:
-            output_dir (str, optional): folder to save the image in. Defaults to None.
             use_cinnabar (bool): whether to use the cinnabar data or the self computed data. Defaults to False.
             engines (str/list, optional): engine to draw the network for. Defaults to None, draws for each engine.
             successful_runs (bool): whether to only draw the successful runs. Only useable if cinnabar is set to False. Defaults to True.
@@ -1165,45 +1237,52 @@ class analysis_network:
         else:
             successful_runs = validate.boolean(successful_runs)
 
+            file_dir = validate.folder_path(
+                f"{self.output_folder}/network", create=True
+            )
+
             if successful_runs:
                 for eng in engines:
                     val, percen, perturbations = self.successful_runs(eng)
-                    graph = net_graph(self.ligands, perturbations)
-                    graph.draw_graph(file_dir=output_dir)
+                    graph = net_graph(
+                        self.ligands,
+                        perturbations,
+                        self.calc_pert_dict[eng],
+                        file_dir=file_dir,
+                        ligands_folder=self.ligands_folder,
+                    )
+                    graph.draw_graph(title=eng)
             else:
                 for eng in engines:
                     graph = net_graph(
-                        self._ligands_dict[eng], self._perturbations_dict[eng]
+                        self._ligands_dict[eng],
+                        self._perturbations_dict[eng],
+                        self.calc_pert_dict[eng],
+                        file_dir=file_dir,
+                        ligands_folder=self.ligands_folder,
                     )
-                    graph.draw_graph(file_dir=output_dir)
+                    graph.draw_graph(title=eng)
 
-            self.network_graph.draw_graph(file_dir=output_dir)
-
-    def _compute_cycle_closures(self):
+    def _compute_cycle_closures(self, eng: str):
         """compute the cycle closures and their stats for each engine for the network.
 
         Returns:
             dict: self.cycle_dict (eng: cycles_dict, cycle_vals, np.mean(cycle_vals), np.std(cycle_vals) )
         """
 
-        # cycle closures
+        eng = self._validate_in_names_list(eng)
 
-        self._initialise_graph_object(check=True)
+        network_graph = self._initialise_graph_object(check=False)
 
-        network_graph = self.network_graph
+        pert_dict = self.calc_pert_dict[eng]
 
-        for eng in self.engines:
-            pert_dict = self.calc_pert_dict[eng]
+        cycle_closures = network_graph.cycle_closures()
 
-            cycle_closures = network_graph.cycle_closures()
+        cycles = make_dict.cycle_closures(pert_dict, cycle_closures)
 
-            cycles = make_dict.cycle_closures(pert_dict, cycle_closures)
-
-            self.cycle_dict.update(
-                {eng: (cycles[0], cycles[1], cycles[2], cycles[3])}
-            )  # the cycles dict : cycles, vals, mean, deviation
-
-        return self.cycle_dict
+        self.cycle_dict.update(
+            {eng: (cycles[0], cycles[1], cycles[2], cycles[3])}
+        )  # the cycles dict : cycles, vals, mean, deviation
 
     def _initialise_plotting_object(self, check: bool = False):
         """intialise the plotting object

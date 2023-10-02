@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import csv
 import numpy as np
 import pandas as pd
+from PIL import Image, ImageOps
 
 from ..utils._validate import *
 
@@ -185,6 +186,7 @@ class net_graph:
         self,
         ligands: list,
         perturbations: list,
+        calc_pert_dict: dict = None,
         file_dir: Optional[str] = None,
         ligands_folder: Optional[str] = None,
     ):
@@ -199,11 +201,20 @@ class net_graph:
         self.ligands = sorted(validate.is_list(ligands))
         self.perturbations = validate.is_list(perturbations)
 
+        if calc_pert_dict:
+            self.calc_pert_dict = validate.dictionary(calc_pert_dict)
+        else:
+            self.calc_pert_dict = None
+
         if file_dir:
             self.file_dir = validate.folder_path(file_dir, create=True)
+            self.ligand_image_dir = validate.folder_path(
+                f"{file_dir}/ligand_images", create=True
+            )
             self._save_image = True
         else:
             self._save_image = False
+            self.ligand_image_dir = None
 
         if ligands_folder:
             self.ligands_folder = validate.folder_path(ligands_folder)
@@ -220,17 +231,26 @@ class net_graph:
 
         # Loop over the nligands and add as nodes to the graph.
         for lig in self.ligands:
-            graph.add_node(lig, label=lig, labelloc="t")
+            if self.ligands_folder:
+                img = self._ligand_image(lig)
+            else:
+                img = None
+            graph.add_node(lig, label=lig, labelloc="t", image=img)
 
         # Loop over the edges in the nxgraph and add to the graph.
         for edge in self.perturbations:
             lig_0 = edge.split("~")[0]
             lig_1 = edge.split("~")[1]
-            graph.add_edge(lig_0, lig_1)
+            if self.calc_pert_dict:
+                val = self.calc_pert_dict[edge][0]
+                err = self.calc_pert_dict[edge][1]
+                graph.add_edge(lig_0, lig_1, value=val, error=err)
+            else:
+                graph.add_edge(lig_0, lig_1)
 
         self.graph = graph
 
-    def draw_graph(self, file_dir: Optional[str] = None):
+    def draw_graph(self, file_dir: Optional[str] = None, title=None):
         """draw the network x graph.
 
         Args:
@@ -238,22 +258,71 @@ class net_graph:
         """
 
         graph = validate.nxgraph(self.graph)
+        if title:
+            title = validate.string(title)
+        else:
+            title = "Network"
 
         # Plot the networkX graph.
-        pos = nx.kamada_kawai_layout(graph)
-        fig, ax = plt.figure(figsize=(8, 8), dpi=150)
+        pos = nx.circular_layout(graph)  # kamada_kawai_layout
+
+        fig, ax = plt.subplots(
+            figsize=(graph.number_of_nodes() * 2, graph.number_of_nodes() * 2), dpi=150
+        )
+
+        if self.calc_pert_dict:
+            cmap_col = plt.cm.magma
+            edge_colours = [graph[u][v]["error"] for u, v in graph.edges]
+            edges, weights = zip(*nx.get_edge_attributes(graph, "error").items())
+        else:
+            cmap_col = None
+            weights = "black"
+
         nx.draw(
             graph,
             pos,
-            edge_color="black",
+            edge_color=weights,
+            edge_cmap=cmap_col,
             width=1,
             linewidths=1,
             node_size=2100,
-            node_color="darkblue",
-            font_size=9.5,
+            node_color="navy",
+            font_size=15,
             labels={node: node for node in graph.nodes()},
             font_color="white",
         )
+        # nx.draw_networkx_edge_labels(
+        #     graph, pos,
+        #     edge_labels={(u,v): format(graph[u][v]['value'],".2f") for u,v in graph.edges},
+        #     font_color='navy',
+        #     font_size=16,
+        #     label_pos=0.45
+        # )
+
+        plt.title(
+            f"{title}", fontdict={"fontsize": graph.number_of_nodes()}
+        )  # f"{title}\n ddG in kcal/mol"
+
+        if cmap_col:
+            sm = plt.cm.ScalarMappable(
+                cmap=cmap_col, norm=plt.Normalize(vmin=min(weights), vmax=max(weights))
+            )
+            cbar = plt.colorbar(sm, shrink=0.5, location="bottom", aspect=50)
+            cbar.set_label(label="error (kcal/mol)", size=15)
+            cbar.ax.tick_params(labelsize=10)
+
+        trans = ax.transData.transform
+        trans2 = fig.transFigure.inverted().transform
+        piesize = 0.05  # this is the image size
+        p2 = piesize / 2.0
+        for n in graph:
+            xx, yy = trans(pos[n])  # figure coordinates
+            xa, ya = trans2((xx, yy))  # axes coordinates
+            a = plt.axes([xa - p2, ya - p2, piesize, piesize])
+            a.set_aspect("equal")
+            a.imshow(ImageOps.expand(graph.nodes[n]["image"], border=2, fill="black"))
+            a.set_title(f"{n}", y=0.85)
+            a.axis("off")
 
         if self._save_image:
             plt.savefig(f"{self.file_dir}/network.png", dpi=300)
@@ -271,6 +340,12 @@ class net_graph:
         smi = Chem.MolToSmiles(m)
         m2 = Chem.MolFromSmiles(smi)
         img = Chem.Draw.MolToImage(m2)
+        if self._save_image:
+            Chem.Draw.MolToFile(m, f"{self.ligand_image_dir}/{ligand}.png")
+        else:
+            logging.info(
+                "as there is no output folder to save the network image, the ligand images will not be written."
+            )
 
         return img
 

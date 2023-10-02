@@ -4,6 +4,7 @@ import BioSimSpace as BSS
 import yaml
 import csv
 import numpy as np
+import math
 
 from ..utils import *
 from ._dictionaries import *
@@ -321,6 +322,8 @@ class convert:
                 comp_err = comp_diff_dict[key][1]
 
                 if not comp_ddG:
+                    pass
+                elif math.isnan(comp_ddG):
                     pass
                 else:
                     if perturbations:

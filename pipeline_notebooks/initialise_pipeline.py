@@ -5,22 +5,29 @@ from pipeline.setup import *
 
 
 def ask_things():
-
     lig_ff = str(
-        input("what is the Ligand forcefield? (allowed: GAFF2, Parsely, Sage. Default: GAFF2): ")
+        input(
+            "what is the Ligand forcefield? (allowed: GAFF2, Parsely, Sage. Default: GAFF2): "
+        )
     ).strip()
     if not lig_ff:
         lig_ff = "GAFF2"
 
-    sampling_time = str(input("what is the sampling time? (in ns. Default: 4 ns.): ")).strip()
+    sampling_time = str(
+        input("what is the sampling time? (in ns. Default: 4 ns.): ")
+    ).strip()
     if not sampling_time:
         sampling_time = 4
 
-    engines = str(input("what is the engine? (allowed: SOMD, AMBER, GROMACS. Default: SOMD): ")).strip()
+    engines = str(
+        input("what is the engine? (allowed: SOMD, AMBER, GROMACS. Default: SOMD): ")
+    ).strip()
     if not engines:
         engines = "SOMD"
 
-    hmr = str(input("should HMR be applied? (allowed: True, False. Default: True): ")).strip()
+    hmr = str(
+        input("should HMR be applied? (allowed: True, False. Default: True): ")
+    ).strip()
     if not hmr:
         hmr = True
 
@@ -29,7 +36,9 @@ def ask_things():
         repeats = 3
 
     trajectories = str(
-        input("save the trajectories? (allowed: 'None', '0,0.5,1', '0,1', 'All'. Default: All): ")
+        input(
+            "save the trajectories? (allowed: 'None', '0,0.5,1', '0,1', 'All'. Default: All): "
+        )
     ).strip()
     if not trajectories:
         trajectories = "All"
@@ -124,7 +133,9 @@ def main():
     print("please edit the network as needed. Otherwise, leave blank.")
 
     rem_ligs = str(
-        input("do you want to remove any ligands? Please list all ligands to remove, seperated by a comma: ")
+        input(
+            "do you want to remove any ligands? Please list all ligands to remove, seperated by a comma: "
+        )
     ).strip()
     if rem_ligs:
         rem_ligs = [lig.strip() for lig in rem_ligs.split(",")]
@@ -136,7 +147,9 @@ def main():
     pl.setup_network()
 
     rem_perts = str(
-        input("do you want to remove any perturbations? Please list all perts to remove (name as above), seperated by a comma: ")
+        input(
+            "do you want to remove any perturbations? Please list all perts to remove (name as above), seperated by a comma: "
+        )
     ).strip()
     if rem_perts:
         rem_perts = [pert.strip() for pert in rem_perts.split(",")]
@@ -146,7 +159,9 @@ def main():
         pass
 
     add_perts = str(
-        input("do you want to add any perturbations? Please list all perts to add (lig0~lig1), seperated by a comma: ")
+        input(
+            "do you want to add any perturbations? Please list all perts to add (lig0~lig1), seperated by a comma: "
+        )
     ).strip()
     if add_perts:
         add_perts = [pert.strip() for pert in rem_perts.split(",")]
@@ -156,16 +171,22 @@ def main():
         pass
 
     run_reverse = str(
-        input("do you want to also run the perturbations in reverse? Please input True/False: ")
+        input(
+            "do you want to also run the perturbations in reverse? Please input True/False: "
+        )
     ).strip()
     if run_reverse:
         pl.run_reverse(run_reverse)
     else:
         pass
 
-    pl.add_source_file(str(
-        input("please state the bash file that includes all the source and module parameters: ")
-    ).strip())
+    pl.add_source_file(
+        str(
+            input(
+                "please state the bash file that includes all the source and module parameters: "
+            )
+        ).strip()
+    )
 
     # make run_all_slurm to the main folder that was made.
     pl.write_run_all()
