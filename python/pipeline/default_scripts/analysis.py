@@ -4,6 +4,7 @@ import BioSimSpace as BSS
 import sys
 import os as _os
 from argparse import ArgumentParser
+import logging
 
 BSS.setVerbose = True
 
@@ -32,9 +33,6 @@ def analysis(pert, engine, ana_file, main_dir, prot_file=None):
     if _os.path.exists(f"{main_dir}/outputs_extracted/{engine}/{pert_name}"):
         path_to_dir = f"{main_dir}/outputs_extracted/{engine}/{pert_name}"
         final_results_folder = f"{main_dir}/outputs_extracted/results"
-    elif _os.path.exists(f"{main_dir}/outputs/{engine}_extracted/{pert_name}"):
-        path_to_dir = f"{main_dir}/outputs/{engine}_extracted/{pert_name}"
-        final_results_folder = f"{main_dir}/outputs/results"
     else:
         path_to_dir = f"{main_dir}/outputs/{engine}/{pert_name}"
         final_results_folder = f"{main_dir}/outputs/results"
@@ -48,15 +46,16 @@ def analysis(pert, engine, ana_file, main_dir, prot_file=None):
     # using the pipeline module for analysis
     analysed_pert = analyse(path_to_dir, pert=pert, analysis_prot=analysis_options)
     avg, error, repeats_tuple_list = analysed_pert.analyse_all_repeats()
+    analysed_pert.check_convergence()
     analysed_pert.plot_graphs()
 
     # write the final result
     write_analysis_file(analysed_pert, final_results_folder)
 
     # plot the convergence
-    analysed_pert.calculate_convergence()
-    analysed_pert.plot_convergence()
-    analysed_pert.plot_across_lambda()
+    # analysed_pert.calculate_convergence()
+    # analysed_pert.plot_convergence()
+    # analysed_pert.plot_across_lambda()
 
     # write for edgembar
     # analysed_pert.format_for_edgembar()

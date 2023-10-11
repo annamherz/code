@@ -16,15 +16,18 @@ def analyse_results(main_dir, experimental_file):
     net_file = f"{main_dir}/execution_model/network.dat"
     ana_file = f"{main_dir}/execution_model/analysis_protocol.dat"
     exp_file = experimental_file
-    results_folder = f"{main_dir}/outputs_extracted/results"
-    output_folder = validate.folder_path(f"{main_dir}/analysis", create=True)
+    output_folder = f"{main_dir}/outputs_extracted"
+
+    prot_file = f"{main_dir}/execution_model/protocol.dat"
+    pipeline_prot = pipeline_protocol(prot_file, auto_validate=True)
 
     all_analysis_object = analysis_network(
-        results_folder,
+        output_folder=output_folder,
         exp_file=exp_file,
         net_file=net_file,
-        output_folder=output_folder,
         analysis_prot=ana_file,
+        # method = pipeline_prot.name(), # if the protocol had a name
+        engines=pipeline_prot.engines(),
     )
 
     all_analysis_object.compute_results()
@@ -34,18 +37,18 @@ def analyse_results(main_dir, experimental_file):
 
     # plotting all
     # bar
-    all_analysis_object.plot_bar_lig()
-    all_analysis_object.plot_bar_pert()
+    all_analysis_object.plot_bar_dG()
+    all_analysis_object.plot_bar_ddG()
 
     # scatter
-    all_analysis_object.plot_scatter_lig()
-    all_analysis_object.plot_scatter_pert()
-    all_analysis_object.plot_scatter_lig(use_cinnabar=True)
-    all_analysis_object.plot_scatter_pert(use_cinnabar=True)
+    all_analysis_object.plot_scatter_dG()
+    all_analysis_object.plot_scatter_ddG()
+    all_analysis_object.plot_scatter_dG(use_cinnabar=True)
+    all_analysis_object.plot_scatter_ddG(use_cinnabar=True)
 
     for eng in all_analysis_object.engines:
-        all_analysis_object.plot_scatter_lig(engines=eng)
-        all_analysis_object.plot_scatter_pert(engines=eng)
+        all_analysis_object.plot_scatter_dG(engines=eng)
+        all_analysis_object.plot_scatter_ddG(engines=eng)
 
         # outliers
         all_analysis_object.plot_outliers(engine=eng)

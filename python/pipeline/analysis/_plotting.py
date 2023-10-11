@@ -21,13 +21,13 @@ class plotting_engines:
     def __init__(
         self,
         analysis_object=None,
-        output_folder: str = None,
+        results_folder: str = None,
     ):
         """for plotting analysis network results.
 
         Args:
             analysis_object (pipeline.analysis.analysis_network, optional): analysis object that is to be plotted for. Defaults to None.
-            output_folder (str, optional): output folder for generated csv files and graph images. Defaults to None.
+            results_folder (str, optional): output folder for generated csv files and graph images. Defaults to None.
 
         Raises:
             ValueError: must provide an analysis network object.
@@ -36,31 +36,29 @@ class plotting_engines:
         if analysis_object:
             self._analysis_object = analysis_object
             # get info about things for plotting from analysis
-            self.analysis_obj_into_format()
-            self.analysis_obj_dicts_into_format()
+            self._analysis_obj_into_format()
+            self._analysis_obj_dicts_into_format()
         else:
             raise ValueError("please provide an analysis object to be plotted for.")
 
         # place to write results to
-        if not output_folder:
+        if not results_folder:
             # want to write to the graph directory
-            self.output_folder = self._analysis_object.output_folder
+            self.results_folder = self._analysis_object.results_folder
             self.graph_folder = self._analysis_object.graph_dir
         else:
-            self.output_folder = validate.folder_path(output_folder, create=True)
+            self.results_folder = validate.folder_path(results_folder, create=True)
             self.graph_folder = validate.folder_path(
-                f"{output_folder}/graphs", create=True
+                f"{results_folder}/graphs", create=True
             )
 
         # set the colours
-        self.colours = plotting_engines.set_colours(
-            other_results_names=self.other_results_names
-        )
+        self.colours = set_colours(other_results_names=self.other_results_names)
 
         # convert the dictionaries into dataframes for plotting
         self._analysis_dicts_to_df()
 
-    def analysis_obj_into_format(self):
+    def _analysis_obj_into_format(self):
         """turn the passed pipeline.analysis.analysis_network object into format for this class"""
 
         ana_obj = self._analysis_object
@@ -76,11 +74,13 @@ class plotting_engines:
         # name of all options
         self._eng_other_list()
 
-        # file extension
-        self.file_extension(self.default_file_ext())
-        self.network_extension(self.default_net_ext())
+        # file and network extensions
+        self.file_ext = None
+        self.net_ext = None
+        self.file_extension()
+        self.network_extension()
 
-    def analysis_obj_dicts_into_format(self):
+    def _analysis_obj_dicts_into_format(self):
         ana_obj = self._analysis_object
 
         # dictionaries of engines for plotting from cinnabar
@@ -106,32 +106,6 @@ class plotting_engines:
         self.epert_bound_dict = ana_obj.epert_bound_dict
         self.epert_free_dict = ana_obj.epert_free_dict
 
-    def default_file_ext(self) -> str:
-        """file extension from the analysis object, if none is provided na.
-
-        Returns:
-            str: file extension
-        """
-
-        file_ext = self._analysis_object.file_ext
-
-        if file_ext == ".+":
-            file_ext = "na"
-
-        return file_ext
-
-    def default_net_ext(self) -> str:
-        """the network extension
-
-        Returns:
-            str: network extension
-        """
-
-        net_ext = self._analysis_object.net_ext
-        self.net_ext = net_ext
-
-        return net_ext
-
     def file_extension(self, file_ext: str = None) -> str:
         """set or return the file extension
 
@@ -144,6 +118,15 @@ class plotting_engines:
 
         if file_ext:
             self.file_ext = validate.string(file_ext)
+
+        elif not self.file_ext:
+            file_ext = self._analysis_object.file_ext
+
+            if file_ext == ".+":
+                file_ext = "na"
+
+            self.file_ext = file_ext
+
         else:
             pass
 
@@ -161,6 +144,9 @@ class plotting_engines:
 
         if net_ext:
             self.net_ext = validate.string(net_ext)
+        elif not self.net_ext:
+            net_ext = self._analysis_object.net_ext
+            self.net_ext = net_ext
         else:
             pass
 
@@ -338,7 +324,7 @@ class plotting_engines:
 
                 # save our results to a file that can be opened in e.g. Excel.
                 freenrg_df.to_csv(
-                    f"{self.output_folder}/{name}_vs_{x_name}_{pv}_results_table_{self.file_ext}_{self.net_ext}.csv"
+                    f"{self.results_folder}/{name}_vs_{x_name}_{pv}_results_table_{self.file_ext}_{self.net_ext}.csv"
                 )
 
         self.freenrg_df_dict[x_name] = freenrg_df_dict
@@ -442,62 +428,6 @@ class plotting_engines:
                 df.loc[pert] = [0, 0, 0, 0]
 
         return df
-
-    @staticmethod
-    def set_colours(
-        colour_dict: Optional[dict] = None, other_results_names: Optional[list] = None
-    ) -> dict:
-        """set the colours of the bars or scatter plots.
-
-        Args:
-            colour_dict (dict, optional): dicitonary of names and their colours. Defaults to None.
-
-        Returns:
-            dict: dictionary of new colours
-        """
-
-        if colour_dict:
-            colour_dict = validate.dictionary(colour_dict)
-        else:
-            colour_dict = {}
-
-        if other_results_names:
-            other_results_names = validate.is_list(other_results_names, make_list=True)
-
-        other_colours = [
-            "limegreen",
-            "gold",
-            "mediumpurple",
-            "darkred",
-            "grey",
-            "lightsteelblue",
-            "peru",
-            "plum",
-            "papayawhip",
-            "honeydew",
-        ]
-
-        if other_results_names:
-            other_res_list = []
-            for res in other_results_names:
-                if res not in colour_dict.keys():
-                    other_res_list.append(res)
-
-            for res, col in zip(other_res_list, other_colours):
-                colour_dict[res] = col
-
-        default_colour_dict = {
-            "AMBER": "orange",
-            "SOMD": "darkturquoise",
-            "GROMACS": "orchid",
-            "experimental": "midnightblue",
-        }
-
-        for key in colour_dict:
-            # replace default colour dict keys with those in the passed dictionary
-            default_colour_dict[key] = colour_dict[key]
-
-        return default_colour_dict
 
     @staticmethod
     def get_bar_spacing(names: list = None) -> tuple:
@@ -605,30 +535,6 @@ class plotting_engines:
             placement_dict.update({eng: place})  # for each engine
 
         return placement_dict, width
-
-    def _plotting_engines(self, engines_query: list) -> list:
-        """engines to be used for plotting
-
-        Args:
-            engines_query (list): list of engines to be plotted for
-
-        Returns:
-            list: validated list of engines to be plotted for.
-        """
-
-        # get engines for analysis
-        if not engines_query:
-            engines = self.engines
-        else:
-            try:
-                engines = validate.engines(engines_query)
-            except:
-                logging.error(
-                    "engine input not recognised. Will use all engines for which there is data."
-                )
-                engines = self.engines
-
-        return engines
 
     def _parse_kwargs_graphs(self, graph: str = None, **kwargs):
         graph = validate.string(graph).upper()
@@ -1112,10 +1018,10 @@ class plotting_engines:
             logging.info(
                 f"plotting diff to final result for all perturbations in {engine}..."
             )
-            sdf = plotting_engines.pert_dict_into_conv_df(
+            sdf = self.pert_dict_into_convergence_df(
                 self.spert_results_dict[engine], plot_error=False, plot_difference=True
             )
-            edf = plotting_engines.pert_dict_into_conv_df(
+            edf = self.pert_dict_into_convergence_df(
                 self.epert_results_dict[engine], plot_error=False, plot_difference=True
             )
             analyse.plot_truncated(
@@ -1127,7 +1033,7 @@ class plotting_engines:
             logging.info(f"saved images in {self.graph_folder}.")
 
     @staticmethod
-    def pert_dict_into_conv_df(
+    def pert_dict_into_convergence_df(
         pert_dict: dict, plot_error: bool = False, plot_difference: bool = True
     ) -> pd.DataFrame:
         df = pd.DataFrame.from_dict(pert_dict)
@@ -1186,13 +1092,13 @@ class plotting_histogram(plotting_engines):
     def __init__(
         self,
         analysis_object=None,
-        output_folder: Optional[str] = None,
+        results_folder: Optional[str] = None,
     ):
         """for plotting histograms.
 
         Args:
             analysis_object (pipeline.analysis.analysis_network, optional): analysis object that is to be plotted for. Defaults to None.
-            output_folder (str, optional): output folder for generated csv files and graph images. Defaults to None.
+            results_folder (str, optional): output folder for generated csv files and graph images. Defaults to None.
 
         Raises:
             ValueError: must provide an analysis network object.
@@ -1201,8 +1107,8 @@ class plotting_histogram(plotting_engines):
         if analysis_object:
             self._analysis_object = analysis_object
             # get info about things for plotting from analysis
-            self.analysis_obj_into_format()
-            self.analysis_obj_files_into_format()
+            self._analysis_obj_into_format()
+            self._analysis_obj_files_into_format()
             # remove experimental as not needed for this
             try:
                 self.names_list.remove("experimental")
@@ -1212,29 +1118,27 @@ class plotting_histogram(plotting_engines):
             raise ValueError("please provide an analysis object to be plotted for.")
 
         # place to write results to
-        if not output_folder:
+        if not results_folder:
             # want to write to the graph directory
-            self.output_folder = self._analysis_object.output_folder
+            self.results_folder = self._analysis_object.results_folder
             self.graph_folder = self._analysis_object.graph_dir
         else:
-            self.output_folder = validate.folder_path(output_folder, create=True)
+            self.results_folder = validate.folder_path(results_folder, create=True)
             self.graph_folder = validate.folder_path(
-                f"{output_folder}/graphs", create=True
+                f"{results_folder}/graphs", create=True
             )
         # set the colours
-        self.colours = plotting_engines.set_colours(
-            other_results_names=self.other_results_names
-        )
+        self.colours = set_colours(other_results_names=self.other_results_names)
 
         # set the dictionary for histograms
-        self.files_into_error_lists()
+        self._files_into_error_lists()
 
         # make empty dicts
         self.best_fit_dict = {}
         for err in self.error_type:
             self.best_fit_dict[err] = {}
 
-    def analysis_obj_files_into_format(self):
+    def _analysis_obj_files_into_format(self):
         ana_obj = self._analysis_object
 
         self._results_files = ana_obj._results_files
@@ -1243,7 +1147,7 @@ class plotting_histogram(plotting_engines):
         self._results_bound_repeat_files = ana_obj._results_bound_repeat_files
         self._results_value_files = ana_obj._results_value_files
 
-    def files_into_error_lists(self):
+    def _files_into_error_lists(self):
         self.error_dict = {}
 
         self.error_type = ["SEM_pert", "per_lig", "repeat", "free", "bound"]

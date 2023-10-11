@@ -1,22 +1,16 @@
 # import libraries
 import BioSimSpace as BSS
-import csv
-import numpy as np
-import pandas as pd
 import networkx as nx
 from scipy.stats import sem as sem
 from rdkit import Chem
 import math
 import logging
-
-from typing import Union, Optional
-
 import matplotlib
 import matplotlib.pyplot as plt
-import csv
 import numpy as np
-import pandas as pd
 from PIL import Image, ImageOps
+
+from typing import Union, Optional
 
 from ..utils._validate import *
 
@@ -25,163 +19,7 @@ font = {"family": "normal", "weight": "bold", "size": 22}
 matplotlib.rc("font", **{"size": 10})
 
 
-def get_ligands_from_perts(perturbations: list) -> list:
-    perturbations = validate.is_list(perturbations)
-    ligands = []
-
-    for pert in perturbations:
-        lig_0 = pert.split("~")[0]
-        lig_1 = pert.split("~")[1]
-        if lig_0 not in ligands:
-            ligands.append(lig_0)
-        if lig_1 not in ligands:
-            ligands.append(lig_1)
-
-    return ligands
-
-
-def get_info_network(
-    net_file: Optional[str] = None,
-    results_files: Optional[list] = None,
-    extra_options: Optional[dict] = None,
-) -> tuple:
-    """get information about the network from the network file
-
-    Args:
-        net_file (str, optional): network file. Defaults to None.
-        results_files (list, optional): list of results files. Defaults to None.
-        extra_options (dict, optional): extra options (engine or engines). Defaults to None.
-
-    Returns:
-        tuple: (perturbations, ligands)
-    """
-    # get info from a network file for engine
-    # For the network that we are considering,
-    # we want to get results files with these perturbations from the overall file that contains the large network results (if this is the case).
-    # This is just good to have a consistent format of results to analyse.
-
-    use_net_file = False
-
-    if net_file:
-        try:
-            net_file = validate.file_path(net_file)
-            use_net_file = True
-        except Exception as e:
-            logging.error(e)
-            logging.info("can't use net_file, will use results files instead.")
-
-    if not use_net_file:
-        try:
-            results_files = validate.is_list(results_files, make_list=True)
-            for file in results_files:
-                validate.file_path(file)
-        except Exception as e:
-            logging.error(e)
-            logging.error(
-                "cant use network or results files, please provide one or the other."
-            )
-            return (None, None)
-
-    # set extra_options variables as defaults
-    engines = None
-
-    if extra_options:
-        extra_options = validate.dictionary(extra_options)
-
-        if "engine" in extra_options.keys():
-            try:
-                engines = [validate.engine(extra_options["engine"])]
-            except Exception as e:
-                logging.error(e)
-        if "engines" in extra_options.keys():
-            try:
-                engines = validate.engines(extra_options["engines"])
-            except Exception as e:
-                logging.error(e)
-
-    # We also want to create a list of the perturbations in our network.
-    perturbations = []
-
-    if use_net_file:
-        # use the network file to find the ligands and perturbations
-        with open(f"{net_file}", "r") as file:
-            for line in file:
-                if engines:
-                    use_line = False
-                    for engine in engines:
-                        if line.split()[-1] == engine:
-                            use_line = True
-                else:
-                    use_line = True
-
-                if "lig0" in line or "lig_0" in line:
-                    use_line = False
-
-                if use_line:
-                    lig_0 = line.split()[0]
-                    lig_1 = line.split()[1]
-                    pert = f"{lig_0}~{lig_1}"
-                    if pert not in perturbations:
-                        perturbations.append(pert)
-
-    else:
-        for res_file in results_files:
-            # use the network file to find the ligands and perturbations
-            with open(f"{res_file}", "r") as file:
-                lines = (
-                    line.rstrip() for line in file
-                )  # All lines including the blank ones
-                lines = (line for line in lines if line)  # Non-blank lines
-                for line in lines:
-                    if engines:
-                        use_line = False
-                        for engine in engines:
-                            if line.split(",")[4] == engine:
-                                use_line = True
-
-                    else:
-                        use_line = True
-
-                    if "lig0" in line or "lig_0" in line:
-                        use_line = False
-
-                    if use_line:
-                        lig_0 = line.split(",")[0]
-                        lig_1 = line.split(",")[1]
-                        pert = f"{lig_0}~{lig_1}"
-                        if pert not in perturbations:
-                            perturbations.append(pert)
-
-    ligands = get_ligands_from_perts(perturbations)
-
-    return (perturbations, ligands)
-
-
-def get_info_network_from_dict(res_dict: dict) -> tuple:
-    """get list of perturbations and ligands from a dictionary
-
-    Args:
-        res_dict (dict): dictionary of free energy results
-
-    Returns:
-        tuple: (perturbations, ligands)
-    """
-    # get info for the network from a perturbation results dictionary
-
-    res_dict = validate.dictionary(res_dict)
-
-    perturbations = []
-
-    for key in res_dict.keys():
-        if key not in perturbations:
-            perturbations.append(key)
-
-    ligands = get_ligands_from_perts(perturbations)
-
-    return (perturbations, ligands)
-
-
-class net_graph:
+class network_graph:
     def __init__(
         self,
         ligands: list,
@@ -221,7 +59,7 @@ class net_graph:
         else:
             self.ligands_folder = None
 
-        net_graph._gen_graph(self)
+        network_graph._gen_graph(self)
 
     def _gen_graph(self):
         """generate a network x graph from the perturbations and ligands."""
@@ -250,7 +88,7 @@ class net_graph:
 
         self.graph = graph
 
-    def draw_graph(self, file_dir: Optional[str] = None, title=None):
+    def draw_graph(self, file_dir: Optional[str] = None, title=None, figsize: tuple = None, networkx_layout_func = None):
         """draw the network x graph.
 
         Args:
@@ -263,11 +101,19 @@ class net_graph:
         else:
             title = "Network"
 
-        # Plot the networkX graph.
-        pos = nx.circular_layout(graph)  # kamada_kawai_layout
+        # Plot the networkX graph. 
+        if networkx_layout_func:
+            func = networkx_layout_func
+        else:
+            func = nx.kamada_kawai_layout
+        pos = func(graph)  # circular_layout
 
+        # default fig size based on network size
+        if not figsize:
+            figsize = (graph.number_of_nodes() * 2, graph.number_of_nodes() * 2)
+        
         fig, ax = plt.subplots(
-            figsize=(graph.number_of_nodes() * 2, graph.number_of_nodes() * 2), dpi=150
+            figsize=figsize, dpi=300
         )
 
         if self.calc_pert_dict:
@@ -358,14 +204,27 @@ class net_graph:
 
         return fig
 
-    def draw_all_ligands(self, file_dir: Optional[str] = None):
+    def draw_all_ligands(self, file_dir: Optional[str] = None, figsize: tuple = (10,15)):
+        """draw all the ligands in the network.
+
+        Args:
+            file_dir (Optional[str], optional): where to save the image. Defaults to None, no image saved, or in the object directory if given.
+            figsize (tuple, optional): Size of the figure, to adjust based on the ligand. Defaults to (10,15).
+
+        Raises:
+            ValueError: need a ligands directory with the structures inside to draw them.
+
+        Returns:
+            fig: the figure.
+        """
+
         if not self.ligands_folder:
             raise ValueError("please provide a ligands dir w the files inside.")
 
         len_ligs = len(self.ligands)
 
         fig, axs = plt.subplots(
-            math.ceil(len_ligs / 3), 3, figsize=(10, 35), dpi=150
+            math.ceil(len_ligs / 3), 3, figsize=figsize, dpi=300
         )  # 10,15
 
         for ax in axs.ravel():
@@ -441,16 +300,78 @@ class net_graph:
 
         return cycle_closures
 
-    def add_weight(self, input_data: Union[dict, str]):
+    def cycle_closure_dict(self):
+        pert_dict = self.calc_pert_dict
+        cycle_closures = self.cycle_closures()
+
+        cycles_dict = {}
+
+        for cycle in cycle_closures:
+            cycle_dict = {}
+            cycle_val = []
+            cycle_val_err = []
+            for pert in cycle:
+                liga = pert.split("~")[0]
+                ligb = pert.split("~")[1]
+                rev_pert = f"{ligb}~{liga}"
+
+                if pert in pert_dict:
+                    if pert_dict[pert][0] is not None:
+                        cycle_val.append(+pert_dict[pert][0])
+                        cycle_val_err.append(pert_dict[pert][1])
+                    else:
+                        logging.warning(
+                            f"{pert} or {rev_pert} does not exist in the results for {cycle}. This cycle is not included."
+                        )
+                        break
+                elif rev_pert in pert_dict:
+                    if pert_dict[rev_pert][0] is not None:
+                        cycle_val.append(-pert_dict[rev_pert][0])
+                        cycle_val_err.append(pert_dict[rev_pert][1])
+                    else:
+                        logging.warning(
+                            f"{pert} or {rev_pert} does not exist in the results for {cycle}. This cycle is not included."
+                        )
+                        break
+
+            cycles_dict.update({"_".join(cycle): (sum(cycle_val), sum(cycle_val_err))})
+
+        self.cycles_dict = cycles_dict
+
+        return cycles_dict
+
+    def cycle_vals(self):
+        self.cycle_closure_dict()
+
+        cycle_vals = []
+
+        for key in self.cycles_dict.keys():
+            val = self.cycles_dict[key]
+            cycle_vals.append(val[0])
+
+        return cycle_vals
+
+    def average_cycle_closures(self):
+        cycle_vals = self.cycle_vals()
+
+        cycle_vals_not_nan = [abs(x) for x in cycle_vals if str(x) != "nan"]
+        avg_cc = np.mean(cycle_vals_not_nan)
+        std_cc = np.std(cycle_vals_not_nan)
+
+        return avg_cc, std_cc
+
+    def add_weight(self, input_data: Union[dict, str], name: str = "weights"):
         """add weights to the network x graph for the edges and each perturbation.
 
         Args:
             input_data (str or dict): file path or dict of the weights for the perturbation edges.
+            name (str): name for the data, eg weight.
 
         Raises:
             TypeError: if dict, must be of format {(lig_0, lig_1): weight}
         """
         # these weights are for the lomap or rbfenn score
+        name = validate.string(name)
 
         try:
             weight_dict = validate.dictionary(input_data)
@@ -474,7 +395,7 @@ class net_graph:
                     weight = line.split(",")[-1].strip()
                     weight_dict[(lig_0, lig_1)] = float(weight)
 
-        nx.set_edge_attributes(self.graph, weight_dict, name="weight")
+        nx.set_edge_attributes(self.graph, weight_dict, name=name)
 
     # from alvaro
     def get_average_weighted_simple_paths(self) -> float:

@@ -24,4 +24,3 @@ with _warnings.catch_warnings():
 from . import utils
 from . import analysis
 from . import prep
-from . import setup

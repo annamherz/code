@@ -13,6 +13,7 @@ import glob
 import re
 import pathlib
 import logging
+from statistics import stdev
 
 from typing import Union, Optional
 
@@ -384,12 +385,12 @@ class analyse:
         if self._no_of_b_repeats != self._no_of_f_repeats:
             logging.warning(
                 f"There are a different number of repeats for bound ({self._no_of_b_repeats}) and free ({self._no_of_f_repeats}) for {self._work_dir}."
-                + f"these are {self._b_folders} and {self._f_folders}."
+                + f" These are {self._b_folders} and {self._f_folders}."
             )
         else:
             logging.info(
                 f"There are {self._no_of_b_repeats} repeats for each the bound and the free for {self._work_dir}."
-                + f"these are {self._b_folders} and {self._f_folders}."
+                + f" These are {self._b_folders} and {self._f_folders}."
             )
 
     def _check_pickle(self) -> bool:
@@ -889,6 +890,22 @@ class analyse:
                         logging.exception(e)
                         logging.error(f"could not plt dhdl for {name}")
 
+
+    def check_convergence(self):
+        """check if the standard deviation of the repeats is less than 1.5 kcal/mol
+        """
+        # ((f"{str(r)}_repeat", freenrg_val, freenrg_err))
+        repeats_values = [repeat_val[1] for repeat_val in self.repeats_tuple_list]
+        standard_deviation_of_vals = stdev(repeats_values)
+
+        threshold = 1.5
+        if standard_deviation_of_vals < threshold:
+            logging.info(f"Standard deviation of the freenerg repeats is {standard_deviation_of_vals}, which is less than {threshold}. The freenrg is considered converged.")
+        else:
+            logging.error(f"Standard deviation of the freenerg repeats is {standard_deviation_of_vals}, which is more than {threshold}. The freenrg is NOT considered converged.")
+        
+        return standard_deviation_of_vals
+    
     def calculate_convergence(self):
         if self._try_pickle:
             do_pickle = self._check_convergence_pickle()
@@ -921,7 +938,7 @@ class analyse:
             self.epert_bound_dict = ebound_dict
             self.epert_free_dict = efree_dict
 
-        self.save_convergence_pickle()
+        self._save_convergence_pickle()
 
     def _check_convergence_pickle(self) -> bool:
         """check if there are all the pickle files present in the pickle folder.
@@ -969,7 +986,7 @@ class analyse:
 
         return do_pickle
 
-    def save_convergence_pickle(self):
+    def _save_convergence_pickle(self):
         self._pickle_dir = validate.folder_path(self._pickle_dir, create=True)
         pickle_ext = self.pickle_extension.split("truncate")[0]
 

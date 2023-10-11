@@ -5,7 +5,7 @@ import logging
 
 try:
     amber_version = float(BSS._amber_version)
-    # assume the amber version is 20
+    # assume the amber version is 22
     if not amber_version:
         amber_version = 22
 except:
@@ -14,7 +14,6 @@ except:
 from ..utils import *
 from ._merge import *
 from ._ligprep import *
-from ._equilibrate import *
 
 from typing import Optional
 from pytest import approx
@@ -277,7 +276,7 @@ class fepprep:
         if protocol.engine() == "AMBER":
             # for amber, this will be 1/value to give 2 for the collision frequency in ps-1
             thermostat_time_constant = BSS.Types.Time(0.5, "picosecond")
-            eq_timestep = 2
+            eq_timestep = protocol.timestep()
         elif protocol.engine() == "GROMACS":
             # in gromacs this is the tau-t in ps
             thermostat_time_constant = BSS.Types.Time(2, "picosecond")
@@ -411,10 +410,35 @@ class fepprep:
         if protocol.engine() == "AMBER" or protocol.engine() == "GROMACS":
             # set up for each the bound and the free leg
             for leg, system in zip(["bound", "free"], [system_bound, system_free]):
-                min_extra_options = {}
-                heat_extra_options = {}
-                eq_extra_options = {}
-                prod_extra_options = {}
+                if protocol.engine() == "GROMACS":
+                    min_extra_options = {}
+                    heat_extra_options = {}
+                    eq_extra_options = {}
+                    prod_extra_options = {}
+
+                elif protocol.engine() == "AMBER":
+                    if amber_version > 20:
+                        amber_dict = {
+                            "gti_cut": 1,  # add smoothing to SC-vDW, beginning at gti_cut_sc_on and ending at gti_cut_sc_off; using the second order smooth-step function
+                            "gti_cut_sc_on": 8,
+                            "gti_cut_sc_off": 10,
+                            "gti_output": 1,  # output term by term detailed TI results
+                            "gti_add_sc": 5,  # all interactions except vdw sc internal are scaled with lambda and not present in the dummy state
+                            "gti_scale_beta": 1,  # new form of sc potential enabled
+                            # "scalpha":0.5, # default for gti_scale_beta
+                            # "scbeta":1.0, # default for gti_scale_beta
+                            "gti_ele_sc": 1,  # smoothstep function used
+                            "gti_vdw_sc": 1,  # smoothstep function used
+                            "gti_cut_sc": 2,  # smooth vdw (1) and then also elec (2)
+                            "gti_ele_exp": 2,
+                            "gti_vdw_exp": 2,  # default value is 6
+                        }
+                    else:
+                        amber_dict = {}
+                    min_extra_options = amber_dict.copy()
+                    heat_extra_options = amber_dict.copy()
+                    eq_extra_options = amber_dict.copy()
+                    prod_extra_options = amber_dict.copy()
 
                 for key, value in protocol.config_options()["all"].items():
                     min_extra_options[key] = value
@@ -546,8 +570,8 @@ class fepprep:
                 if self._pipeline_protocol.engine() == "AMBER":
                     kwarg_dict["PRUNECROSSINGCONSTRAINTS"] = True
 
-        if self._pipeline_protocol.engine() == "AMBER":
-            kwarg_dict["PRUNEATOMTYPES"] = True
+            if self._pipeline_protocol.engine() == "AMBER":
+                kwarg_dict["PRUNEATOMTYPES"] = True
 
         # any pipeline kwargs overwrite this
         for key, value in self._pipeline_protocol.kwargs().items():

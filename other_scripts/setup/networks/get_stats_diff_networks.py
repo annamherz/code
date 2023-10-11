@@ -113,20 +113,20 @@ while repeat < 5001:
             except:
                 continue
 
-        perts, ligs = pipeline.analysis.get_info_network(f"{file}")
+        perts, ligs = pipeline.utils.get_info_network(f"{file}")
 
         if not exper_val_dict:
             exper_val_dict = pipeline.analysis.convert.yml_into_exper_dict(
                 f"/home/anna/Documents/benchmark/inputs/experimental/{protein}.yml",
                 temp=300,
             )
-            normalised_exper_val_dict = pipeline.analysis.make_dict._exper_from_ligands(
+            normalised_exper_val_dict = pipeline.analysis.make_dict.exper_from_ligands(
                 exper_val_dict, sorted(ligs), normalise=True
             )
         else:
             pass
 
-        pert_dict = pipeline.analysis.make_dict._exper_from_perturbations(
+        pert_dict = pipeline.analysis.make_dict.exper_from_perturbations(
             exper_val_dict, perts
         )
 

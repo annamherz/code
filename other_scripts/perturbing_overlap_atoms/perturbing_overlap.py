@@ -41,7 +41,7 @@ def no_perturbing_atoms(pert, prep):
 
 
 def get_inputs(net_file, prot):
-    perts, ligs = pipeline.setup.get_info_network(net_file)
+    perts, ligs = pipeline.utils.get_info_network(net_file)
     engs = prot.engines()
 
     return perts, engs
@@ -147,7 +147,6 @@ def main():
     )
 
     all_analysis_object.get_experimental()
-    all_analysis_object.get_experimental_pert()
     pert_dict = all_analysis_object.exper_pert_dict
 
     with open(file, "w") as f:

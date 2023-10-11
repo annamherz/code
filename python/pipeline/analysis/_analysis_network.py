@@ -24,11 +24,11 @@ class analysis_network:
 
     def __init__(
         self,
-        results_directory: Optional[str] = None,
+        output_folder: Optional[str] = None,
         exp_file: Optional[str] = None,
         engines: Optional[str] = None,
         net_file: Optional[str] = None,
-        output_folder: Optional[str] = None,
+        results_folder: Optional[str] = None,
         analysis_prot: Optional[analysis_protocol] = None,
         method: Optional[str] = None,
         extra_options: Optional[dict] = None,
@@ -36,11 +36,11 @@ class analysis_network:
         """analyses the network for a certain system
 
         Args:
-            results_directory (str, optional): directory where the results are located. Defaults to None.
+            output_folder (str, optional): directory where all the outputs are located. Should be outputs_extracted in the main folder. This should contain a results folder where the outputs from the analysis was saved. Defaults to None.
             exp_file (str, optional): file path to the experimental results file. Defaults to None.
             engines (list, optional): engines to consider (to comapre multiple). Defaults to None.
             net_file (str, optional): file path to the network of perturbations to analyse. Defaults to None.
-            output_folder (str, optional): folder path to where to save all the outputs of the analysis. Defaults to None.
+            results_folder (str, optional): folder path to where to save all the outputs of the analysis. Defaults to None.
             analysis_prot (pipeline.protocol.analysis_protocol, optional): analysis protocol to make file extension to look for for the results. Defaults to None.
             method (str, optional): Method to consider in the method column of the results files. Defaults to None (will consider all results in the file).
             extra_options (dict, optional): extra options (eg temperature). Defaults to None.
@@ -93,8 +93,8 @@ class analysis_network:
                     f"{analysis_prot} analysis protocol must be an analysis protocol file/dictionary"
                 )
 
-        if results_directory:
-            self._results_directory = validate.folder_path(results_directory)
+        if output_folder:
+            self.output_folder = validate.folder_path(output_folder)
             # get files from results directory
             self._results_repeat_files = self._get_results_repeat_files()
             self._results_free_repeat_files = self._get_results_repeat_files(leg="free")
@@ -107,31 +107,31 @@ class analysis_network:
             logging.critical(
                 "There is no provided results directory. There are no results to analyse. This will probably create an issue for many other functions. please reinstantiate the object with a results directory."
             )
-            self._results_directory = None
+            self.output_folder = None
             self._results_repeat_files = None
             self._results_free_repeat_files = None
             self._results_bound_repeat_files = None
             self._results_files = None
             self._results_value_files = None
 
-        if not output_folder:
-            if self._results_directory:
+        if not results_folder:
+            if self.output_folder:
                 logging.info(
-                    "no output folder provided, writing all output to the 'results_directory'."
+                    "no output folder provided, writing all output to the 'output_folder/analysis'."
                 )
-                self.output_folder = f"{self._results_directory}"
+                self.results_folder = f"{self.output_folder}/analysis"
                 self.graph_dir = validate.folder_path(
-                    f"{self._results_directory}/graphs", create=True
+                    f"{self.results_folder}/graphs", create=True
                 )
             else:
                 logging.info(
                     "no output or results directory, so writing files to current folder..."
                 )
-                self.output_folder = os.getcwd()
+                self.results_folder = os.getcwd()
         else:
-            self.output_folder = validate.folder_path(output_folder, create=True)
+            self.results_folder = validate.folder_path(results_folder, create=True)
             self.graph_dir = validate.folder_path(
-                f"{output_folder}/graphs", create=True
+                f"{results_folder}/graphs", create=True
             )
 
         # set defaults
@@ -152,11 +152,6 @@ class analysis_network:
         self._ligands_dict = {}
         self._set_network()  # get network info
 
-        # read the extra options
-        self._set_default_options()
-        if extra_options:
-            self.set_options(extra_options)
-
         # as not yet computed, set this to false
         self._is_computed_dicts = False
 
@@ -171,7 +166,7 @@ class analysis_network:
         Returns:
             dict: dict of engines as keys and their repeat files for the defined leg.
         """
-        res_dir = self._results_directory
+        res_dir = f"{self.output_folder}/results"
         all_files = os.listdir(res_dir)
 
         files_for_dict = []
@@ -189,13 +184,13 @@ class analysis_network:
 
         files_dict = {}
 
-        for eng in self.engines:
+        for engine in self.engines:
             eng_files = []
             for file in files_for_dict:
-                if eng in file:
+                if engine in file:
                     if re.search(self.file_ext, file):
                         eng_files.append(file)
-            files_dict[eng] = eng_files
+            files_dict[engine] = eng_files
 
         return files_dict
 
@@ -205,7 +200,7 @@ class analysis_network:
         Returns:
             dict: dict of engines as keys and their summary files as values.
         """
-        res_dir = self._results_directory
+        res_dir = f"{self.output_folder}/results"
         all_files = os.listdir(res_dir)
         sum_files = []
         for file in all_files:
@@ -215,13 +210,13 @@ class analysis_network:
 
         files_dict = {}
 
-        for eng in self.engines:
+        for engine in self.engines:
             eng_files = []
             for file in sum_files:
-                if eng in file:
+                if engine in file:
                     if re.search(self.file_ext, file):
                         eng_files.append(file)
-            files_dict[eng] = eng_files
+            files_dict[engine] = eng_files
 
         return files_dict
 
@@ -232,7 +227,7 @@ class analysis_network:
         # if network file, get from that
         # if not, use all results files for this
 
-        if not self._results_directory:
+        if not self.output_folder:
             if not self._net_file:
                 logging.error(
                     "As there is no provided results directory or network file, please set perturbations and ligands manually."
@@ -259,31 +254,21 @@ class analysis_network:
         self.ligands = values[1]
 
         # for individual engines
-        for eng in self.engines:
+        for engine in self.engines:
             values = get_info_network(
                 results_files=file_names,
                 net_file=self._net_file,
-                extra_options={"engines": eng},
+                extra_options={"engines": engine},
             )
 
             # check if there are any values for this engine, if not assume it is the entire network from before
             # as dont want this to be none in later functions
             if not values[0]:
-                self._perturbations_dict[eng] = self.perturbations
-                self._ligands_dict[eng] = self.ligands
+                self._perturbations_dict[engine] = self.perturbations
+                self._ligands_dict[engine] = self.ligands
             else:
-                self._perturbations_dict[eng] = values[0]
-                self._ligands_dict[eng] = values[1]
-
-    def _set_default_options(self):
-        """set the default options for the analysis."""
-
-        self._compute_experimental = True
-        self._compute_per_ligand = True
-        self._compute_cycles = True
-
-        self._save_pickle = True
-        self._try_pickle = True
+                self._perturbations_dict[engine] = values[0]
+                self._ligands_dict[engine] = values[1]
 
     def _set_dictionary_outputs(self):
         # set all the dicts for analysis
@@ -316,7 +301,6 @@ class analysis_network:
         # storing the nx digraphs, per engine
         self._cinnabar_networks = {}
         # overall graph
-        self.network_graph = None
         self.ligands_folder = None
         # cycles
         self.cycle_dict = {}
@@ -335,45 +319,23 @@ class analysis_network:
         # for stats
         self._stats_object = None
 
-    def set_options(self, options_dict: dict):
-        """set the options based on the options dict.
+    def get_experimental(
+        exp_file: str = None, pert_val: str = None, normalised: bool = False
+    ) -> dict:
+        """get experimental values converted. Can be used to add the experimental values to the object.
 
         Args:
-            options_dict (dict): options dict to adjust default options.
-        """
-
-        options_dict = validate.dictionary(options_dict)
-
-        if "compute_experimental" in options_dict:
-            self._compute_experimental = validate.boolean(
-                options_dict["compute_experimental"]
-            )
-        if "compute_per_ligand" in options_dict:
-            self._compute_per_ligand = validate.boolean(
-                options_dict["compute_per_ligand"]
-            )
-        if "compute_cycle_closure" in options_dict:
-            self._compute_cycles = validate.boolean(options_dict["compute_cycles"])
-        if "XXXX" in options_dict:
-            self._XXXX = validate.boolean(options_dict["XXXX"])
-
-        if "save_pickle" in options_dict:
-            self._save_pickle = validate.boolean(options_dict["save_pickle"])
-        if "try_pickle" in options_dict:
-            self._try_pickle = validate.boolean(options_dict["try_pickle"])
-
-    def get_experimental(self, exp_file: str = None) -> tuple:
-        """get the experimental value dictionaries from a given yml file.
-
-        Args:
-            exp_file (str, optional): file path to the experimental file. Defaults to None.
-
-        Raises:
-            ValueError: if the provided file is not in the yml format.
+            exp_file (str, optional): path to experimental yml or csv file. Defaults to None.
+            pert_val (str, optional): Whether to return dict for the pert or the vals. Defaults to None.
+            normalised (bool, optional): Whether the vals should be normalised. Defaults to False.
 
         Returns:
-            tuple: (experimental value dictionary, normalised experimental value dictionary)
+            dict: experimental dictionary. Only if pert_val is provided, else returns nothing.
         """
+
+        if pert_val:
+            pert_val = validate.pert_val(pert_val)
+        normalised = validate.boolean(normalised)
 
         if not exp_file:
             if not self.exp_file:
@@ -384,6 +346,26 @@ class analysis_network:
                 exp_file = self.exp_file
         else:
             self.exp_file = validate.file_path(exp_file)
+
+        self._get_experimental()
+
+        if not pert_val:
+            return
+
+        elif pert_val == "pert":
+            return self.exper_pert_dict
+
+        elif pert_val == "val":
+            if normalised:
+                return self.normalised_exper_val_dict
+
+            else:
+                return self.exper_val_dict
+
+    def _get_experimental(self):
+        """get the experimental value dictionaries from a given yml file."""
+
+        exp_file = self.exp_file
 
         if exp_file.split(".")[-1] == "yml":
             exper_val_dict = convert.yml_into_exper_dict(
@@ -400,39 +382,16 @@ class analysis_network:
             return
 
         # experimental value dict
-        new_exper_val_dict = make_dict._exper_from_ligands(exper_val_dict, self.ligands)
-        self.exper_val_dict = new_exper_val_dict
+        self.exper_val_dict = make_dict.exper_from_ligands(exper_val_dict, self.ligands)
 
         # normalise the experimental values
-        normalised_exper_val_dict = make_dict._exper_from_ligands(
+        self.normalised_exper_val_dict = make_dict.exper_from_ligands(
             exper_val_dict, self.ligands, normalise=True
         )
-        self.normalised_exper_val_dict = normalised_exper_val_dict
 
-        return new_exper_val_dict, normalised_exper_val_dict
-
-    def get_experimental_pert(self, exper_val_dict: Optional[dict] = None) -> dict:
-        """calculate the experimental relative values (pert) for the network from the provided experimental values
-
-        Args:
-            exper_val_dict (dict, optional): experimental value dictionary. Defaults to None.
-
-        Returns:
-            dict: dictionary of perturbations and their experimental values.
-        """
-
-        if exper_val_dict:
-            exper_val_dict = validate.dictionary(exper_val_dict)
-        else:
-            exper_val_dict = self.exper_val_dict
-
-        pert_dict = make_dict._exper_from_perturbations(
-            exper_val_dict, self.perturbations
+        self.exper_pert_dict = make_dict.exper_from_perturbations(
+            self.exper_val_dict, self.perturbations
         )
-
-        self.exper_pert_dict = pert_dict
-
-        return pert_dict
 
     def _validate_in_names_list(self, name: str, make_list: bool = False) -> list:
         """validate if the name is in the names list
@@ -588,76 +547,97 @@ class analysis_network:
 
         self._is_computed_dicts = True
 
-    def compute_statistics(self):
-        self.pert_statistics = {}
-        self.val_statistics = {}
-        # for eng in self.engines:
-        # self.pert_statistics.update({eng: self.compute_statistics(pert_val="pert", engine=eng)})
-        # self.val_statistics.update({eng: self.compute_statistics(pert_val="val", engine=eng)})
-        self._initialise_stats_object()
+    def compute_cycle_closures(self, engines: list = None):
+        """Compute cycle closures average and error.
 
-    def compute_cycle_closures(self, engines):
-        engines = validate.is_list(engines, make_list=True)
+        Args:
+            engines (list): MD engines to compute cycle closures for.
+        """
+        if engines:
+            engines = self._validate_in_names_list(engines)
+        else:
+            engines = self.engines
 
-        for eng in engines:
-            self._compute_cycle_closures(eng)
+        for engine in engines:
+            self._compute_cycle_closures(engine)
             print(
-                f"cycle closure average is {self.cycle_dict[eng][2]} +/- {self.cycle_dict[eng][3]} kcal/mol"
+                f"cycle closure average is {self.cycle_dict[engine][1]} +/- {self.cycle_dict[engine][2]} kcal/mol"
             )
+
+    def _compute_cycle_closures(self, engine: str):
+        """compute the cycle closures and their stats for each engine for the network.
+
+        Returns:
+            dict: self.cycle_dict (engine: cycles_dict, cycle_vals, np.mean(cycle_vals), np.std(cycle_vals) )
+        """
+
+        engine = self._validate_in_names_list(engine)
+
+        graph = network_graph(
+            self._ligands_dict[engine],
+            self._perturbations_dict[engine],
+            self.calc_pert_dict[engine],
+        )
+
+        cycles = graph.cycle_closure_dict()
+        avg_cycle_closures = graph.average_cycle_closures()
+
+        self.cycle_dict.update(
+            {engine: (cycles, avg_cycle_closures[0], avg_cycle_closures[1])}
+        )  # the cycles dict : cycles_dict(cycle:(val,err)), mean, deviation
 
     def _compute_dicts(self):
         """calculate the perturbation dicts from the previously passed repeat files."""
 
         # compute the experimental for perturbations
-        self.get_experimental()  # get experimental val dict and normalised dict
-        self.get_experimental_pert()
+        self._get_experimental()  # get experimental val dict and normalised dict
 
         # for self plotting of per pert
-        for eng in (
+        for engine in (
             self.engines + self.other_results_names
         ):  # other results will only be added after already computed once in function below
-            if not self._results_files[eng]:
-                files = self._results_repeat_files[eng]
+            if not self._results_files[engine]:
+                files = self._results_repeat_files[engine]
             else:
-                files = self._results_files[eng]
+                files = self._results_files[engine]
 
             calc_diff_dict = make_dict.comp_results(
-                files, self._perturbations_dict[eng], eng, method=self.method
+                files, self._perturbations_dict[engine], engine, method=self.method
             )  # older method
-            self.calc_pert_dict.update({eng: calc_diff_dict})
+            self.calc_pert_dict.update({engine: calc_diff_dict})
 
-            # calc the free and bound leg dicts for the eng
+            # calc the free and bound leg dicts for the engine
             try:
                 calc_bound_dict = make_dict.comp_results(
-                    self._results_bound_repeat_files[eng],
-                    self._perturbations_dict[eng],
-                    eng,
+                    self._results_bound_repeat_files[engine],
+                    self._perturbations_dict[engine],
+                    engine,
                     method=self.method,
                 )  # older method
-                self.calc_bound_dict.update({eng: calc_bound_dict})
+                self.calc_bound_dict.update({engine: calc_bound_dict})
                 calc_free_dict = make_dict.comp_results(
-                    self._results_free_repeat_files[eng],
-                    self._perturbations_dict[eng],
-                    eng,
+                    self._results_free_repeat_files[engine],
+                    self._perturbations_dict[engine],
+                    engine,
                     method=self.method,
                 )  # older method
-                self.calc_free_dict.update({eng: calc_free_dict})
+                self.calc_free_dict.update({engine: calc_free_dict})
             except Exception as e:
                 logging.error(e)
                 logging.error("Could not calculate dicts for bound/free legs.")
 
-            self._compute_cinnabar_dict(files, eng, method=self.method)
+            self._compute_cinnabar_dict(files, engine, method=self.method)
 
     def _compute_cinnabar_dict(
-        self, files: list, eng: str, method: Optional[str] = None
+        self, files: list, engine: str, method: Optional[str] = None
     ):
         """compute cinnabar and get the dictionaries from it."""
 
-        perts, ligs = get_info_network_from_dict(self.calc_pert_dict[eng])
+        perts, ligs = get_info_network_from_dict(self.calc_pert_dict[engine])
 
         # get the files into cinnabar format for analysis
         cinnabar_file_name = (
-            f"{self.output_folder}/cinnabar_{eng}_{self.file_ext}_{self.net_ext}"
+            f"{self.results_folder}/cinnabar_{engine}_{self.file_ext}_{self.net_ext}"
         )
 
         convert.cinnabar_file(
@@ -671,66 +651,47 @@ class analysis_network:
         try:
             # compute the per ligand for the network
             network = wrangle.FEMap(f"{cinnabar_file_name}.csv")
-            self._cinnabar_networks.update({eng: network})
+            self._cinnabar_networks.update({engine: network})
 
             # from cinnabar graph
             self.cinnabar_calc_pert_dict.update(
-                {eng: make_dict.from_cinnabar_network_edges(network, "calc", perts)}
+                {engine: make_dict.from_cinnabar_network_edges(network, "calc", perts)}
             )
             self.cinnabar_exper_pert_dict.update(
-                {eng: make_dict.from_cinnabar_network_edges(network, "exp", perts)}
+                {engine: make_dict.from_cinnabar_network_edges(network, "exp", perts)}
             )
 
             # for self plotting of per ligand
             self.cinnabar_calc_val_dict.update(
-                {eng: make_dict.from_cinnabar_network_node(network, "calc")}
+                {engine: make_dict.from_cinnabar_network_node(network, "calc")}
             )
             self.cinnabar_exper_val_dict.update(
                 {
-                    eng: make_dict.from_cinnabar_network_node(
+                    engine: make_dict.from_cinnabar_network_node(
                         network, "exp", normalise=True
                     )
                 }
             )
 
-            self.write_vals_file(
-                self.cinnabar_exper_val_dict[eng],
-                f"{self.output_folder}/lig_values_{eng}_{self.file_ext}_{self.net_ext}",
-                eng,
+            write_vals_file(
+                self.cinnabar_exper_val_dict[engine],
+                f"{self.results_folder}/lig_values_{engine}_{self.file_ext}_{self.net_ext}",
+                engine,
                 self.file_ext,
                 self.method,
             )
-            self._results_value_files[eng] = [
-                f"{self.output_folder}/lig_values_{eng}_{self.file_ext}_{self.net_ext}.csv"
+            self._results_value_files[engine] = [
+                f"{self.results_folder}/lig_values_{engine}_{self.file_ext}_{self.net_ext}.csv"
             ]
 
         except Exception as e:
             logging.error(e)
-            logging.error(f"could not create cinnabar network for {eng}")
-            self._cinnabar_networks.update({eng: None})
-            self.cinnabar_calc_pert_dict.update({eng: None})
-            self.cinnabar_exper_pert_dict.update({eng: None})
-            self.cinnabar_calc_val_dict.update({eng: None})
-            self.cinnabar_exper_val_dict.update({eng: None})
-
-    @staticmethod
-    def write_vals_file(
-        val_dict,
-        file_path: str,
-        eng: Optional[str] = None,
-        analysis_string: Optional[str] = None,
-        method: str = None,
-    ):
-        val_dict = validate.dictionary(val_dict)
-
-        with open(f"{file_path}.csv", "w") as file:
-            writer = csv.writer(file)
-            writer.writerow(
-                ["ligand", "freenrg", "error", "engine", "analysis", "method"]
-            )
-
-            for key, value in val_dict.items():
-                writer.writerow([key, value[0], value[1], eng, analysis_string, method])
+            logging.error(f"could not create cinnabar network for {engine}")
+            self._cinnabar_networks.update({engine: None})
+            self.cinnabar_calc_pert_dict.update({engine: None})
+            self.cinnabar_exper_pert_dict.update({engine: None})
+            self.cinnabar_calc_val_dict.update({engine: None})
+            self.cinnabar_exper_val_dict.update({engine: None})
 
     def compute_other_results(
         self,
@@ -803,14 +764,19 @@ class analysis_network:
             self.calc_free_dict.update({name: None})
             self.calc_bound_dict.update({name: None})
 
-        self._compute_cinnabar_dict(files=f"{new_file_path}.csv", eng=name)
+        self._compute_cinnabar_dict(files=f"{new_file_path}.csv", engine=name)
 
         # initialise plotting and stats objects again so theyre added
         self._initialise_plotting_object(check=False)
         self._initialise_stats_object(check=False)
+        
+    def compute_convergence(self, compute_missing: bool = False):
+        """compute the convergence of the results.
 
-    def compute_convergence(self, main_dir: str, compute_missing: bool = False):
-        main_dir = validate.folder_path(main_dir)
+        Args:
+            compute_missing (bool, optional): Compute the missing convergence results. This can take awhile! Defaults to False.
+        """
+
         compute_missing = validate.boolean(compute_missing)
 
         for engine in self.engines:
@@ -827,28 +793,14 @@ class analysis_network:
                     name = f"_{self.method}"
                 else:
                     name = ""
-                path_to_dir = (
-                    f"{main_dir}/outputs_extracted/{engine}/{pert}{name}/pickle"
-                )
+                path_to_dir = f"{self.output_folder}/{engine}/{pert}{name}/pickle"
                 try:
                     validate.folder_path(path_to_dir)
                 except:
-                    try:
-                        path_to_dir = (
-                            f"{main_dir}/outputs/{engine}_extracted/{pert}{name}/pickle"
-                        )
-                        validate.folder_path(path_to_dir)
-                    except:
-                        try:
-                            path_to_dir = (
-                                f"{main_dir}/outputs/{engine}/{pert}{name}/pickle"
-                            )
-                            validate.folder_path(path_to_dir)
-                        except:
-                            path_to_dir = None
-                            logging.error(
-                                f"cannot find pickle directory for {pert} in {engine}, where the pickles saved in a 'pickle' dir in that perturbation folder?"
-                            )
+                    logging.error(
+                        f"cannot find pickle directory for {pert} in {engine}, does '{path_to_dir}' exist?"
+                    )
+                    path_to_dir = None
 
                 try:
                     pickle_ext = analyse.pickle_ext(
@@ -897,24 +849,24 @@ class analysis_network:
                     pickle_loaded = False
 
                 if compute_missing and not pickle_loaded:
-                    path_to_dir = f"{main_dir}/outputs_extracted/{engine}/{pert}{name}"
+                    path_to_dir = f"{self.output_folder}/{engine}/{pert}{name}"
                     try:
                         validate.folder_path(path_to_dir)
                     except:
-                        try:
-                            path_to_dir = f"{main_dir}/outputs/{engine}/{pert}{name}"
-                            validate.folder_path(path_to_dir)
-                        except:
-                            path_to_dir = None
-                            logging.error(
-                                f"{engine} {pert}{name} does not exist in the searched output locations."
-                            )
-                            continue
+                        path_to_dir = None
+                        logging.error(
+                            f"{engine} {pert}{name} does not exist in the searched output locations."
+                        )
+                        continue
 
                     analysed_pert = analyse(
                         path_to_dir, pert=pert, analysis_prot=self.analysis_options
                     )
                     analysed_pert._save_pickle = True
+
+                    logging.info(
+                        f"calculating convergence for {engine} {pert}{name} ..."
+                    )
                     analysed_pert.calculate_convergence()
 
                     pickle_ext = analyse.pickle_ext(
@@ -959,19 +911,21 @@ class analysis_network:
                     self.epert_bound_dict[engine][pert] = ebound_dict
                     self.epert_free_dict[engine][pert] = efree_dict
 
-    def successful_runs(self, eng: str, perts: Optional[list] = None) -> tuple:
+    def successful_perturbations(
+        self, engine: str, perts: Optional[list] = None
+    ) -> tuple:
         """calculate how many successful runs
 
         Args:
-            eng (str): the engine to calc for
+            engine (str): the engine to calc for
             perts (list, optional): The list of perts to use. Defaults to None.
 
         Returns:
             tuple: (val, percen, perturbations)
         """
 
-        res_dict = self.calc_pert_dict[eng]
-        eng = validate.engine(eng)
+        res_dict = self.calc_pert_dict[engine]
+        engine = validate.engine(engine)
         if perts:
             perts = validate.is_list(perts)
         else:
@@ -997,10 +951,19 @@ class analysis_network:
             logging.error("please compute results from results files first.")
             return (None, None, None)
 
-    def failed_runs(self, eng: str) -> list:
-        eng = validate.engine(eng)
+    def failed_perturbations(self, engine: str) -> list:
+        """get the failed perturbations for an engine.
 
-        val, percen, perturbations = self.successful_runs(eng)
+        Args:
+            engine (str): the MD engine.
+
+        Returns:
+            list: failed perturbations.
+        """
+
+        engine = validate.engine(engine)
+
+        val, percen, perturbations = self.successful_perturbations(engine)
 
         failed_perts = []
 
@@ -1010,28 +973,77 @@ class analysis_network:
 
         return failed_perts
 
-    def disconnected_ligands(self, eng: str) -> list:
-        eng = validate.engine(eng)
-        val, percen, perturbations = self.successful_runs(eng)
-        graph = net_graph(self.ligands, perturbations)
+    def draw_failed_perturbations(self, engine: str):
+        """Draw the failed perturbations.
+
+        Args:
+            engine (str): the MD engine.
+        """
+
+        engine = validate.engine(engine)
+
+        perturbations = self.failed_perturbations(engine)
+
+        if perturbations:
+            graph = network_graph(
+                self._ligands_dict[engine],
+                self._perturbations_dict[engine],
+                self.calc_pert_dict[engine],
+                ligands_folder=self.ligands_folder,
+            )
+            for pert in perturbations:
+                graph.draw_perturbation(pert)
+
+    def draw_perturbations(self, pert_list: list):
+        """Draw certain perturbations.
+
+        Args:
+            engine (str): the MD engine.
+        """
+        graph = network_graph(
+            self.ligands,
+            self.perturbations,
+            ligands_folder=self.ligands_folder,
+        )
+        for pert in pert_list:
+            graph.draw_perturbation(pert)
+
+    def disconnected_ligands(self, engine: str) -> list:
+        """Get the disconnected ligands.
+
+        Args:
+            engine (str): The MD engine.
+
+        Returns:
+            list: List of disconnected ligands.
+        """
+
+        engine = validate.engine(engine)
+        val, percen, perturbations = self.successful_perturbations(engine)
+        graph = network_graph(
+            self._ligands_dict[engine],
+            perturbations,
+            ligands_folder=self.ligands_folder,
+        )
         ligs = graph.disconnected_ligands()
 
         return ligs
 
-    def draw_failed_perturbations(self, eng: str) -> list:
-        eng = validate.engine(eng)
+    def draw_disconnected_ligands(self, engine: str):
+        """Draw the disconnected ligands.
 
-        perturbations = self.failed_runs(eng)
+        Args:
+            engine (str): The MD engine.
+        """
 
-        if perturbations:
-            self._initialise_graph_object(check=True)
-            for pert in perturbations:
-                self.network_graph.draw_perturbation(pert)
-
-    def draw_perturbations(self, pert_list: list):
-        self._initialise_graph_object(check=True)
-        for pert in pert_list:
-            self.network_graph.draw_perturbation(pert)
+        ligands = self.disconnected_ligands(engine)
+        graph = network_graph(
+            self._ligands_dict[engine],
+            self._perturbations_dict[engine],
+            ligands_folder=self.ligands_folder,
+        )
+        for lig in ligands:
+            graph.draw_ligand(lig)
 
     def get_outliers(
         self, threshold: Union[int, float] = 10, name: Optional[str] = None
@@ -1101,6 +1113,14 @@ class analysis_network:
         self._stats_object = None
 
     def sort_ligands_by_binding_affinity(self, engine: Optional[str] = None) -> list:
+        """Ligands sorted by binding affinity.
+
+        Args:
+            engine (Optional[str], optional): _description_. Defaults to None.
+
+        Returns:
+            list: _description_
+        """
         if not self._is_computed_dicts:
             self._compute_dicts()
 
@@ -1111,7 +1131,7 @@ class analysis_network:
             logging.info(
                 "sorting ligands based on consensus scoring, as no engine was provided."
             )
-            engine = f"consensus_{'_'.join(str(eng) for eng in self.engines)}"
+            engine = f"consensus_{'_'.join(str(engine) for engine in self.engines)}"
 
         df = pd.DataFrame(
             self.cinnabar_calc_val_dict[engine], index=["value", "error"]
@@ -1135,8 +1155,8 @@ class analysis_network:
         for pert in self.perturbations:
             consensus_pert_dict[pert] = []
 
-            for eng in names:
-                consensus_pert_dict[pert].append(self.calc_pert_dict[eng][pert][0])
+            for engine in names:
+                consensus_pert_dict[pert].append(self.calc_pert_dict[engine][pert][0])
 
             consensus_pert_dict[pert] = (
                 np.mean(consensus_pert_dict[pert]),
@@ -1149,7 +1169,7 @@ class analysis_network:
             df.index.name = "perturbations"
             df = df.reset_index()
             df[["lig_0", "lig_1"]] = df["perturbations"].str.split("~", expand=True)
-            df["engine"] = f"consensus_{'_'.join(str(eng) for eng in names)}"
+            df["engine"] = f"consensus_{'_'.join(str(engine) for engine in names)}"
             df["analysis"] = self.file_ext
             df["method"] = "None"
             df = df.drop(labels="perturbations", axis=1)
@@ -1158,13 +1178,13 @@ class analysis_network:
             ]
 
             df.to_csv(
-                f"{self.output_folder}/consensus_score_{self.engines}_{self.file_ext}.csv",
+                f"{self.results_folder}/consensus_score_{self.engines}_{self.file_ext}.csv",
                 sep=",",
                 index=False,
             )
 
         self.compute_other_results(
-            f"{self.output_folder}/consensus_score_{self.engines}_{self.file_ext}.csv",
+            f"{self.results_folder}/consensus_score_{self.engines}_{self.file_ext}.csv",
             name="consensus",
         )
 
@@ -1177,48 +1197,18 @@ class analysis_network:
 
         self.ligands_folder = validate.folder_path(folder)
 
-    def _initialise_graph_object(self, check: bool = False):
-        """intialise the graph object
-
-        Args:
-            check (bool, optional): whether to check the plotting object. Defaults to False.
-
-        Returns:
-            pipeline.analysis.plotting_engines: the plotting object.
-        """
-
-        # if not checking, always make
-        if not check:
-            self.network_graph = net_graph(
-                self.ligands, self.perturbations, ligands_folder=self.ligands_folder
-            )
-
-        if not self.ligands_folder:
-            logging.error(
-                "please use self.add_ligands folder to add a folder so the ligands can be visualised!"
-            )
-
-        # if checking, first see if it exists and if not make
-        elif check:
-            if not self.network_graph:
-                self.network_graph = net_graph(
-                    self.ligands, self.perturbations, ligands_folder=self.ligands_folder
-                )
-
-        return self.network_graph
-
     def draw_graph(
         self,
         use_cinnabar: bool = False,
         engines: Optional[list] = None,
-        successful_runs: bool = True,
+        successful_perturbations: bool = True,
     ):
         """draw the network graph.
 
         Args:
             use_cinnabar (bool): whether to use the cinnabar data or the self computed data. Defaults to False.
             engines (str/list, optional): engine to draw the network for. Defaults to None, draws for each engine.
-            successful_runs (bool): whether to only draw the successful runs. Only useable if cinnabar is set to False. Defaults to True.
+            successful_perturbations (bool): whether to only draw the successful runs. Only useable if cinnabar is set to False. Defaults to True.
         """
 
         if engines:
@@ -1227,62 +1217,38 @@ class analysis_network:
             engines = self.engines
 
         if use_cinnabar:
-            for eng in engines:
-                if output_dir:
-                    file_name = f"{output_dir}/cinnabar_network_{eng}_{self.file_ext}_{self.net_ext}.png"
-                else:
-                    file_name = None
-                self._cinnabar_networks[eng].draw_graph(file_name=file_name)
+            for engine in engines:
+                file_name = f"{self.graph_dir}/cinnabar_network_{engine}_{self.file_ext}_{self.net_ext}.png"
+                self._cinnabar_networks[engine].draw_graph(file_name=file_name)
 
         else:
-            successful_runs = validate.boolean(successful_runs)
+            successful_perturbations = validate.boolean(successful_perturbations)
 
             file_dir = validate.folder_path(
-                f"{self.output_folder}/network", create=True
+                f"{self.results_folder}/network", create=True
             )
 
-            if successful_runs:
-                for eng in engines:
-                    val, percen, perturbations = self.successful_runs(eng)
-                    graph = net_graph(
+            if successful_perturbations:
+                for engine in engines:
+                    val, percen, perturbations = self.successful_perturbations(engine)
+                    graph = network_graph(
                         self.ligands,
                         perturbations,
-                        self.calc_pert_dict[eng],
+                        self.calc_pert_dict[engine],
                         file_dir=file_dir,
                         ligands_folder=self.ligands_folder,
                     )
-                    graph.draw_graph(title=eng)
+                    graph.draw_graph(title=engine)
             else:
-                for eng in engines:
-                    graph = net_graph(
-                        self._ligands_dict[eng],
-                        self._perturbations_dict[eng],
-                        self.calc_pert_dict[eng],
+                for engine in engines:
+                    graph = network_graph(
+                        self._ligands_dict[engine],
+                        self._perturbations_dict[engine],
+                        self.calc_pert_dict[engine],
                         file_dir=file_dir,
                         ligands_folder=self.ligands_folder,
                     )
-                    graph.draw_graph(title=eng)
-
-    def _compute_cycle_closures(self, eng: str):
-        """compute the cycle closures and their stats for each engine for the network.
-
-        Returns:
-            dict: self.cycle_dict (eng: cycles_dict, cycle_vals, np.mean(cycle_vals), np.std(cycle_vals) )
-        """
-
-        eng = self._validate_in_names_list(eng)
-
-        network_graph = self._initialise_graph_object(check=False)
-
-        pert_dict = self.calc_pert_dict[eng]
-
-        cycle_closures = network_graph.cycle_closures()
-
-        cycles = make_dict.cycle_closures(pert_dict, cycle_closures)
-
-        self.cycle_dict.update(
-            {eng: (cycles[0], cycles[1], cycles[2], cycles[3])}
-        )  # the cycles dict : cycles, vals, mean, deviation
+                    graph.draw_graph(title=engine)
 
     def _initialise_plotting_object(self, check: bool = False):
         """intialise the plotting object
@@ -1326,7 +1292,7 @@ class analysis_network:
 
         return self._histogram_object
 
-    def plot_bar_pert(self, engines: Optional[list] = None, **kwargs):
+    def plot_bar_ddG(self, engines: Optional[list] = None, **kwargs):
         """plot the bar plot of the perturbations.
 
         Args:
@@ -1341,7 +1307,7 @@ class analysis_network:
         plot_obj = self._initialise_plotting_object(check=True)
         plot_obj.bar(pert_val="pert", names=engines, **kwargs)
 
-    def plot_bar_lig(self, engines: Optional[list] = None, **kwargs):
+    def plot_bar_dG(self, engines: Optional[list] = None, **kwargs):
         """plot the bar plot of the values per ligand.
 
         Args:
@@ -1369,7 +1335,7 @@ class analysis_network:
 
         plot_obj.bar(pert_val=leg, names=engine, **plotting_dict)
 
-    def plot_scatter_pert(
+    def plot_scatter_ddG(
         self, engines: Optional[list] = None, use_cinnabar: bool = False, **kwargs
     ):
         """plot the scatter plot of the perturbations.
@@ -1385,11 +1351,11 @@ class analysis_network:
             engines = self.engines + self.other_results_names
 
         if use_cinnabar:
-            for eng in engines:
+            for engine in engines:
                 plotting.plot_DDGs(
-                    self._cinnabar_networks[eng].graph,
-                    filename=f"{self.graph_dir}/DDGs_{eng}_{self.file_ext}_{self.net_ext}.png",
-                    title=f"DDGs for {eng}, {self.net_ext}",
+                    self._cinnabar_networks[engine].graph,
+                    filename=f"{self.graph_dir}/DDGs_{engine}_{self.file_ext}_{self.net_ext}.png",
+                    title=f"DDGs for {engine}, {self.net_ext}",
                     **{"figsize": 5},
                 )  # with {self.file_ext}
 
@@ -1397,7 +1363,7 @@ class analysis_network:
             plot_obj = self._initialise_plotting_object(check=True)
             plot_obj.scatter(pert_val="pert", y_names=engines, **kwargs)
 
-    def plot_scatter_lig(
+    def plot_scatter_dG(
         self, engines: Optional[list] = None, use_cinnabar: bool = False, **kwargs
     ):
         """plot the scatter plot of the values per ligand.
@@ -1413,11 +1379,11 @@ class analysis_network:
             engines = self.engines + self.other_results_names
 
         if use_cinnabar:
-            for eng in engines:
+            for engine in engines:
                 plotting.plot_DGs(
-                    self._cinnabar_networks[eng].graph,
-                    filename=f"{self.graph_dir}/DGs_{eng}_{self.file_ext}_{self.net_ext}.png",
-                    title=f"DGs for {eng}, {self.net_ext}",
+                    self._cinnabar_networks[engine].graph,
+                    filename=f"{self.graph_dir}/DGs_{engine}_{self.file_ext}_{self.net_ext}.png",
+                    title=f"DGs for {engine}, {self.net_ext}",
                     **{"figsize": 5},
                 )
 
@@ -1531,8 +1497,8 @@ class analysis_network:
             engines = validate.is_list(engines, make_list=True)
 
         for type_error in type_errors:
-            for eng in engines:
-                hist_obj.histogram(name=eng, type_error=type_error)
+            for engine in engines:
+                hist_obj.histogram(name=engine, type_error=type_error)
             hist_obj.histogram_distribution(names=engines, type_error=type_error)
 
     def plot_convergence(self, engines: Optional[list] = None):
@@ -1571,99 +1537,125 @@ class analysis_network:
 
         return self._stats_object
 
-    def _calc_mae_iterations(
-        self, pert_val: str = None, enginesa: list = None, enginesb: list = None
-    ):
-        stats_obj = self._initialise_stats_object(check=True)
-
-        pv = validate.pert_val(pert_val)
-
-        mae_df = pd.DataFrame(columns=enginesa, index=enginesb)
-        mae_df_err = pd.DataFrame(columns=enginesa, index=enginesb)
-
-        # iterate compared to experimental
-        for combo in it.product(enginesa, enginesb):
-            eng1 = combo[0]
-            eng2 = combo[1]
-
-            values = stats_obj.compute_mue(pv, x=eng1, y=eng2)
-            mean_absolute_error = values[0]  # the computed statistic
-            mae_err = values[1]  # the stderr from bootstrapping
-
-            # loc index, column
-            mae_df.loc[eng2, eng1] = mean_absolute_error
-            mae_df_err.loc[eng2, eng1] = mae_err
-
-        return mae_df, mae_df_err
-
     def calc_mae_engines(self, pert_val: str = None, engines: Optional[list] = None):
         """calculate the Mean Absolute Error (MAE) vs experimental results
 
         Args:
             pert_val (str, optional): whether plotting 'pert' ie perturbations or 'val' ie values (per ligand result). Defaults to None.
-            engines (list, optional): names of engines / other results names to calculate the MAE for.
+            engines (list, optional): names of engines / other results names to calculate for.
 
         Returns:
-            tuple: of dataframe of value and error (mae_df, mae_df_err)
+            tuple: of dataframe of value and error (df, df_err)
         """
 
-        if engines:
-            engines = self._validate_in_names_list(engines, make_list=True)
-        else:
-            engines = self.engines + self.other_results_names
-
-        mae_df, mae_df_err = self._calc_mae_iterations(
-            pert_val, engines, ["experimental"]
-        )
-
-        mae_df.to_csv(
-            f"{self.output_folder}/MAE_{pert_val}_{self.file_ext}.csv", sep=" "
-        )
-        mae_df_err.to_csv(
-            f"{self.output_folder}/MAE_err_{pert_val}_{self.file_ext}.csv", sep=" "
-        )
-
-        return mae_df, mae_df_err
+        return self._calc_stats_engines(pert_val, engines, statistic="MAE")
 
     def calc_mad_engines(self, pert_val: str = None, engines: Optional[list] = None):
         """calculate the Mean Absolute Deviation (MAD) for between all the engines.
 
         Args:
             pert_val (str, optional): whether plotting 'pert' ie perturbations or 'val' ie values (per ligand result). Defaults to None.
-            engines (list, optional): names of engines / other results names to calculate the MAD for.
+            engines (list, optional): names of engines / other results names to calculate for.
 
         Returns:
-            tuple: of dataframe of value and error (mad_df, mad_df_err)
+            tuple: of dataframe of value and error (df, df_err)
         """
+
+        return self._calc_stats_engines(pert_val, engines, statistic="MAD")
+
+    def calc_rmse_engines(self, pert_val: str = None, engines: Optional[list] = None):
+        """calculate the Root Mean Squared Error (RMSE) for between all the engines and the experimental.
+
+        Args:
+            pert_val (str, optional): whether plotting 'pert' ie perturbations or 'val' ie values (per ligand result). Defaults to None.
+            engines (list, optional): names of engines / other results names to calculate for.
+
+        Returns:
+            tuple: of dataframe of value and error (df, df_err)
+        """
+
+        return self._calc_stats_engines(pert_val, engines, statistic="RMSE")
+
+    def calc_spearmans_rank_engines(
+        self, pert_val: str = None, engines: Optional[list] = None
+    ):
+        """calculate the Spearman's Rank correlation coefficient for between all the engines and the experimental.
+
+        Args:
+            pert_val (str, optional): whether plotting 'pert' ie perturbations or 'val' ie values (per ligand result). Defaults to None.
+            engines (list, optional): names of engines / other results names to calculate for.
+
+        Returns:
+            tuple: of dataframe of value and error (df, df_err)
+        """
+
+        return self._calc_stats_engines(pert_val, engines, statistic="Spearmans")
+
+    def _calc_stats_engines(
+        self,
+        pert_val: str = None,
+        engines: Optional[list] = None,
+        statistic: str = None,
+    ) -> tuple:
+        """internal function to wrap around the stats object and return dataframe.
+
+        Args:
+            pert_val (str, optional): whether for pert or val. Defaults to None.
+            engines (Optional[list], optional): engines to calculate for. Defaults to None.
+            statistic (str, optional): The statistic to calculate for. Defaults to None.
+
+        Returns:
+            tuple: (df, df_err)
+        """
+
+        self._initialise_stats_object(check=True)
+
+        statistic_dict = {
+            "MAD": self._stats_object.compute_mue,
+            "MAE": self._stats_object.compute_mue,
+            "RMSE": self._stats_object.compute_rmse,
+            "Spearmans": self._stats_object.compute_rho,
+        }
+
+        func = statistic_dict[statistic]
 
         if engines:
             engines = self._validate_in_names_list(engines, make_list=True)
         else:
             engines = self.engines + self.other_results_names
 
-        mad_df, mad_df_err = self._calc_mae_iterations(pert_val, engines, engines)
-
-        mad_df.to_csv(
-            f"{self.output_folder}/MAD_{pert_val}_{self.file_ext}.csv", sep=" "
-        )
-        mad_df_err.to_csv(
-            f"{self.output_folder}/MAD_err_{pert_val}_{self.file_ext}.csv", sep=" "
-        )
-
-        return mad_df, mad_df_err
-
-    def calc_stats(self, engines: Optional[list] = None):
-        self._initialise_stats_object(check=True)
-
-        if not engines:
-            engines = self.engines
+        if statistic == "MAD":
+            enginesb = engines
         else:
-            engines = validate.engines(engines)
+            enginesb = ["experimental"]
 
-        stats_dict = self._stats_object.compute_statistics(names=engines)
+        pv = validate.pert_val(pert_val)
 
-        return stats_dict
-        # maybe TODO write an output file for the dictionary
+        df = pd.DataFrame(columns=engines, index=enginesb)
+        df_err = pd.DataFrame(columns=engines, index=enginesb)
+
+        # iterate compared to experimental
+        for combo in it.product(engines, enginesb):
+            eng1 = combo[0]
+            eng2 = combo[1]
+
+            values = func(pv, x=eng1, y=eng2)
+            mean_absolute_error = values[0]  # the computed statistic
+            err = values[1]  # the stderr from bootstrapping
+
+            # loc index, column
+            df.loc[eng2, eng1] = mean_absolute_error
+            df_err.loc[eng2, eng1] = err
+
+        df.to_csv(
+            f"{self.results_folder}/{statistic}_{pert_val}_{self.file_ext}.csv", sep=" "
+        )
+        df_err.to_csv(
+            f"{self.results_folder}/{statistic}_err_{pert_val}_{self.file_ext}.csv",
+            sep=" ",
+        )
+
+        return df, df_err
 
     # freenergworkflows stuff for comparison
     def _add_fwf_path(self, fwf_path: str):
@@ -1731,7 +1723,7 @@ class analysis_network:
         nf = 0
         for file_name in self._results_repeat_files[engine]:
             # rewrite the file to include only lig_0, lig_1, freenrg, error, engine
-            new_file_name = f"{self.output_folder}/fwf_{engine}_file_{nf}.csv"
+            new_file_name = f"{self.results_folder}/fwf_{engine}_file_{nf}.csv"
             data = pd.read_csv(file_name, delimiter=",")
             header_data = data[["lig_0", "lig_1", "freenrg", "error", "engine"]]
             clean_data = header_data.replace("kcal/mol", "", regex=True)
@@ -1851,9 +1843,9 @@ class analysis_network:
             mad_df.loc[eng2, eng1] = mean_absolute_deviation
             mad_df_err.loc[eng2, eng1] = mad_err
 
-        mad_df.to_csv(f"{self.output_folder}/MAD_fwf_{self.file_ext}.csv", sep=" ")
+        mad_df.to_csv(f"{self.results_folder}/MAD_fwf_{self.file_ext}.csv", sep=" ")
         mad_df_err.to_csv(
-            f"{self.output_folder}/MAD_err_fwf_{self.file_ext}.csv", sep=" "
+            f"{self.results_folder}/MAD_err_fwf_{self.file_ext}.csv", sep=" "
         )
 
         return mad_df, mad_df_err
@@ -1878,7 +1870,7 @@ class analysis_network:
 
         pert_dict = self.exper_pert_dict
 
-        with open(f"{self.output_folder}/perturbing_overlap.dat", "w") as f:
+        with open(f"{self.results_folder}/perturbing_overlap.dat", "w") as f:
             writer = csv.writer(f)
             writer.writerow(
                 [
@@ -1891,8 +1883,8 @@ class analysis_network:
                     "error",
                 ]
             )
-            for pert, eng in it.product(self.perturbations, self.engines):
-                logging.info(f"running {pert}, {eng}....")
+            for pert, engine in it.product(self.perturbations, self.engines):
+                logging.info(f"running {pert}, {engine}....")
 
                 if calc_atom_mappings:
                     lig_0 = pert.split("~")[0]
@@ -1921,7 +1913,7 @@ class analysis_network:
 
                 try:
                     ana_obj = pipeline.analysis.analyse(
-                        f"{outputs_dir}/{eng}/{pert}",
+                        f"{outputs_dir}/{engine}/{pert}",
                         analysis_prot=self.analysis_options,
                     )
                     avg, error, repeats_tuple_list = ana_obj.analyse_all_repeats()
@@ -1935,5 +1927,5 @@ class analysis_network:
                     diff = None
                     err = None
 
-                row = [pert, eng, pert_atoms, percen_okay, too_smalls_avg, diff, err]
+                row = [pert, engine, pert_atoms, percen_okay, too_smalls_avg, diff, err]
                 writer.writerow(row)

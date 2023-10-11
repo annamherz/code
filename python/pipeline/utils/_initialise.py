@@ -6,9 +6,9 @@ from collections import OrderedDict
 
 from typing import Union, Optional
 
-from ..utils._validate import *
-from ..utils._files import *
-from ..utils._files import write_network as _write_network
+from ._validate import *
+from ._files import *
+from ._files import write_network as _write_network
 from ..prep._protocol import *
 from ..analysis._network import *
 
@@ -361,7 +361,7 @@ class initialise_pipeline:
             print("please setup network first")
             return
 
-        graph = net_graph(list(self.ligands_dict.keys()), self.perturbations)
+        graph = network_graph(list(self.ligands_dict.keys()), self.perturbations)
         graph.draw_graph(file_dir=folder)
 
     def setup_protocols(
@@ -474,6 +474,9 @@ export ana_file="$MAINDIRECTORY/execution_model/analysis_protocol.dat"
 
 # this should be the location of in the pipeline module
 export scripts_dir="$MAINDIRECTORY/scripts" # choose location of scripts
+
+# if have a different, already prepped ligands folder, can change this here
+export prep_folder="$MAINDIRECTORY/prep"
 
 # replace trailing ^M
 cp $prot_file $prot_file\_0

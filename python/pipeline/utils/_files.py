@@ -7,9 +7,26 @@ import logging
 from typing import Union, Optional
 
 from ._validate import *
-from ..analysis._network import get_info_network
+from ._network import *
 
 csv.QUOTE_NONE
+
+
+def write_vals_file(
+    val_dict,
+    file_path: str,
+    eng: Optional[str] = None,
+    analysis_string: Optional[str] = None,
+    method: str = None,
+):
+    val_dict = validate.dictionary(val_dict)
+
+    with open(f"{file_path}.csv", "w") as file:
+        writer = csv.writer(file)
+        writer.writerow(["ligand", "freenrg", "error", "engine", "analysis", "method"])
+
+        for key, value in val_dict.items():
+            writer.writerow([key, value[0], value[1], eng, analysis_string, method])
 
 
 def write_analysis_file(analysis, results_dir: str, method=None):

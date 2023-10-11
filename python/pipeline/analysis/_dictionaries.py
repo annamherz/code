@@ -13,7 +13,6 @@ import logging
 from typing import Union, Optional
 
 from ..utils import *
-from ._network import get_info_network
 from ._analysis import *
 
 
@@ -481,32 +480,7 @@ class make_dict:
             return freenrg_dict
 
     @staticmethod
-    def experimental_for_network(
-        exper_dict: dict, ligands: list, perturbations: list
-    ) -> tuple:
-        """make experimental dicts based on certain ligands and perturbations
-
-        Args:
-            exper_dict (dict): dictionary of experimental values
-            ligands (list): list of ligands
-            perturbations (list): list of perturbations
-
-        Returns:
-            tuple: (experimental diff dict, exper val dict)
-        """
-
-        ligands = validate.is_list(ligands)
-        perturbations = validate.is_list(perturbations)
-
-        exper_val_dict = make_dict._exper_from_ligands(exper_dict, ligands)
-        exper_diff_dict = make_dict._exper_from_perturbations(
-            exper_val_dict, perturbations
-        )
-
-        return exper_diff_dict, exper_val_dict
-
-    @staticmethod
-    def _exper_from_ligands(
+    def exper_from_ligands(
         exper_val_dict: dict, ligands: list, normalise: Optional[bool] = False
     ) -> dict:
         """make a new dict of experimental values, can normalise.
@@ -542,7 +516,7 @@ class make_dict:
             return new_exper_val_dict
 
     @staticmethod
-    def _exper_from_perturbations(exper_val_dict: dict, perturbations: list) -> dict:
+    def exper_from_perturbations(exper_val_dict: dict, perturbations: list) -> dict:
         """make experimental dict based on and perturbations
 
         Args:
@@ -607,66 +581,3 @@ class make_dict:
                 normalised_data.append(val - avg_val)
 
             return normalised_data
-
-    @staticmethod
-    def cycle_closures(pert_dict: dict, cycle_closures: list) -> tuple:
-        """compute cycle closures.
-
-        Args:
-            pert_dict (dict): _description_
-            cycle_closures (list): _description_
-
-        Returns:
-            tuple: (cycles_dict, cycle_vals, np.mean(cycle_vals), np.std(cycle_vals))
-                    cycles_dict is {lig_in_cycle:(cycle closure value, cycle closure error)}
-                    cycle_vals is all cycle closures
-                    average cycle closure
-                    standard deviation of cycle closures
-        """
-
-        pert_dict = validate.dictionary(pert_dict)
-        cycle_closures = validate.is_list(cycle_closures)
-
-        cycles_dict = {}
-        cycle_vals = []
-
-        for cycle in cycle_closures:
-            cycle_dict = {}
-            cycle_val = []
-            cycle_val_err = []
-            for pert in cycle:
-                liga = pert.split("~")[0]
-                ligb = pert.split("~")[1]
-                rev_pert = f"{ligb}~{liga}"
-
-                if pert in pert_dict:
-                    if pert_dict[pert][0] is not None:
-                        cycle_val.append(+pert_dict[pert][0])
-                        cycle_val_err.append(pert_dict[pert][1])
-                    else:
-                        logging.warning(
-                            f"{pert} or {rev_pert} does not exist in the results for {cycle}. This cycle is not included."
-                        )
-                        break
-                elif rev_pert in pert_dict:
-                    if pert_dict[rev_pert][0] is not None:
-                        cycle_val.append(-pert_dict[rev_pert][0])
-                        cycle_val_err.append(pert_dict[rev_pert][1])
-                    else:
-                        logging.warning(
-                            f"{pert} or {rev_pert} does not exist in the results for {cycle}. This cycle is not included."
-                        )
-                        break
-
-            if not all(i is None for i in cycle_val):
-                cycle_vals.append(sum(cycle_val))
-            else:
-                pass
-
-            cycles_dict.update({"_".join(cycle): (sum(cycle_val), sum(cycle_val_err))})
-
-            cycle_vals_not_nan = [abs(x) for x in cycle_vals if str(x) != "nan"]
-            avg_cc = np.mean(cycle_vals_not_nan)
-            std_cc = np.std(cycle_vals_not_nan)
-
-        return (cycles_dict, cycle_vals, avg_cc, std_cc)

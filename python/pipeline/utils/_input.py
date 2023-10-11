@@ -34,3 +34,59 @@ def engine_network(engine: str, file_path: str):
             for line in file:
                 if engine in line:
                     f.write(f"{line}")
+
+
+def set_colours(
+    colour_dict: Optional[dict] = None, other_results_names: Optional[list] = None
+) -> dict:
+    """set the colours of the bars or scatter plots.
+
+    Args:
+        colour_dict (dict, optional): dicitonary of names and their colours. Defaults to None.
+
+    Returns:
+        dict: dictionary of new colours
+    """
+
+    if colour_dict:
+        colour_dict = validate.dictionary(colour_dict)
+    else:
+        colour_dict = {}
+
+    if other_results_names:
+        other_results_names = validate.is_list(other_results_names, make_list=True)
+
+    other_colours = [
+        "limegreen",
+        "gold",
+        "mediumpurple",
+        "darkred",
+        "grey",
+        "lightsteelblue",
+        "peru",
+        "plum",
+        "papayawhip",
+        "honeydew",
+    ]
+
+    if other_results_names:
+        other_res_list = []
+        for res in other_results_names:
+            if res not in colour_dict.keys():
+                other_res_list.append(res)
+
+        for res, col in zip(other_res_list, other_colours):
+            colour_dict[res] = col
+
+    default_colour_dict = {
+        "AMBER": "orange",
+        "SOMD": "darkturquoise",
+        "GROMACS": "orchid",
+        "experimental": "midnightblue",
+    }
+
+    for key in colour_dict:
+        # replace default colour dict keys with those in the passed dictionary
+        default_colour_dict[key] = colour_dict[key]
+
+    return default_colour_dict

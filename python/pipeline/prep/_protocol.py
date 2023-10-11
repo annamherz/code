@@ -10,7 +10,6 @@ class protocol:
         self,
         file: str = None,
         auto_validate: bool = False,
-        verbose: bool = True,
         protocol_type: str = None,
     ):
         """class for storing and validating protocol options from files or dictionary.
@@ -19,8 +18,6 @@ class protocol:
             file (file path (or dictionary)): file with the options for the protocol. Alternatively a dictionary.
             auto_validate (bool, optional): Whether to automatically validate the given input. Defaults to False.
         """
-
-        self.verbose = validate.boolean(verbose)
 
         if file:
             try:
@@ -52,18 +49,17 @@ class protocol:
                         prot = validate.pipeline_protocol(file, auto_validate=False)
                     elif protocol_type == "analysis":
                         prot = validate.analysis_protocol(file, auto_validate=False)
-                    else:
-                        raise TypeError(
-                            "protocol must be either a pipeline or analysis protocol."
-                        )
+
                     self._query_dict = prot.dictionary()
+
                     try:
                         self._prot_file = validate.file_path(prot._prot_file)
                     except:
                         self._prot_file = None
+
                 except Exception as e:
                     logging.error(e)
-                    logging.error(
+                    logging.critical(
                         f"input was not recognised as a file/dictionary/protocol object."
                     )
                     self._query_dict = {}
@@ -246,11 +242,9 @@ class protocol:
 
 
 class pipeline_protocol(protocol):
-    def __init__(
-        self, file: str = None, auto_validate: bool = False, verbose: bool = False
-    ):
+    def __init__(self, file: str = None, auto_validate: bool = False):
         # inherit the init from other protocol too
-        super().__init__(file, auto_validate, verbose, "pipeline")
+        super().__init__(file, auto_validate, "pipeline")
 
     def default_dict(self) -> dict:
         """the default dictionary for the protocol
@@ -972,21 +966,23 @@ class pipeline_protocol(protocol):
         return value
 
     def config_options(self, value: Optional[dict] = None) -> dict:
+
         if value:
             try:
                 value = validate.file_path(value)
                 value_dict = self._read_config_file(file=value)
+                self._query_dict["config options"] = value_dict
                 self._query_dict["config options file"] = value
+                self._config_options = value_dict
                 self._config_options_file = value
             except:
                 logging.error(
                     "config options not a file, trying to read in as dictionary..."
                 )
                 try:
-                    value_dict = value
-                    value = validate.dictionary(value_dict)
-                    self._query_dict["config options"] = value
-                    self._config_options = value
+                    value_dict = validate.dictionary(value)
+                    self._query_dict["config options"] = value_dict
+                    self._config_options = value_dict
                 except:
                     logging.error(f"could not validate config options, {value}")
                     value = self._config_dict()
@@ -1071,9 +1067,9 @@ class pipeline_protocol(protocol):
 
 
 class analysis_protocol(protocol):
-    def __init__(self, file=None, auto_validate=False, verbose=False):
+    def __init__(self, file=None, auto_validate=False):
         # inherit the init from other protocol too
-        super().__init__(file, auto_validate, verbose, "analysis")
+        super().__init__(file, auto_validate, "analysis")
 
     # check query also inherited but with new default dict
     def default_dict(self) -> dict:

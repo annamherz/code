@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 from argparse import ArgumentParser
-from pipeline.setup import *
+from pipeline.utils import *
 
 
 def ask_things():
