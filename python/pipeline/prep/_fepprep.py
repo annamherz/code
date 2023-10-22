@@ -418,6 +418,7 @@ class fepprep:
 
                 elif protocol.engine() == "AMBER":
                     if amber_version > 20:
+                        # Options used in AMBER DDBoost ; http://ambermd.org/tutorials/advanced/tutorial39/index.php
                         amber_dict = {
                             "gti_cut": 1,  # add smoothing to SC-vDW, beginning at gti_cut_sc_on and ending at gti_cut_sc_off; using the second order smooth-step function
                             "gti_cut_sc_on": 8,
@@ -425,8 +426,9 @@ class fepprep:
                             "gti_output": 1,  # output term by term detailed TI results
                             "gti_add_sc": 5,  # all interactions except vdw sc internal are scaled with lambda and not present in the dummy state
                             "gti_scale_beta": 1,  # new form of sc potential enabled
-                            # "scalpha":0.5, # default for gti_scale_beta
-                            # "scbeta":1.0, # default for gti_scale_beta
+                            "scalpha":0.5, # default for gti_scale_beta
+                            "scbeta":1.0, # default for gti_scale_beta
+                            "gti_lam_sch": 1,  #
                             "gti_ele_sc": 1,  # smoothstep function used
                             "gti_vdw_sc": 1,  # smoothstep function used
                             "gti_cut_sc": 2,  # smooth vdw (1) and then also elec (2)

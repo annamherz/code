@@ -88,7 +88,7 @@ class network_graph:
 
         self.graph = graph
 
-    def draw_graph(self, file_dir: Optional[str] = None, title=None, figsize: tuple = None, networkx_layout_func = None):
+    def draw_graph(self, file_dir: Optional[str] = None, title=None, edge_labels: str = True, figsize: tuple = None, networkx_layout_func = None):
         """draw the network x graph.
 
         Args:
@@ -120,9 +120,14 @@ class network_graph:
             cmap_col = plt.cm.magma
             edge_colours = [graph[u][v]["error"] for u, v in graph.edges]
             edges, weights = zip(*nx.get_edge_attributes(graph, "error").items())
+            if edge_labels:
+                draw_edge_labels = True
+            else:
+                draw_edge_labels = False
         else:
             cmap_col = None
             weights = "black"
+            
 
         nx.draw(
             graph,
@@ -137,17 +142,19 @@ class network_graph:
             labels={node: node for node in graph.nodes()},
             font_color="white",
         )
-        # nx.draw_networkx_edge_labels(
-        #     graph, pos,
-        #     edge_labels={(u,v): format(graph[u][v]['value'],".2f") for u,v in graph.edges},
-        #     font_color='navy',
-        #     font_size=16,
-        #     label_pos=0.45
-        # )
+        if draw_edge_labels:
+            nx.draw_networkx_edge_labels(
+                graph, pos,
+                edge_labels={(u,v): format(graph[u][v]['value'],".2f") for u,v in graph.edges},
+                font_color='navy',
+                font_size=16,
+                label_pos=0.45
+            )
+            title = f"{title}\n ddG in kcal/mol"
 
         plt.title(
             f"{title}", fontdict={"fontsize": graph.number_of_nodes()}
-        )  # f"{title}\n ddG in kcal/mol"
+        )
 
         if cmap_col:
             sm = plt.cm.ScalarMappable(

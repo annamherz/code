@@ -403,6 +403,8 @@ def write_protocol(query_dict: dict, file_path: str):
         for query in query_dict.keys():
             if query == "config options":
                 pass
+            elif query == "number of lambda windows":
+                pass
             elif not query_dict[query]:  # do not write if None value
                 pass
             elif isinstance(query_dict[query], list):

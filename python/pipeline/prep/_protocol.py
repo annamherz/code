@@ -428,7 +428,7 @@ class pipeline_protocol(protocol):
 
         if value:
             value = validate.integer(value)
-            self._query_dict["num lambda"] = value
+            self._query_dict["number of lambda windows"] = value
             self._num_lambda = value
         else:
             value = self._num_lambda

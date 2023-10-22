@@ -82,13 +82,16 @@ class convert:
             string: value in kcal/mol
         """
 
-        # gas constant in kcal per Kelvin per mol, exp val converted into M
-        kcal_val = (
-            R_kcalmol * temperature * np.log(value)
-        )  # value is /1 as the concentration of substrate
+        # gas constant in kcal per Kelvin per mol, exp val is Ki converted into M
+        kcal_val = (R_kcalmol * temperature * np.log(value))  # value is /1 as the concentration of substrate, log result has no units, units from RT
 
         # propagate the error
-        kcal_err = abs(R_kcalmol * temperature * (err / (value * np.log(10))))
+        # given that y = A log(x)
+        # dy = A * (dy/dx) dx
+        # differentiating, dy = A ( dx / x ln(10) )
+        error =(err / (value * np.log(10)))
+        # A is RT
+        kcal_err = abs(R_kcalmol * temperature * error)
 
         return kcal_val, kcal_err
 
@@ -117,11 +120,14 @@ class convert:
             # check what type of data
             if data[key]["measurement"]["type"].lower().strip() == "ki":
                 # assuming concentration of substrate in the assay is 1, IC50 is approx Ki*2
-                factor = 2
+                factor = 1
+                pki_err_factor = 0.4
             elif data[key]["measurement"]["type"].lower().strip() == "ic50":
-                factor = 1
+                factor = 0.5
+                pki_err_factor = 0.55
             else:
-                factor = 1
+                factor = 0.5
+                pki_err_factor = 0.55
                 logging.error(
                     "the type of data was not recognised. Must be IC50 or Ki. Assuming IC50 ..."
                 )
@@ -133,10 +139,24 @@ class convert:
             else:
                 logging.critical("only nM and uM recognised as units!")
                 magnitude = 1
+            
+            value = data[key]["measurement"]["value"]
+            error = data[key]["measurement"]["error"]
+
+            # find the value in M
+            value = value * factor * magnitude
+
+            if not error or error == -1:
+                # assume error of 0.4 log units for Ki and 0.55 log units for ic50, https://livecomsjournal.org/index.php/livecoms/article/view/v4i1e1497/1399
+                # as pKi = -logKi
+                # error is sd * ln(10) * value
+                error = pki_err_factor * np.log(10) * value
+            else:
+                error = error * factor * magnitude
 
             exper_raw_dict[key] = (
-                data[key]["measurement"]["value"] * factor * magnitude,
-                data[key]["measurement"]["error"] * factor * magnitude,
+                value,
+                error,
             )
 
         exper_val_dict = convert.exper_raw_dict_into_val_dict(
@@ -169,11 +189,11 @@ class convert:
         for index, row in res_df.iterrows():
             if row["type"].lower().strip() == "ki":
                 # assuming concentration of substrate in the assay is 1, IC50 is approx Ki*2
-                factor = 2
+                factor = 1
             elif row["type"].lower().strip() == "ic50":
-                factor = 1
+                factor = 0.5
             else:
-                factor = 1
+                factor = 0.5
                 logging.error(
                     "the type of data was not recognised. Must be IC50 or Ki. Assuming IC50 ..."
                 )
@@ -186,10 +206,11 @@ class convert:
                 logging.critical("only nM and uM recognised as units!")
                 magnitude = 1
 
+            # get this value as Ki in M
             value = float(row["value"].strip()) * factor * magnitude
 
             try:
-                err = (float(row["error"].strip()) * factor * magnitude,)
+                err = float(row["error"].strip()) * factor * magnitude
             except:
                 err = None
 
@@ -226,7 +247,10 @@ class convert:
             exp_val = float(
                 exper_raw_dict[key][0]
             )  # this is in IC50 from reading in the files
-            err_val = float(exper_raw_dict[key][1])
+            try:
+                err_val = float(exper_raw_dict[key][1])
+            except:
+                err_val = None
             # if there is no error, assign based on https://doi.org/10.1016/j.drudis.2009.01.012
             # ie that assay error is usually 0.3 log units standard deviation pIC50 or a factor of 2 in IC50
             if not err_val:  # ie there is no provided error
@@ -335,3 +359,85 @@ class convert:
 
                     else:
                         writer.writerow([lig_0, lig_1, comp_ddG, comp_err, "0.0"])
+
+    @staticmethod
+    def _convert_html_mbarnet_into_dict(file):
+
+        try:
+            from bs4 import BeautifulSoup
+            import re
+            import json
+            import execjs
+        except Exception as e:
+            logging.critical(f"{e}")
+            logging.critical("cannot import for converting html mbarnet to dictionary.")
+        
+        file = validate.file_path(file)
+
+        with open(file, "r") as file:
+            html_content = file.read()
+
+        soup = BeautifulSoup(html_content, "html.parser")
+
+        # Define a regular expression pattern to extract the data array from the JavaScript code
+        pattern = re.compile(r'var idata = (.*?);', re.DOTALL)
+
+        # Search for the pattern in the HTML content
+        match = pattern.search(html_content)
+
+        if match:
+            data_js = match.group(1)
+            # Replace single quotes with double quotes in the JSON data
+            data_js = data_js.replace("\n", "")
+            data_js = data_js.replace("'", "\"")
+
+            javascript_code = f"""
+            var gdata = {data_js};
+            var jsonString = JSON.stringify(gdata);
+            jsonString;
+            """
+
+            # Run JavaScript code
+            try:
+                context = execjs.compile(javascript_code)
+                json_string = context.eval("jsonString")
+            except Exception as e:
+                print(f"Error executing JavaScript: {e}")
+
+            try:
+                # Parse the JSON data into a dictionary
+                data = json.loads(json_string)
+            except json.JSONDecodeError as e:
+                print(f"Error decoding JSON: {e}")
+        else:
+            print("Data pattern not found.")
+
+        ligands_dict = {}
+
+        for lig in data:
+            # from end as different order if experimental data file
+            # (Expt, CFE_Expt), CFE, dCFE, LMI, AvgCC, name
+            ligands_dict[lig[-1]] = (lig[-5], lig[-4])
+
+        # UFE, dUFE, CFE, dCFE, Shift, LME, OFC2, AvgCC, MaxCC, ErrMsgs, Outliers
+
+        # # the below is if the search pattern is dgata, however this has no errors
+        # # seperate into perturbations and ligands
+        # perturbations_dict = {}
+        # ligands_dict = {}
+
+        # # CONFE : Constrained net free energy (complexed-solvated) in kcal/mol.
+        # # AVGCC : Average CC for all cycles traversing this node or edge.
+        # # LMI : Lagrange multiplier index (unitless).
+        # for key in gdata_dict.keys():
+        #     if "~" in key:
+        #         use_dict = perturbations_dict
+        #     else:
+        #         use_dict = ligands_dict
+            
+        #     use_dict[key] = {}
+        #     use_dict[key]["CONFE"] = gdata_dict[key]["CONFE"]["size"]
+        #     use_dict[key]["AVGCC"] = gdata_dict[key]["AVGCC"]["size"]
+        #     use_dict[key]["LMI"] = gdata_dict[key]["LMI"]["size"]
+
+        return ligands_dict

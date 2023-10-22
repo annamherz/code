@@ -17,7 +17,7 @@ from statistics import stdev
 
 from typing import Union, Optional
 
-from alchemlyb.postprocessors.units import to_kcalmol
+from alchemlyb.postprocessors.units import to_kcalmol, to_kJmol, to_kT
 from alchemlyb.visualisation import plot_mbar_overlap_matrix, plot_ti_dhdl
 
 from ..utils import *
@@ -895,15 +895,20 @@ class analyse:
         """check if the standard deviation of the repeats is less than 1.5 kcal/mol
         """
         # ((f"{str(r)}_repeat", freenrg_val, freenrg_err))
-        repeats_values = [repeat_val[1] for repeat_val in self.repeats_tuple_list]
-        standard_deviation_of_vals = stdev(repeats_values)
 
-        threshold = 1.5
-        if standard_deviation_of_vals < threshold:
-            logging.info(f"Standard deviation of the freenerg repeats is {standard_deviation_of_vals}, which is less than {threshold}. The freenrg is considered converged.")
-        else:
-            logging.error(f"Standard deviation of the freenerg repeats is {standard_deviation_of_vals}, which is more than {threshold}. The freenrg is NOT considered converged.")
-        
+        try:
+            repeats_values = [repeat_val[1] for repeat_val in self.repeats_tuple_list]
+            standard_deviation_of_vals = stdev(repeats_values)
+
+            threshold = 1.5
+            if standard_deviation_of_vals < threshold:
+                logging.info(f"Standard deviation of the freenerg repeats is {standard_deviation_of_vals}, which is less than {threshold}. The freenrg is considered converged.")
+            else:
+                logging.error(f"Standard deviation of the freenerg repeats is {standard_deviation_of_vals}, which is more than {threshold}. The freenrg is NOT considered converged.")
+        except:
+            logging.error("could not check convergence / calculate the standard deviation of repeats.")
+            standard_deviation_of_vals = None
+
         return standard_deviation_of_vals
     
     def calculate_convergence(self):
@@ -1251,49 +1256,91 @@ class analyse:
                 f"{self._graph_dir}/{self.perturbation}_across_lambda_windows_freenrg.png"
             )
 
-    def extract_edgembar_data(self):
-        self.format_for_edgembar()
-
-    def format_for_edgembar(self):
+    def format_for_edgembar(self, dats_folder=None):
         # need to get the data into the format of
         # filename efep_tlam_elam.dat
         # tlam is the window at which it is generated ie the name of the folder lambda
         # elam is the energy lambda ie the different column headings
         # timeseries kcal/mol
 
-        if not self.is_analysed:
-            warnings.warn(
-                "can't carry out until all repeats have been analysed. please self.analyse_all_repeats() first!"
-            )
-
-            return None
-
+        if dats_folder:
+            dats_folder = validate.folder_path(dats_folder, create=True)
+        else:
+            dats_folder = self._edgembar_dir
+               
         for leg in self._b_folders + self._f_folders:
             files, temperatures, lambdas = self.get_files_temperatures_lambdas(
                 f"{self._work_dir}/{leg}"
             )
+            # extract u_nk
             u_nk = BSS.FreeEnergy.Relative._get_u_nk(files, temperatures, self.engine)
 
+            # extract dhdl
+            dhdl = BSS.FreeEnergy.Relative._get_dh_dl(files, temperatures, self.engine)
+
+            # for the amber output format, this is not the val - ref but just the val.
+            # as alchemlyb uses the val - ref, this needs to be added back to have the correct format
+            kcal_u_nk = []
+
             for df in u_nk:
-                kcal_df = to_kcalmol(df)
+                new_df = to_kcalmol(df)
+                kcal_u_nk.append(new_df)
 
-                # get trajectory lambda
-                tlam = df.index.get_level_values("lambdas")[0]
+            for df in kcal_u_nk:
+                
+                try:
 
-                for elam in df.columns:
-                    new_df = kcal_df[elam]
-                    newer_df = new_df.droplevel("lambdas")
-                    final_df = newer_df.reset_index()
-                    folder = validate.folder_path(
-                        f"{self._edgembar_dir}/{leg.split('_')[0]}/{leg.split('_')[1]}",
-                        create=True,
-                    )
-                    final_df.to_csv(
-                        f"{folder}/efep_{tlam}_{elam}.dat",
-                        sep=" ",
-                        index=False,
-                        header=False,
-                    )
+                    if self.engine == "AMBER":
+                        lam_name = "lambdas"
+                    elif self.engine == "SOMD" or self.engine == "GROMACS":
+                        lam_name = "fep-lambda"
+
+                    tlam = df.index.get_level_values(lam_name)[0]
+
+                    for elam in df.columns:
+                        new_df = df[elam]
+                        ref_df = df[tlam]
+                        val_df = ref_df + new_df
+                        newer_df = val_df.droplevel(lam_name)
+                        final_df = newer_df.reset_index()
+                        final_df["time"] = final_df["time"].round(1)
+                        # need to replace any infinity values - this is the value used for infinity in the pymaberdats
+                        final_df.replace([np.inf, -np.inf], 100000.000000, inplace=True)
+
+                        folder = validate.folder_path(
+                            f"{dats_folder}/{leg.split('_')[0]}/{leg.split('_')[1]}",
+                            create=True,
+                        )
+                        final_df.to_csv(
+                            f"{folder}/efep_{tlam}_{elam}.dat",
+                            sep=" ",
+                            index=False,
+                            header=False,
+                        )
+                except:
+                    logging.error(f"failed to extract the edge to df after folder {leg}, {tlam}, {elam}.")
+
+            # for df in dhdl:
+            #     # first column is simulation time, second column is the potential energy in kcal/mol of the elam state
+            #     unit_df = to_kcalmol(df)
+
+            #     try:
+            #         new_df = unit_df["dHdl"]
+            #         newer_df = new_df.droplevel("lambdas")
+            #         final_df = newer_df.reset_index()
+
+            #         folder = validate.folder_path(
+            #             f"{dats_folder}/{leg.split('_')[0]}/{leg.split('_')[1]}",
+            #             create=True,
+            #         )
+            #         final_df.to_csv(
+            #             f"{folder}/dvdl_{tlam}.dat",
+            #             sep=" ",
+            #             index=False,
+            #             header=False,
+            #         )
+            #     except:
+            #         logging.error(f"failed to extract the dhdl edge to df after folder {leg}, {tlam}, {elam}.")
 
     def get_files_temperatures_lambdas(self, work_dir: str) -> tuple:
         function_glob_dict = {
@@ -1370,7 +1417,7 @@ class analyse:
                         end = "(K)"
                         if start and end in line:
                             t = int(((line.split(start)[1]).split(end)[0]).strip())
-                            temperatures.append(t)
+                            temperatures.append(float(t))
                             if t is not None:
                                 found_temperature = True
                                 break

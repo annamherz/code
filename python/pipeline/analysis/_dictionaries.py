@@ -257,12 +257,12 @@ class make_dict:
 
     @staticmethod
     def experimental_from_freenrgworkflows(
-        experimental_DDGs, ligands: list, perturbations: list
+        experimental_DGs, ligands: list, perturbations: list
     ) -> tuple:
         """get the experimental dicts from the freenergworkflows
 
         Args:
-            experimental_DDGs (freenergworkflows experimental): from frreenergworkflows
+            experimental_DGs (freenergworkflows experimental): from frreenergworkflows
             ligands (list): list of ligands
             perturbations (list): list of perturbations
 
@@ -274,22 +274,22 @@ class make_dict:
         perturbations = validate.is_list(perturbations)
 
         exper_val_dict = make_dict._from_freenrgworkflows_experimental_val(
-            experimental_DDGs, ligands
+            experimental_DGs, ligands
         )
         exper_diff_dict = make_dict._from_freenrgworkflows_experimental_diff(
             exper_val_dict, perturbations
         )
 
-        return exper_diff_dict, exper_val_dict
+        return exper_val_dict, exper_diff_dict
 
     @staticmethod
     def _from_freenrgworkflows_experimental_val(
-        experimental_DDGs, ligands: list
+        experimental_DGs, ligands: list
     ) -> dict:
         """get the experimental value dict from the freenergworkflows
 
         Args:
-            experimental_DDGs (freenergworkflows experimental): from frreenergworkflows
+            experimental_DGs (freenergworkflows experimental): from frreenergworkflows
             ligands (list): list of ligands
 
         Returns:
@@ -300,7 +300,7 @@ class make_dict:
         exper_val_dict = {}
 
         # convert the list of dicitonaries from freenrgworkflows into a single dictionary
-        for lig_dict in experimental_DDGs:
+        for lig_dict in experimental_DGs:
             lig_name = list(lig_dict.keys())[0]
             exper = lig_dict[lig_name]
             exper_err = lig_dict["error"]
@@ -322,7 +322,7 @@ class make_dict:
         """get the experimental difference dict from the freenergworkflows
 
         Args:
-            experimental_DDGs (freenergworkflows experimental): from frreenergworkflows
+            experimental_DGs (freenergworkflows experimental): from frreenergworkflows
             perturbations (list): list of perturbations
 
         Returns:
@@ -354,11 +354,11 @@ class make_dict:
         return exper_diff_dict
 
     @staticmethod
-    def from_freenrgworkflows_network_analyser(computed_relative_DDGs) -> dict:
+    def from_freenrgworkflows_network_analyser(computed_relative_DGs) -> dict:
         """convert freenergworkflows into a dictionary
 
         Args:
-            computed_relative_DDGs (freenergworkflows computed): from freenergworkflows
+            computed_relative_DGs (freenergworkflows computed): from freenergworkflows
 
         Returns:
             dict: dictionary of freenerg values per ligand
@@ -367,7 +367,7 @@ class make_dict:
         freenrg_dict = {}
 
         # append computed freenrg and error.
-        for item in computed_relative_DDGs:
+        for item in computed_relative_DGs:
             ligand = list(item.keys())[0]
             freenrg = list(item.values())[0]
             error = list(item.values())[1]
@@ -533,11 +533,18 @@ class make_dict:
         for pert in perturbations:
             lig_0 = pert.split("~")[0]
             lig_1 = pert.split("~")[1]
-            exper_ddG = exper_val_dict[lig_1][0] - exper_val_dict[lig_0][0]
-            exper_err = math.sqrt(
-                math.pow(exper_val_dict[lig_0][1], 2)
-                + math.pow(exper_val_dict[lig_1][1], 2)
-            )
+            try:
+                exper_ddG = exper_val_dict[lig_1][0] - exper_val_dict[lig_0][0]
+                exper_err = math.sqrt(
+                    math.pow(exper_val_dict[lig_0][1], 2)
+                    + math.pow(exper_val_dict[lig_1][1], 2)
+                )
+            except Exception as e:
+                logging.error(e)
+                logging.error(f"the experimental pert value for {pert} could not be computed and will be left empty. Is the ligand in the experimental file?")
+                exper_ddG = None
+                exper_err = None
+
             exper_diff_dict.update({pert: (exper_ddG, exper_err)})
 
         return exper_diff_dict
